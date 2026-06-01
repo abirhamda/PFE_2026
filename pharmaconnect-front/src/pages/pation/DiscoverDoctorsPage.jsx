@@ -1,8 +1,25 @@
-﻿import { useEffect, useMemo, useState } from "react";
-import { CalendarDays, ChevronLeft, ChevronRight, Loader2, MapPin, Phone, Search, Sparkles } from "lucide-react";
+import { useEffect, useState } from "react";
+import {
+  Building2,
+  CalendarDays,
+  ChevronLeft,
+  ChevronRight,
+  Loader2,
+  Mail,
+  MapPin,
+  Phone,
+  Search,
+  Sparkles,
+} from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import api from "../../lib/api";
 import { useAuth } from "../../hooks/useAuth";
+
+const SEARCH_SCOPES = [
+  { value: "all", label: "Tout" },
+  { value: "doctor", label: "Medecins" },
+  { value: "pharmacy", label: "Pharmacies" },
+];
 
 const dayLabels = {
   0: "Dim",
@@ -77,61 +94,63 @@ const DiscoverDoctorsPage = ({ publicMode = false }) => {
   const role = String(user?.role || "").toLowerCase();
   const canBook = !publicMode && isAuthenticated && role === "pation";
 
+  const [scope, setScope] = useState("all");
   const [filters, setFilters] = useState({
     name: "",
     specialty: "",
-    city: "",
-    radius_km: 50,
+    address: "",
   });
-  const [coords, setCoords] = useState({ lat: null, lng: null });
   const [loading, setLoading] = useState(false);
   const [booking, setBooking] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [hasSearched, setHasSearched] = useState(false);
   const [doctors, setDoctors] = useState([]);
+  const [pharmacies, setPharmacies] = useState([]);
   const [weekOffsetByDoctor, setWeekOffsetByDoctor] = useState({});
   const [pendingBooking, setPendingBooking] = useState(null);
 
-  const loadDoctors = async (nextFilters = filters, nextCoords = coords) => {
+  const loadResults = async (nextFilters = filters, nextScope = scope) => {
     setLoading(true);
     setError("");
+    setHasSearched(true);
+
     try {
-      const params = {
-        name: nextFilters.name || undefined,
-        specialty: nextFilters.specialty || undefined,
-        city: nextFilters.city || undefined,
-        radius_km: nextFilters.radius_km || undefined,
-        lat: nextCoords.lat ?? undefined,
-        lng: nextCoords.lng ?? undefined,
+      const shouldLoadDoctors = nextScope !== "pharmacy";
+      const shouldLoadPharmacies = nextScope !== "doctor";
+
+      const doctorParams = {
+        name: nextFilters.name.trim() || undefined,
+        specialty: nextFilters.specialty.trim() || undefined,
+        address: nextFilters.address.trim() || undefined,
+        limit: 12,
       };
 
-      const response = await api.get("/patient-portal/doctors", { params });
-      const list = Array.isArray(response.data?.doctors) ? response.data.doctors : [];
-      setDoctors(list);
+      const pharmacyParams = {
+        name: nextFilters.name.trim() || undefined,
+        address: nextFilters.address.trim() || undefined,
+        limit: 12,
+      };
+
+      const [doctorsResponse, pharmaciesResponse] = await Promise.all([
+        shouldLoadDoctors
+          ? api.get("/patient-portal/doctors", { params: doctorParams })
+          : Promise.resolve({ data: { doctors: [] } }),
+        shouldLoadPharmacies
+          ? api.get("/pharmacy/public-search", { params: pharmacyParams })
+          : Promise.resolve({ data: { pharmacies: [] } }),
+      ]);
+
+      setDoctors(Array.isArray(doctorsResponse.data?.doctors) ? doctorsResponse.data.doctors : []);
+      setPharmacies(Array.isArray(pharmaciesResponse.data?.pharmacies) ? pharmaciesResponse.data.pharmacies : []);
     } catch (requestError) {
-      setError(requestError.response?.data?.error || "Impossible de charger les medecins");
+      setError(requestError.response?.data?.error || "Impossible de charger les resultats");
       setDoctors([]);
+      setPharmacies([]);
     } finally {
       setLoading(false);
     }
   };
-
-  useEffect(() => {
-    const tryGeolocation = () => {
-      if (!navigator?.geolocation) return;
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setCoords({ lat: position.coords.latitude, lng: position.coords.longitude });
-        },
-        () => {
-          // no-op
-        },
-        { enableHighAccuracy: false, timeout: 7000 },
-      );
-    };
-
-    tryGeolocation();
-  }, []);
 
   useEffect(() => {
     const loadPatientDefaults = async () => {
@@ -139,10 +158,10 @@ const DiscoverDoctorsPage = ({ publicMode = false }) => {
       try {
         const response = await api.get("/patient-portal/me");
         const profile = response.data?.profile;
-        if (!profile) return;
+        if (!profile?.city) return;
         setFilters((prev) => ({
           ...prev,
-          city: prev.city || profile.city || "",
+          address: prev.address || profile.city || "",
         }));
       } catch (_error) {
         // no-op
@@ -152,21 +171,12 @@ const DiscoverDoctorsPage = ({ publicMode = false }) => {
     loadPatientDefaults();
   }, [canBook]);
 
-  useEffect(() => {
-    loadDoctors();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
-    if (coords.lat === null || coords.lng === null) return;
-    loadDoctors(filters, coords);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [coords.lat, coords.lng]);
-
-  const specialties = useMemo(() => {
-    const values = [...new Set(doctors.map((doctor) => doctor.specialty).filter(Boolean))];
-    return values.sort((left, right) => left.localeCompare(right));
-  }, [doctors]);
+  const handleScopeChange = (nextScope) => {
+    setScope(nextScope);
+    if (hasSearched) {
+      loadResults(filters, nextScope);
+    }
+  };
 
   const requestBooking = (doctor, slotAt) => {
     setError("");
@@ -199,7 +209,7 @@ const DiscoverDoctorsPage = ({ publicMode = false }) => {
       });
       setPendingBooking(null);
       setMessage("Rendez-vous reserve avec succes.");
-      await loadDoctors();
+      await loadResults();
     } catch (requestError) {
       setError(requestError.response?.data?.error || "Reservation impossible");
     } finally {
@@ -240,9 +250,7 @@ const DiscoverDoctorsPage = ({ publicMode = false }) => {
           >
             <ChevronLeft size={14} />
           </button>
-          <p className="text-xs font-semibold text-slate-600">
-            Semaine {formatWeekRange(weekDays[0])}
-          </p>
+          <p className="text-xs font-semibold text-slate-600">Semaine {formatWeekRange(weekDays[0])}</p>
           <button
             type="button"
             onClick={() =>
@@ -307,6 +315,10 @@ const DiscoverDoctorsPage = ({ publicMode = false }) => {
     );
   };
 
+  const showDoctors = scope !== "pharmacy";
+  const showPharmacies = scope !== "doctor";
+  const totalResults = doctors.length + pharmacies.length;
+
   return (
     <div className="space-y-6">
       <section className="rounded-3xl bg-gradient-to-r from-cyan-700 via-cyan-600 to-teal-600 p-6 text-white shadow-xl">
@@ -315,10 +327,8 @@ const DiscoverDoctorsPage = ({ publicMode = false }) => {
             <Sparkles size={20} />
           </div>
           <div>
-            <h1 className="text-3xl font-bold">Trouver un medecin</h1>
-            <p className="mt-1 text-sm text-cyan-100">
-              Recherchez par specialite, localisation ou nom.
-            </p>
+            <h1 className="text-3xl font-bold">Recherche medecins et pharmacies</h1>
+            <p className="mt-1 text-sm text-cyan-100">Recherche par nom, specialite et adresse uniquement.</p>
           </div>
         </div>
       </section>
@@ -327,133 +337,201 @@ const DiscoverDoctorsPage = ({ publicMode = false }) => {
       {error && <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-rose-700">{error}</div>}
 
       <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <div className="flex flex-wrap items-center gap-2">
+          {SEARCH_SCOPES.map((item) => (
+            <button
+              key={item.value}
+              type="button"
+              onClick={() => handleScopeChange(item.value)}
+              className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+                scope === item.value
+                  ? "bg-cyan-100 text-cyan-800 ring-1 ring-cyan-200"
+                  : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+              }`}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
+
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            loadResults();
+          }}
+          className={`mt-4 grid gap-3 ${scope === "pharmacy" ? "md:grid-cols-2 xl:grid-cols-3" : "md:grid-cols-2 xl:grid-cols-4"}`}
+        >
           <input
             value={filters.name}
             onChange={(event) => setFilters((prev) => ({ ...prev, name: event.target.value }))}
-            placeholder="Nom du medecin"
+            placeholder={scope === "pharmacy" ? "Nom de la pharmacie" : "Nom du medecin ou pharmacie"}
             className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm"
           />
+          {scope !== "pharmacy" ? (
+            <input
+              value={filters.specialty}
+              onChange={(event) => setFilters((prev) => ({ ...prev, specialty: event.target.value }))}
+              placeholder="Specialite"
+              className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm"
+            />
+          ) : null}
           <input
-            value={filters.city}
-            onChange={(event) => setFilters((prev) => ({ ...prev, city: event.target.value }))}
-            placeholder="Ville"
+            value={filters.address}
+            onChange={(event) => setFilters((prev) => ({ ...prev, address: event.target.value }))}
+            placeholder="Adresse ou ville"
             className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm"
           />
-          <select
-            value={filters.specialty}
-            onChange={(event) => setFilters((prev) => ({ ...prev, specialty: event.target.value }))}
-            className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm"
-          >
-            <option value="">Toutes les specialites</option>
-            {specialties.map((specialty) => (
-              <option key={specialty} value={specialty}>
-                {specialty}
-              </option>
-            ))}
-          </select>
-          <input
-            type="number"
-            min={1}
-            max={200}
-            value={filters.radius_km}
-            onChange={(event) => setFilters((prev) => ({ ...prev, radius_km: Number(event.target.value) || 50 }))}
-            placeholder="Rayon (km)"
-            className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm"
-          />
-        </div>
-
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
-          <p className="text-xs text-slate-500">
-            {coords.lat !== null && coords.lng !== null
-              ? "Distance basee sur votre position actuelle"
-              : "Distance disponible si la position navigateur est autorisee"}
-          </p>
           <button
-            type="button"
-            onClick={() => loadDoctors()}
-            className="inline-flex items-center gap-2 rounded-xl bg-cyan-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-cyan-700"
+            type="submit"
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-cyan-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-cyan-700"
           >
-            <Search size={15} /> Rechercher
+            <Search size={15} />
+            Rechercher
           </button>
-        </div>
+        </form>
       </section>
 
       {loading ? (
         <div className="rounded-xl border border-dashed border-slate-300 p-8 text-center text-slate-500">
           <Loader2 className="mx-auto mb-2 animate-spin" size={22} />
-          Chargement des medecins...
+          Chargement des resultats...
         </div>
-      ) : doctors.length === 0 ? (
+      ) : !hasSearched ? (
         <div className="rounded-xl border border-dashed border-slate-300 p-8 text-center text-slate-500">
-          Aucun medecin ne correspond a vos criteres.
+          Lancez une recherche pour afficher les medecins et les pharmacies correspondants.
+        </div>
+      ) : totalResults === 0 ? (
+        <div className="rounded-xl border border-dashed border-slate-300 p-8 text-center text-slate-500">
+          Aucun resultat ne correspond a vos criteres.
         </div>
       ) : (
-        <section className="grid gap-4 xl:grid-cols-2">
-          {doctors.map((doctor) => (
-            <article key={doctor.doctor_id} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <p className="text-lg font-semibold text-slate-900">Dr. {doctor.display_name}</p>
-                  <p className="text-sm text-slate-500">{doctor.specialty}</p>
-                </div>
-                {doctor.distance_km !== null && (
-                  <span className="rounded-full bg-cyan-50 px-2.5 py-1 text-xs font-semibold text-cyan-700">
-                    {doctor.distance_km} km
-                  </span>
-                )}
+        <section className="space-y-6">
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-700">Resultats</p>
+              <p className="mt-1 text-sm text-slate-500">Affichage limite aux correspondances trouvees.</p>
+            </div>
+            <span className="rounded-full bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700">{totalResults} resultat(s)</span>
+          </div>
+
+          {showDoctors && doctors.length > 0 ? (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <CalendarDays className="text-cyan-700" size={18} />
+                <h2 className="text-lg font-semibold text-slate-900">Medecins</h2>
               </div>
 
-              <div className="mt-4 grid gap-2 text-sm text-slate-600 md:grid-cols-2">
-                <p className="flex items-center gap-1.5">
-                  <MapPin size={14} />
-                  {doctor.address_line || "-"}, {doctor.city || "-"}
-                </p>
-                <p className="flex items-center gap-1.5">
-                  <Phone size={14} />
-                  {doctor.public_phone || "-"}
-                </p>
-                <p>Tarif: {doctor.consultation_fee !== null ? `${doctor.consultation_fee} MAD` : "-"}</p>
+              <div className="grid gap-4 xl:grid-cols-2">
+                {doctors.map((doctor) => (
+                  <article key={doctor.doctor_id} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <p className="text-lg font-semibold text-slate-900">Dr. {doctor.display_name}</p>
+                        <p className="text-sm text-slate-500">{doctor.specialty}</p>
+                      </div>
+                      {doctor.distance_km !== null && (
+                        <span className="rounded-full bg-cyan-50 px-2.5 py-1 text-xs font-semibold text-cyan-700">
+                          {doctor.distance_km} km
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="mt-4 grid gap-2 text-sm text-slate-600 md:grid-cols-2">
+                      <p className="flex items-center gap-1.5">
+                        <MapPin size={14} />
+                        {doctor.address_line || "-"}, {doctor.city || "-"}
+                      </p>
+                      <p className="flex items-center gap-1.5">
+                        <Phone size={14} />
+                        {doctor.public_phone || "-"}
+                      </p>
+                      <p>Tarif: {doctor.consultation_fee !== null ? `${doctor.consultation_fee} MAD` : "-"}</p>
+                    </div>
+
+                    <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3">
+                      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Horaires</p>
+                      <div className="grid gap-1 text-xs text-slate-600 sm:grid-cols-2">
+                        {prettyWorkingHours(doctor.working_hours).map((line) => (
+                          <span key={line}>{line}</span>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="mt-4">
+                      <p className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-800">
+                        <CalendarDays size={15} />
+                        Disponibilites en ligne
+                      </p>
+
+                      {doctor.online_booking_enabled && (doctor.available_slots || []).length > 0 ? (
+                        <>{renderWeeklySlots(doctor)}</>
+                      ) : (
+                        <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+                          Aucune disponibilite en ligne (acces non active ou creneaux complets).
+                        </p>
+                      )}
+
+                      {!canBook && (
+                        <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
+                          Reservation en ligne reservee aux patients connectes.
+                          <button
+                            type="button"
+                            onClick={() => navigate("/login")}
+                            className="ml-1 font-semibold text-cyan-700 hover:text-cyan-800"
+                          >
+                            Se connecter
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
+          {showPharmacies && pharmacies.length > 0 ? (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <Building2 className="text-cyan-700" size={18} />
+                <h2 className="text-lg font-semibold text-slate-900">Pharmacies</h2>
               </div>
 
-              <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3">
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Horaires</p>
-                <div className="grid gap-1 text-xs text-slate-600 sm:grid-cols-2">
-                  {prettyWorkingHours(doctor.working_hours).map((line) => (
-                    <span key={line}>{line}</span>
-                  ))}
-                </div>
+              <div className="grid gap-4 xl:grid-cols-2">
+                {pharmacies.map((pharmacy) => (
+                  <article key={pharmacy.id_pharmacie} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <p className="text-lg font-semibold text-slate-900">{pharmacy.nom_pharmacie}</p>
+                        <p className="text-sm text-slate-500">{pharmacy.type_label || "Pharmacie"}</p>
+                      </div>
+                      <span className="rounded-full bg-cyan-50 px-2.5 py-1 text-xs font-semibold text-cyan-700">Pharmacie</span>
+                    </div>
+
+                    <div className="mt-4 space-y-3 text-sm text-slate-600">
+                      <p className="flex items-start gap-2">
+                        <MapPin size={15} className="mt-0.5 shrink-0" />
+                        <span>{[pharmacy.address_line, pharmacy.city].filter(Boolean).join(", ") || "Adresse non renseignee"}</span>
+                      </p>
+                      <p className="flex items-center gap-2">
+                        <Phone size={15} />
+                        <span>{pharmacy.telephone || "Telephone non renseigne"}</span>
+                      </p>
+                      <p className="flex items-center gap-2">
+                        <Mail size={15} />
+                        <span>{pharmacy.email || "Email non renseigne"}</span>
+                      </p>
+                    </div>
+
+                    <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                      <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">Responsable</p>
+                      <p className="mt-2 text-sm font-medium text-slate-800">{pharmacy.president_pharmacie || "Non renseigne"}</p>
+                    </div>
+                  </article>
+                ))}
               </div>
-
-              <div className="mt-4">
-                <p className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-800">
-                  <CalendarDays size={15} />
-                  Disponibilites en ligne
-                </p>
-
-                {doctor.online_booking_enabled && doctor.available_slots.length > 0 ? (
-                  <>{renderWeeklySlots(doctor)}</>
-                ) : (
-                  <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
-                    Aucune disponibilite en ligne (acces non active ou creneaux complets).
-                  </p>
-                )}
-
-                {!canBook && (
-                  <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
-                    Reservation en ligne reservee aux patients connectes.
-                    <button
-                      type="button"
-                      onClick={() => navigate("/login")}
-                      className="ml-1 font-semibold text-cyan-700 hover:text-cyan-800"
-                    >
-                      Se connecter
-                    </button>
-                  </div>
-                )}
-              </div>
-            </article>
-          ))}
+            </div>
+          ) : null}
         </section>
       )}
 

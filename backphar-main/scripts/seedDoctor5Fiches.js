@@ -4,8 +4,8 @@ import dotenv from "dotenv";
 dotenv.config();
 
 const DOCTOR_ID = 5;
-const SEED_DOCTOR_EMAIL = "doctor.seed5@pharmaconnect.local";
-const SEED_DOCTOR_PASSWORD_HASH = "$2b$10$V.GYFTM9oY8dj.K4lQiwq.KI1OZp93l6/wFApZhL/fVG.en4s.AkW"; // Test@123
+const SEED_DOCTOR_EMAIL = "doctor5.sousse@pharmaconnect.tn";
+const SEED_DOCTOR_PASSWORD_HASH = "$2b$10$ifAVhPPmpVFTeoBcwRIJN.KcgMIVpLKu3Z2kYNURLdPVBzgG.U2kO"; // Sousse2026!
 
 const connectionConfig = {
   host: process.env.DB_HOST || "127.0.0.1",
@@ -43,67 +43,67 @@ const defaultWorkingHours = {
 
 const seedPatients = [
   {
-    nom: "Benkirane",
-    prenom: "Imane",
-    cin: "BB500501",
-    telephone: "0605005001",
+    nom: "Ben Salem",
+    prenom: "Imene",
+    cin: "13050001",
+    telephone: "28150001",
     date_naissance: "1989-06-18",
   },
   {
-    nom: "El Idrissi",
+    nom: "Jallouli",
     prenom: "Youssef",
-    cin: "BB500502",
-    telephone: "0605005002",
+    cin: "13050002",
+    telephone: "28150002",
     date_naissance: "1978-02-03",
   },
   {
-    nom: "Tahlawi",
+    nom: "Trabelsi",
     prenom: "Sara",
-    cin: "BB500503",
-    telephone: "0605005003",
+    cin: "13050003",
+    telephone: "28150003",
     date_naissance: "1996-09-27",
   },
 ];
 
 const buildAppointmentPlan = (patientByCin) => [
   {
-    patient: patientByCin.BB500501,
+    patient: patientByCin[13050001],
     appointment_at: makeDate(-120, 9, 0),
     doctor_notes: "Conseil hygiene de vie et examens biologiques.",
     payment_doctor_comment: "Verifier la prise en charge a la prochaine consultation.",
   },
   {
-    patient: patientByCin.BB500501,
+    patient: patientByCin[13050001],
     appointment_at: makeDate(-65, 10, 0),
     doctor_notes: "Amelioration clinique, poursuivre traitement 3 mois.",
     payment_doctor_comment: "Paiement partiel acceptable, confirmer solde.",
   },
   {
-    patient: patientByCin.BB500501,
+    patient: patientByCin[13050001],
     appointment_at: makeDate(-10, 11, 30),
     doctor_notes: "Continuer surveillance mensuelle.",
     payment_doctor_comment: "Aucun ajustement de tarif pour le moment.",
   },
   {
-    patient: patientByCin.BB500502,
+    patient: patientByCin[13050002],
     appointment_at: makeDate(-95, 14, 0),
     doctor_notes: "Demande radiographie et test fonctionnel respiratoire.",
     payment_doctor_comment: "Prevoir pack examens lors du prochain passage.",
   },
   {
-    patient: patientByCin.BB500502,
+    patient: patientByCin[13050002],
     appointment_at: makeDate(-35, 15, 0),
     doctor_notes: "Stabilisation correcte, suivi trimestriel.",
     payment_doctor_comment: "Secretaire: rappeler au patient le mode de reglement.",
   },
   {
-    patient: patientByCin.BB500503,
+    patient: patientByCin[13050003],
     appointment_at: makeDate(-45, 16, 0),
     doctor_notes: "Suspicion trouble fonctionnel, traitement symptomatique.",
     payment_doctor_comment: "Tarif standard applique.",
   },
   {
-    patient: patientByCin.BB500503,
+    patient: patientByCin[13050003],
     appointment_at: makeDate(4, 9, 30),
     doctor_notes: "A completer lors de la prochaine consultation.",
     payment_doctor_comment: "Confirmer la modalite de paiement avant la consultation.",
@@ -138,7 +138,7 @@ const ensureDoctorExists = async (connection) => {
 
   await connection.execute(
     `INSERT INTO doctors (id, nom, prenom, email, password, cin, specialty, is_active)
-     VALUES (?, 'Seed', 'Doctor', ?, ?, 'DOC-SEED-0005', 'Medecine generale', 1)`,
+     VALUES (?, 'Ghannouchi', 'Walid', ?, ?, '11000005', 'Medecine generale', 1)`,
     [DOCTOR_ID, SEED_DOCTOR_EMAIL, SEED_DOCTOR_PASSWORD_HASH],
   );
 
@@ -169,15 +169,15 @@ const ensurePublicProfile = async (connection, doctor) => {
       [
         DOCTOR_ID,
         displayName,
-        "0605000005",
-        "Cabinet Centre Ville",
-        "Casablanca",
-        33.5731,
-        -7.5898,
-        250.0,
+        "73330505",
+        "Rue Ibn El Jazzar, Medina de Sousse",
+        "Sousse",
+        35.8248,
+        10.6349,
+        45.0,
         20,
         JSON.stringify(defaultWorkingHours),
-        "Cabinet de consultation generale et suivi clinique.",
+        "Cabinet de medecine generale et suivi clinique.",
       ],
     );
     return;
@@ -191,15 +191,15 @@ const ensurePublicProfile = async (connection, doctor) => {
      WHERE doctor_id = ?`,
     [
       displayName,
-      "0605000005",
-      "Cabinet Centre Ville",
-      "Casablanca",
-      33.5731,
-      -7.5898,
-      250.0,
+      "73330505",
+      "Rue Ibn El Jazzar, Medina de Sousse",
+      "Sousse",
+      35.8248,
+      10.6349,
+      45.0,
       20,
       JSON.stringify(defaultWorkingHours),
-      "Cabinet de consultation generale et suivi clinique.",
+      "Cabinet de medecine generale et suivi clinique.",
       DOCTOR_ID,
     ],
   );

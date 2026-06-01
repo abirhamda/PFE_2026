@@ -1,4 +1,4 @@
-// Type definitions for the PharmaConnect application
+// Type definitions for the MediCare application
 
 // User roles
 export enum UserRole {

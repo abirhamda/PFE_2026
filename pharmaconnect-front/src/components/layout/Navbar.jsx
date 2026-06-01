@@ -27,7 +27,11 @@ const Navbar = ({ onToggleSidebar }) => {
   const role = String(user?.role || "").toLowerCase();
   const displayName = getDisplayName(user);
   const profilePath =
-    role === "secretaire"
+    role === "pharmacist"
+      ? "/pharmacy/profile"
+      : role === "supplier"
+        ? "/supplier/profile"
+        : role === "secretaire"
       ? "/secretaire/profile"
       : role === "doctor"
         ? "/docteur/profile"
@@ -35,7 +39,13 @@ const Navbar = ({ onToggleSidebar }) => {
           ? "/patient/profile"
           : "/profile";
   const settingsPath =
-    role === "secretaire"
+    role === "admin"
+      ? "/admin/settings"
+      : role === "pharmacist"
+        ? "/pharmacy/settings"
+        : role === "supplier"
+          ? "/supplier/settings"
+      : role === "secretaire"
       ? "/secretaire/settings"
       : role === "doctor"
         ? "/docteur/settings"
@@ -62,8 +72,8 @@ const Navbar = ({ onToggleSidebar }) => {
             </button>
 
             <div>
-              <p className="text-sm font-semibold tracking-wide text-slate-900">PharmaConnect</p>
-              <p className="text-xs text-slate-500">Plateforme healthcare operations</p>
+              <p className="text-sm font-semibold tracking-wide text-slate-900">MediCare</p>
+              <p className="text-xs text-slate-500">Gestion medicale</p>
             </div>
           </div>
 

@@ -70,6 +70,7 @@ export default function SettingsPage() {
   const { user, updateProfile } = useAuth();
   const role = String(user?.role || "").toLowerCase();
   const isProvider = role === "doctor" || role === "secretaire";
+  const genericSettingsTitle = role === "admin" ? "Parametres administrateur" : "Parametres generaux";
 
   const [loading, setLoading] = useState(isProvider);
   const [saving, setSaving] = useState(false);
@@ -184,10 +185,13 @@ export default function SettingsPage() {
 
   return (
     <div className="mx-auto max-w-5xl space-y-5">
-      <section className="rounded-3xl bg-gradient-to-r from-cyan-700 to-teal-600 p-6 text-white shadow-xl">
-        <div className="flex items-center gap-3">
-          <SettingsIcon className="h-6 w-6 text-white" />
-          <h1 className="text-xl font-semibold text-white">Parametres</h1>
+      <section className="flex items-center gap-3 rounded-[26px] border border-cyan-200/80 bg-gradient-to-r from-cyan-700 to-teal-600 px-5 py-4 text-white shadow-lg shadow-cyan-900/10">
+        <div className="rounded-2xl bg-white/15 p-2.5 backdrop-blur-sm">
+          <SettingsIcon className="h-5 w-5 text-white" />
+        </div>
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-cyan-100">Configuration</p>
+          <h1 className="mt-1 text-2xl font-semibold text-white">Parametres</h1>
         </div>
       </section>
 
@@ -396,9 +400,9 @@ export default function SettingsPage() {
         <form onSubmit={handleGenericSubmit} className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="mb-4 flex items-center gap-2">
             <div className="rounded-xl bg-cyan-50 p-2 text-cyan-700">
-              <Stethoscope size={16} />
+              {role === "admin" ? <ShieldCheck size={16} /> : <Stethoscope size={16} />}
             </div>
-            <h2 className="text-lg font-semibold text-slate-900">Parametres generaux</h2>
+            <h2 className="text-lg font-semibold text-slate-900">{genericSettingsTitle}</h2>
           </div>
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">

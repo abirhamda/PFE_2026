@@ -1,5 +1,6 @@
 import db from "../db.js";
 import bcrypt from "bcryptjs";
+import { resolveSupplierContext } from "../utils/userContext.js";
 
 const validateSupplierData = (data, isCreate = true) => {
   const required = ["nom", "prenom", "email", "telephone"];
@@ -441,10 +442,219 @@ const getPharmaciesWithDemandes = async (req, res) => {
 
 const getSupplierPharmacies = getPharmaciesBySupplierId;
 
+const getMyProfile = async (req, res) => {
+  const connection = await db.getConnection();
+  try {
+    const supplier = await resolveSupplierContext(connection, req.user);
+    if (!supplier) {
+      return res.status(403).json({ error: "Profil fournisseur invalide" });
+    }
+
+    const [rows] = await connection.execute(
+      `SELECT id, nom, prenom, email, telephone, is_active, created_at
+       FROM suppliers
+       WHERE id = ?
+       LIMIT 1`,
+      [supplier.id],
+    );
+
+    return res.json({ success: true, profile: rows[0] });
+  } catch (error) {
+    console.error("Error getting my supplier profile:", error);
+    return res.status(500).json({ error: "Erreur lors de la recuperation du profil fournisseur" });
+  } finally {
+    connection.release();
+  }
+};
+
+const updateMyProfile = async (req, res) => {
+  const connection = await db.getConnection();
+  try {
+    const supplier = await resolveSupplierContext(connection, req.user);
+    if (!supplier) {
+      return res.status(403).json({ error: "Profil fournisseur invalide" });
+    }
+
+    const payload = {
+      ...req.body,
+      nom: String(req.body?.nom || "").trim(),
+      prenom: String(req.body?.prenom || "").trim(),
+      email: String(req.body?.email || "").trim().toLowerCase(),
+      telephone: String(req.body?.telephone || "").trim(),
+    };
+
+    const validation = validateSupplierData(payload, false);
+    if (!validation.isValid) {
+      return res.status(400).json({ error: validation.error });
+    }
+
+    await connection.beginTransaction();
+
+    const [duplicate] = await connection.execute(
+      "SELECT id FROM suppliers WHERE email = ? AND id <> ? LIMIT 1",
+      [payload.email, supplier.id],
+    );
+    if (duplicate.length > 0) {
+      await connection.rollback();
+      return res.status(409).json({ error: "Cet email est deja utilise par un autre fournisseur" });
+    }
+
+    await connection.execute(
+      "UPDATE suppliers SET nom = ?, prenom = ?, email = ?, telephone = ? WHERE id = ?",
+      [payload.nom, payload.prenom, payload.email, payload.telephone, supplier.id],
+    );
+
+    if (payload.email !== supplier.email) {
+      await connection.execute("UPDATE users SET email = ? WHERE email = ? AND role = 'supplier'", [payload.email, supplier.email]);
+    }
+
+    await connection.commit();
+    return res.json({ success: true, message: "Profil fournisseur mis a jour avec succes" });
+  } catch (error) {
+    await connection.rollback();
+    console.error("Error updating my supplier profile:", error);
+    return res.status(500).json({ error: "Erreur lors de la mise a jour du profil fournisseur" });
+  } finally {
+    connection.release();
+  }
+};
+
+const getMyDashboard = async (req, res) => {
+  const connection = await db.getConnection();
+  try {
+    const supplier = await resolveSupplierContext(connection, req.user);
+    if (!supplier) {
+      return res.status(403).json({ error: "Profil fournisseur invalide" });
+    }
+
+    const [demandeRows] = await connection.execute(
+      `SELECT id, nom_medicament, quantite, status, created_at, response_note, pharmacie_id
+       FROM demandes
+       WHERE supplier_id = ?
+       ORDER BY created_at DESC`,
+      [supplier.id],
+    );
+    const [partnershipRows] = await connection.execute(
+      `SELECT id, pharmacie_id, status, created_at, response_note
+       FROM supplier_partnership_requests
+       WHERE supplier_id = ?
+       ORDER BY created_at DESC`,
+      [supplier.id],
+    );
+    const [partnerRows] = await connection.execute(
+      `SELECT COUNT(*) AS total
+       FROM supplier_pharmacie
+       WHERE supplier_id = ?`,
+      [supplier.id],
+    );
+    const [productRows] = await connection.execute(
+      `SELECT COUNT(*) AS total
+       FROM supplier_products
+       WHERE supplier_id = ? AND is_active = 1`,
+      [supplier.id],
+    );
+
+    const merged = [
+      ...demandeRows.map((row) => ({ ...row, request_kind: "medicament" })),
+      ...partnershipRows.map((row) => ({ ...row, request_kind: "partenariat" })),
+    ];
+
+    const stats = {
+      demandes_recues: merged.length,
+      en_attente: merged.filter((item) => item.status === "en_attente").length,
+      acceptees: merged.filter((item) => item.status === "acceptee").length,
+      refusees: merged.filter((item) => item.status === "refusee").length,
+      pharmacies_partenaires: Number(partnerRows[0]?.total || 0),
+      produits_disponibles: Number(productRows[0]?.total || 0),
+    };
+
+    return res.json({
+      success: true,
+      stats,
+      recent_medicament_requests: demandeRows.slice(0, 5),
+      recent_partnership_requests: partnershipRows.slice(0, 5),
+    });
+  } catch (error) {
+    console.error("Error loading supplier dashboard:", error);
+    return res.status(500).json({ error: "Erreur lors du chargement du dashboard fournisseur" });
+  } finally {
+    connection.release();
+  }
+};
+
+const getMyRequestCenter = async (req, res) => {
+  const connection = await db.getConnection();
+  try {
+    const supplier = await resolveSupplierContext(connection, req.user);
+    if (!supplier) {
+      return res.status(403).json({ error: "Profil fournisseur invalide" });
+    }
+
+    const [medicineRows] = await connection.execute(
+      `SELECT
+         d.id,
+         d.nom_medicament AS label,
+         d.quantite,
+         d.status,
+         d.response_note,
+         d.created_at,
+         d.updated_at,
+         d.pharmacie_id,
+         p.nom_pharmacie,
+         p.email AS pharmacie_email,
+         p.telephone AS pharmacie_telephone,
+         p.president_pharmacie,
+         'medicament' AS request_kind
+       FROM demandes d
+       INNER JOIN pharmacie p ON p.id_pharmacie = d.pharmacie_id
+       WHERE d.supplier_id = ?
+       ORDER BY d.created_at DESC`,
+      [supplier.id],
+    );
+
+    const [partnershipRows] = await connection.execute(
+      `SELECT
+         pr.id,
+         'Demande de partenariat' AS label,
+         NULL AS quantite,
+         pr.status,
+         pr.response_note,
+         pr.created_at,
+         pr.updated_at,
+         pr.pharmacie_id,
+         p.nom_pharmacie,
+         p.email AS pharmacie_email,
+         p.telephone AS pharmacie_telephone,
+         p.president_pharmacie,
+         'partenariat' AS request_kind
+       FROM supplier_partnership_requests pr
+       INNER JOIN pharmacie p ON p.id_pharmacie = pr.pharmacie_id
+       WHERE pr.supplier_id = ?
+       ORDER BY pr.created_at DESC`,
+      [supplier.id],
+    );
+
+    const items = [...medicineRows, ...partnershipRows].sort(
+      (left, right) => new Date(right.created_at || 0) - new Date(left.created_at || 0),
+    );
+
+    return res.json({ success: true, items });
+  } catch (error) {
+    console.error("Error loading supplier request center:", error);
+    return res.status(500).json({ error: "Erreur lors du chargement des demandes fournisseur" });
+  } finally {
+    connection.release();
+  }
+};
+
 export default {
   createSupplier,
   getAllSuppliers,
   getSupplier,
+  getMyProfile,
+  updateMyProfile,
+  getMyDashboard,
+  getMyRequestCenter,
   updateSupplier,
   toggleStatus,
   deleteSupplier,

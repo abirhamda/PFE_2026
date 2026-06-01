@@ -2,8 +2,10 @@ import React, { createContext, useContext, useEffect, useMemo, useState } from '
 
 export const AuthContext = createContext();
 
-const STORAGE_USER_KEY = 'pharmaconnect_auth_user';
-const STORAGE_MODE_KEY = 'pharmaconnect_auth_mode';
+const STORAGE_USER_KEY = 'medicare_auth_user';
+const STORAGE_MODE_KEY = 'medicare_auth_mode';
+const LEGACY_STORAGE_USER_KEY = 'pharmaconnect_auth_user';
+const LEGACY_STORAGE_MODE_KEY = 'pharmaconnect_auth_mode';
 const ALLOWED_ROLES = new Set(['admin', 'pharmacist', 'doctor', 'supplier', 'secretaire', 'pation']);
 
 const normalizeBase64Url = (value) => {
@@ -66,12 +68,12 @@ const normalizeUser = (candidate) => {
 
 const readUser = (storage, mode) => {
   try {
-    const savedMode = storage.getItem(STORAGE_MODE_KEY);
+    const savedMode = storage.getItem(STORAGE_MODE_KEY) || storage.getItem(LEGACY_STORAGE_MODE_KEY);
     if (savedMode !== mode) {
       return null;
     }
 
-    const persisted = storage.getItem(STORAGE_USER_KEY);
+    const persisted = storage.getItem(STORAGE_USER_KEY) || storage.getItem(LEGACY_STORAGE_USER_KEY);
     if (!persisted) {
       return null;
     }
@@ -86,6 +88,8 @@ const readUser = (storage, mode) => {
 const clearStorage = (storage) => {
   storage.removeItem(STORAGE_USER_KEY);
   storage.removeItem(STORAGE_MODE_KEY);
+  storage.removeItem(LEGACY_STORAGE_USER_KEY);
+  storage.removeItem(LEGACY_STORAGE_MODE_KEY);
   storage.removeItem('role');
   storage.removeItem('token');
   storage.removeItem('userId');
@@ -163,7 +167,8 @@ export const AuthProvider = ({ children }) => {
 
     setUser(updatedUser);
 
-    const usesLocalStorage = localStorage.getItem(STORAGE_MODE_KEY) === 'local';
+    const usesLocalStorage =
+      localStorage.getItem(STORAGE_MODE_KEY) === 'local' || localStorage.getItem(LEGACY_STORAGE_MODE_KEY) === 'local';
     const targetStorage = usesLocalStorage ? localStorage : sessionStorage;
     const mode = usesLocalStorage ? 'local' : 'session';
     persistUser(targetStorage, updatedUser, mode);

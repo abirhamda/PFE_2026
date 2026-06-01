@@ -1,5 +1,6 @@
 import React from "react";
 import {
+  BrainCircuit,
   CalendarDays,
   FileText,
   LayoutDashboard,
@@ -50,7 +51,7 @@ const SidebarDoctor = ({ isOpen, onClose }) => {
         <div className="flex h-full flex-col p-4">
           <div className="rounded-2xl bg-gradient-to-br from-cyan-600 to-teal-600 p-4 text-white shadow-lg">
             <p className="text-xs uppercase tracking-wider text-cyan-100">Docteur</p>
-            <h2 className="mt-1 text-lg font-semibold">PharmaConnect</h2>
+            <h2 className="mt-1 text-lg font-semibold">MediCare</h2>
             <p className="mt-3 text-sm text-cyan-50">{displayName}</p>
           </div>
 
@@ -59,6 +60,7 @@ const SidebarDoctor = ({ isOpen, onClose }) => {
             <SidebarItem to="/docteur/rendezvous" icon={<CalendarDays size={18} />} label="Rendez-vous" />
             <SidebarItem to="/docteur/patients" icon={<Users size={18} />} label="Patients & fiches" />
             <SidebarItem to="/docteur/ordonnances" icon={<FileText size={18} />} label="Ordonnances" />
+            <SidebarItem to="/medecin/analyse" icon={<BrainCircuit size={18} />} label="Analyse IA" />
             <SidebarItem to="/docteur/secretaires" icon={<UserRoundPlus size={18} />} label="Mes secretaires" />
             <SidebarItem to="/docteur/profile" icon={<User size={18} />} label="Profil" />
             <SidebarItem to="/docteur/settings" icon={<Settings size={18} />} label="Parametres" />

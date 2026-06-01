@@ -1,4 +1,4 @@
--- PharmaConnect test seed (all roles + linked demo data)
+-- MediCare test seed (all roles + linked demo data)
 -- Target DB from .env: application_medicale
 -- Plain password for all test accounts: Test@123
 
@@ -20,7 +20,7 @@ ON DUPLICATE KEY UPDATE
 
 INSERT INTO admin (full_name, email, mot_de_passe, phone, address)
 VALUES
-  ('Admin Test', 'admin.test@pharmaconnect.local', @pwd_hash, '0600000001', 'HQ PharmaConnect')
+  ('Admin Test', 'admin.test@pharmaconnect.local', @pwd_hash, '0600000001', 'HQ MediCare')
 ON DUPLICATE KEY UPDATE
   full_name = VALUES(full_name),
   mot_de_passe = VALUES(mot_de_passe),

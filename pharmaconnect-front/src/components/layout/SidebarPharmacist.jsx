@@ -1,5 +1,5 @@
 import React from "react";
-import { FileText, Home, LogOut, Package, Settings } from "lucide-react";
+import { Building2, ClipboardList, FileText, Home, LogOut, Package2, UserRound } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
 
@@ -41,15 +41,17 @@ const SidebarPharmacist = ({ isOpen, onClose }) => {
         <div className="flex h-full flex-col p-4">
           <div className="rounded-2xl bg-gradient-to-br from-cyan-600 to-teal-600 p-4 text-white shadow-lg">
             <p className="text-xs uppercase tracking-wider text-cyan-100">Pharmacien</p>
-            <h2 className="mt-1 text-lg font-semibold">PharmaConnect</h2>
+            <h2 className="mt-1 text-lg font-semibold">MediCare</h2>
             <p className="mt-3 text-sm text-cyan-50">{displayName}</p>
           </div>
 
           <nav className="mt-6 flex-1 space-y-2">
             <SidebarItem to="/pharmacy/dashboard" icon={<Home size={18} />} label="Dashboard" />
             <SidebarItem to="/pharmacy/ordonnances" icon={<FileText size={18} />} label="Ordonnances" />
-            <SidebarItem to="/pharmacy/supplier" icon={<Package size={18} />} label="Fournisseurs" />
-            <SidebarItem to="/settings" icon={<Settings size={18} />} label="Parametres" />
+            <SidebarItem to="/pharmacy/stock" icon={<Package2 size={18} />} label="Stock" />
+            <SidebarItem to="/pharmacy/demandes" icon={<ClipboardList size={18} />} label="Demandes" />
+            <SidebarItem to="/pharmacy/fournisseurs" icon={<Building2 size={18} />} label="Fournisseurs" />
+            <SidebarItem to="/pharmacy/profile" icon={<UserRound size={18} />} label="Profil" />
           </nav>
 
           <button

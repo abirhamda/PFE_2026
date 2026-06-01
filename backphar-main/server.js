@@ -13,6 +13,8 @@ import ordonnanceRoutes from './routes/ordonnanceRoutes.js';
 import medicamentRoutes from './routes/medicamentRoutes.js';
 import notificationRoutes from './routes/notificationRoutes.js';
 import demandesRoutes from './routes/demandesRoutes.js';
+import partnershipRoutes from './routes/partnershipRoutes.js';
+import supplierProductRoutes from './routes/supplierProductRoutes.js';
 import secretaryRoutes from './routes/secretaryRoutes.js';
 import appointmentRoutes from './routes/appointmentRoutes.js';
 import doctorPatientRoutes from './routes/doctorPatientRoutes.js';
@@ -33,13 +35,15 @@ app.use('/api/ordonnances', ordonnanceRoutes);
 app.use('/api/medicaments', medicamentRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/demandes', demandesRoutes);
+app.use('/api/partnerships', partnershipRoutes);
+app.use('/api/supplier-products', supplierProductRoutes);
 app.use('/api/secretaries', secretaryRoutes);
 app.use('/api/appointments', appointmentRoutes);
 app.use('/api/doctor-patients', doctorPatientRoutes);
 app.use('/api/patient-portal', patientPortalRoutes);
 
 app.get('/', (req, res) => {
-  res.send("Bienvenue sur l'API PharmaConnect");
+  res.send("Bienvenue sur l'API MediCare");
 });
 
 const PORT = process.env.PORT || 5000;

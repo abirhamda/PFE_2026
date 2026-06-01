@@ -1,23 +1,36 @@
+import bcrypt from "bcryptjs";
 import db from "../db.js";
-import bcrypt from "bcryptjs"; // ✅ CORRECTION: bcryptjs au lieu de bcrypt
-import { createAndSaveUser } from "./userController.js"; // Import the refactored function
-// Helper function to validate doctor data
+
+const normalizeEmail = (email) => String(email || "").trim().toLowerCase();
+const normalizeCin = (cin) => String(cin || "").trim();
+const isDuplicateEntryError = (error) => error?.code === "ER_DUP_ENTRY";
+
+const safeRollback = async (connection) => {
+  try {
+    await connection.rollback();
+  } catch (_error) {
+    // no-op
+  }
+};
+
 const validateDoctorData = (data) => {
-  const { firstName, lastName, email, password, cin, specialty } = data;
+  const firstName = String(data?.firstName || "").trim();
+  const lastName = String(data?.lastName || "").trim();
+  const email = normalizeEmail(data?.email);
+  const password = String(data?.password || "");
+  const cin = normalizeCin(data?.cin);
+  const specialty = String(data?.specialty || "").trim();
 
   if (!firstName || !lastName || !email || !password || !cin || !specialty) {
     return { isValid: false, error: "Tous les champs sont obligatoires" };
   }
 
-  if (typeof password !== "string" || password.trim() === "") {
-    return { isValid: false, error: "Le mot de passe ne peut pas être vide" };
+  if (password.trim() === "") {
+    return { isValid: false, error: "Le mot de passe ne peut pas etre vide" };
   }
 
   if (password.length < 6) {
-    return {
-      isValid: false,
-      error: "Le mot de passe doit contenir au moins 6 caractères",
-    };
+    return { isValid: false, error: "Le mot de passe doit contenir au moins 6 caracteres" };
   }
 
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -26,332 +39,260 @@ const validateDoctorData = (data) => {
   }
 
   if (cin.length < 8) {
-    return {
-      isValid: false,
-      error: "Le CIN doit contenir au moins 8 caractères",
-    };
+    return { isValid: false, error: "Le CIN doit contenir au moins 8 caracteres" };
   }
 
-  return { isValid: true };
+  return {
+    isValid: true,
+    data: {
+      firstName,
+      lastName,
+      email,
+      password,
+      cin,
+      specialty,
+    },
+  };
 };
 
-// Get doctor profile by id
-export const getProfile = async (req, res) => {
-  try {
-    const { id } = req.params;
+const validateDoctorUpdateData = (data) => {
+  const firstName = String(data?.firstName || "").trim();
+  const lastName = String(data?.lastName || "").trim();
+  const email = normalizeEmail(data?.email);
+  const cin = normalizeCin(data?.cin);
+  const specialty = String(data?.specialty || "").trim();
 
-    const [rows] = await db.execute(
-      `SELECT id, nom, prenom, email, cin, specialty, is_active, created_at 
-       FROM doctors WHERE id = ?`,
-      [id],
-    );
+  if (!firstName || !lastName || !email || !cin || !specialty) {
+    return { isValid: false, error: "Tous les champs sont obligatoires" };
+  }
 
-    if (rows.length === 0) {
-      return res.status(404).json({ error: "Médecin non trouvé" });
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    return { isValid: false, error: "Format d'email invalide" };
+  }
+
+  if (cin.length < 8) {
+    return { isValid: false, error: "Le CIN doit contenir au moins 8 caracteres" };
+  }
+
+  return {
+    isValid: true,
+    data: {
+      firstName,
+      lastName,
+      email,
+      cin,
+      specialty,
+    },
+  };
+};
+
+const ensureDoctorIdentityIsAvailable = async (connection, { email, cin, currentDoctorEmail = null }) => {
+  if (email) {
+    const params = [email];
+    let emailSql = "SELECT id FROM users WHERE email = ? LIMIT 1";
+    if (currentDoctorEmail) {
+      emailSql = "SELECT id FROM users WHERE email = ? AND NOT (email = ? AND role = 'doctor') LIMIT 1";
+      params.push(currentDoctorEmail);
     }
 
-    res.json({
-      success: true,
-      doctor: rows[0],
-    });
+    const [rows] = await connection.execute(emailSql, params);
+    if (rows.length > 0) {
+      return { ok: false, error: "Un medecin avec cet email existe deja" };
+    }
+  }
 
+  if (cin) {
+    const params = [cin];
+    let cinSql = "SELECT id FROM users WHERE cin = ? LIMIT 1";
+    if (currentDoctorEmail) {
+      cinSql = "SELECT id FROM users WHERE cin = ? AND NOT (email = ? AND role = 'doctor') LIMIT 1";
+      params.push(currentDoctorEmail);
+    }
+
+    const [rows] = await connection.execute(cinSql, params);
+    if (rows.length > 0) {
+      return { ok: false, error: "Un medecin avec ce CIN existe deja" };
+    }
+  }
+
+  return { ok: true };
+};
+
+const getDoctorSummaryById = async (connection, doctorId) => {
+  const [rows] = await connection.execute(
+    `SELECT id, nom, prenom, email, cin, specialty, is_active, created_at
+     FROM doctors
+     WHERE id = ?`,
+    [doctorId],
+  );
+
+  return rows[0] || null;
+};
+
+const updateDoctorUserIdentity = async (connection, oldEmail, nextEmail, nextCin) => {
+  await connection.execute(
+    "UPDATE users SET email = ?, cin = ? WHERE email = ? AND role = 'doctor'",
+    [nextEmail, nextCin, oldEmail],
+  );
+};
+
+export const getProfile = async (req, res) => {
+  try {
+    const doctor = await getDoctorSummaryById(db, req.params.id);
+
+    if (!doctor) {
+      return res.status(404).json({ error: "Medecin non trouve" });
+    }
+
+    return res.json({
+      success: true,
+      doctor,
+    });
   } catch (error) {
     console.error("Error fetching doctor profile:", error);
-    res.status(500).json({
-      error: "Erreur lors de la récupération du profil",
+    return res.status(500).json({
+      error: "Erreur lors de la recuperation du profil",
       details: error.message,
     });
   }
 };
 
-// Create new doctor
 export const createDoctor = async (req, res) => {
   const connection = await db.getConnection();
+
   try {
-    // 1. Validation
-    const { isValid, error } = validateDoctorData(req.body);
-    if (!isValid) {
-      return res.status(400).json({ error });
+    const validation = validateDoctorData(req.body);
+    if (!validation.isValid) {
+      return res.status(400).json({ error: validation.error });
     }
 
-    const { firstName, lastName, email, password, cin, specialty } = req.body;
-
-    // 2. Check email / CIN uniqueness
-    const [[existsEmail]] = await connection.execute(
-      "SELECT id FROM doctors WHERE email = ?",
-      [email]
-    );
-    if (existsEmail) {
-      return res.status(400).json({ error: "Un médecin avec cet email existe déjà" });
-    }
-    const [[existsCin]] = await connection.execute(
-      "SELECT id FROM doctors WHERE cin = ?",
-      [cin]
-    );
-    if (existsCin) {
-      return res.status(400).json({ error: "Un médecin avec ce CIN existe déjà" });
-    }
-
-    // 3. Create user account
-    try {
-      await createAndSaveUser(email, password, "doctor");
-    } catch (userErr) {
-      console.error("Error creating user account:", userErr);
-      if (userErr.message.includes("already exists")) {
-        return res.status(409).json({ error: "Un compte utilisateur avec cet email existe déjà" });
-      }
-      return res.status(500).json({ error: "Erreur lors de la création du compte utilisateur" });
+    const { firstName, lastName, email, password, cin, specialty } = validation.data;
+    const availability = await ensureDoctorIdentityIsAvailable(connection, { email, cin });
+    if (!availability.ok) {
+      return res.status(409).json({ error: availability.error });
     }
 
     await connection.beginTransaction();
 
-    // 4. Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
+    await connection.execute(
+      "INSERT INTO users (email, cin, password, role) VALUES (?, ?, ?, ?)",
+      [email, cin, hashedPassword, "doctor"],
+    );
 
-    // 5. Insert into doctors
     const [insertResult] = await connection.execute(
-      `INSERT INTO doctors 
+      `INSERT INTO doctors
          (prenom, nom, email, password, cin, specialty, is_active, created_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, NOW())`,
-      [firstName, lastName, email, hashedPassword, cin, specialty, 1]
+      [firstName, lastName, email, hashedPassword, cin, specialty, 1],
     );
 
-    // 6. Retrieve new record
-    const [[newDoctor]] = await connection.execute(
-      `SELECT id, nom, prenom, email, cin, specialty, is_active, created_at
-       FROM doctors
-       WHERE id = ?`,
-      [insertResult.insertId]
-    );
-
+    const doctor = await getDoctorSummaryById(connection, insertResult.insertId);
     await connection.commit();
 
-    // 7. Return response
     return res.status(201).json({
-      message: "Médecin créé avec succès",
-      doctor: newDoctor,
+      message: "Medecin cree avec succes",
+      doctor,
     });
-  } catch (err) {
-    await connection.rollback();
-    console.error("Database error:", err);
+  } catch (error) {
+    await safeRollback(connection);
+    console.error("Database error:", error);
+    if (isDuplicateEntryError(error)) {
+      return res.status(409).json({ error: "Cet email ou ce CIN existe deja" });
+    }
     return res.status(500).json({
-      error: "Erreur serveur lors de la création",
-      details: err.message,
+      error: "Erreur serveur lors de la creation",
+      details: error.message,
     });
   } finally {
     connection.release();
   }
 };
 
-// Get all doctors
-export const getAllDoctors = async (req, res) => {
+export const getAllDoctors = async (_req, res) => {
   try {
     const [rows] = await db.execute(
-      `SELECT id, nom, prenom, email, cin, specialty, is_active, created_at 
-       FROM doctors 
+      `SELECT id, nom, prenom, email, cin, specialty, is_active, created_at
+       FROM doctors
        ORDER BY created_at DESC`,
     );
 
-    res.json({
+    return res.json({
       success: true,
       count: rows.length,
       doctors: rows || [],
     });
-
   } catch (error) {
     console.error("Fetch error:", error);
-    res.status(500).json({
-      error: "Erreur lors de la récupération des médecins",
+    return res.status(500).json({
+      error: "Erreur lors de la recuperation des medecins",
       details: error.message,
     });
   }
 };
 
-// Update doctor (for frontend edit functionality)
-export const updateDoctor = async (req, res) => {
+const updateDoctorRecord = async (req, res, successMessage) => {
   const connection = await db.getConnection();
+
   try {
+    const validation = validateDoctorUpdateData(req.body);
+    if (!validation.isValid) {
+      return res.status(400).json({ error: validation.error });
+    }
+
+    const doctorId = Number(req.params.id);
+    if (!Number.isInteger(doctorId) || doctorId <= 0) {
+      return res.status(400).json({ error: "Identifiant medecin invalide" });
+    }
+
+    const [doctorRows] = await connection.execute(
+      "SELECT id, email FROM doctors WHERE id = ? LIMIT 1",
+      [doctorId],
+    );
+
+    if (doctorRows.length === 0) {
+      return res.status(404).json({ error: "Medecin non trouve" });
+    }
+
+    const currentDoctorEmail = normalizeEmail(doctorRows[0].email);
+    const { firstName, lastName, email, cin, specialty } = validation.data;
+
+    const availability = await ensureDoctorIdentityIsAvailable(connection, {
+      email,
+      cin,
+      currentDoctorEmail,
+    });
+    if (!availability.ok) {
+      return res.status(409).json({ error: availability.error });
+    }
+
     await connection.beginTransaction();
 
-    const { id } = req.params;
-    const { firstName, lastName, email, cin, specialty } = req.body;
-
-    // Basic validation
-    if (!firstName || !lastName || !email || !cin || !specialty) {
-      return res.status(400).json({ error: "Tous les champs sont obligatoires" });
-    }
-
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      return res.status(400).json({ error: "Format d'email invalide" });
-    }
-
-    // Check if doctor exists
-    const [doctorExists] = await connection.execute(
-      "SELECT id, email FROM doctors WHERE id = ?",
-      [id]
-    );
-
-    if (doctorExists.length === 0) {
-      return res.status(404).json({ error: "Médecin non trouvé" });
-    }
-
-    // Check if email exists for other doctors
-    const [existingDoctors] = await connection.execute(
-      "SELECT id FROM doctors WHERE email = ? AND id != ?",
-      [email, id]
-    );
-
-    if (existingDoctors.length > 0) {
-      return res.status(400).json({ error: "Un médecin avec cet email existe déjà" });
-    }
-
-    // Check if CIN exists for other doctors
-    const [existingCIN] = await connection.execute(
-      "SELECT id FROM doctors WHERE cin = ? AND id != ?",
-      [cin, id]
-    );
-
-    if (existingCIN.length > 0) {
-      return res.status(400).json({ error: "Un médecin avec ce CIN existe déjà" });
-    }
-
-    const oldEmail = doctorExists[0].email;
-
-    // Update doctor
     await connection.execute(
-      `UPDATE doctors SET prenom = ?, nom = ?, email = ?, cin = ?, specialty = ? 
+      `UPDATE doctors
+       SET prenom = ?, nom = ?, email = ?, cin = ?, specialty = ?
        WHERE id = ?`,
-      [firstName, lastName, email, cin, specialty, id]
+      [firstName, lastName, email, cin, specialty, doctorId],
     );
 
-    // Update user email if changed
-    if (email && email !== oldEmail) {
-      await connection.execute(
-        "UPDATE users SET email = ? WHERE email = ? AND role = ?",
-        [email, oldEmail, "doctor"]
-      );
-    }
+    await updateDoctorUserIdentity(connection, currentDoctorEmail, email, cin);
 
-    // Get updated doctor
-    const [updatedDoctor] = await connection.execute(
-      `SELECT id, nom, prenom, email, cin, specialty, is_active, created_at 
-       FROM doctors WHERE id = ?`,
-      [id]
-    );
-
+    const doctor = await getDoctorSummaryById(connection, doctorId);
     await connection.commit();
 
-    res.json({
-      message: "Médecin modifié avec succès",
-      doctor: updatedDoctor[0]
+    return res.json({
+      message: successMessage,
+      doctor,
     });
-
   } catch (error) {
-    await connection.rollback();
+    await safeRollback(connection);
     console.error("Update error:", error);
-    res.status(500).json({
+    if (isDuplicateEntryError(error)) {
+      return res.status(409).json({ error: "Cet email ou ce CIN existe deja" });
+    }
+    return res.status(500).json({
       error: "Erreur lors de la modification",
-      details: error.message
-    });
-  } finally {
-    connection.release();
-  }
-};
-
-// Update doctor profile
-export const updateProfile = async (req, res) => {
-  const connection = await db.getConnection();
-  try {
-    await connection.beginTransaction();
-
-    const { id } = req.params;
-    const { firstName, lastName, email, cin, specialty } = req.body;
-
-    // Basic validation
-    if (!firstName || !lastName || !email || !cin || !specialty) {
-      return res
-        .status(400)
-        .json({ error: "Tous les champs sont obligatoires" });
-    }
-
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      return res.status(400).json({ error: "Format d'email invalide" });
-    }
-
-    // Check if doctor exists
-    const [doctorExists] = await connection.execute(
-      "SELECT id, email FROM doctors WHERE id = ?",
-      [id],
-    );
-
-    if (doctorExists.length === 0) {
-      return res.status(404).json({ error: "Médecin non trouvé" });
-    }
-
-    // Check if email exists for other doctors
-    const [existingDoctors] = await connection.execute(
-      "SELECT id FROM doctors WHERE email = ? AND id != ?",
-      [email, id],
-    );
-
-    if (existingDoctors.length > 0) {
-      return res
-        .status(400)
-        .json({ error: "Un médecin avec cet email existe déjà" });
-    }
-
-    // Check if CIN exists for other doctors
-    const [existingCIN] = await connection.execute(
-      "SELECT id FROM doctors WHERE cin = ? AND id != ?",
-      [cin, id],
-    );
-
-    if (existingCIN.length > 0) {
-      return res
-        .status(400)
-        .json({ error: "Un médecin avec ce CIN existe déjà" });
-    }
-
-    const oldEmail = doctorExists[0].email;
-
-    // Update doctor
-    await connection.execute(
-      `UPDATE doctors SET prenom = ?, nom = ?, email = ?, cin = ?, specialty = ? 
-       WHERE id = ?`,
-      [firstName, lastName, email, cin, specialty, id],
-    );
-
-    // Update user email if changed
-    if (email && email !== oldEmail) {
-      await connection.execute(
-        "UPDATE users SET email = ? WHERE email = ? AND role = ?",
-        [email, oldEmail, "doctor"],
-      );
-    }
-
-    // Get updated doctor
-    const [updatedDoctor] = await connection.execute(
-      `SELECT id, nom, prenom, email, cin, specialty, is_active, created_at 
-       FROM doctors WHERE id = ?`,
-      [id],
-    );
-
-    await connection.commit();
-
-    res.json({
-      message: "Profil du médecin mis à jour avec succès",
-      doctor: updatedDoctor[0],
-    });
-
-  } catch (error) {
-    await connection.rollback();
-    console.error("Update error:", error);
-    res.status(500).json({
-      error: "Erreur lors de la mise à jour",
       details: error.message,
     });
   } finally {
@@ -359,60 +300,54 @@ export const updateProfile = async (req, res) => {
   }
 };
 
-// Change doctor password
+export const updateDoctor = async (req, res) => updateDoctorRecord(req, res, "Medecin modifie avec succes");
+
+export const updateProfile = async (req, res) =>
+  updateDoctorRecord(req, res, "Profil du medecin mis a jour avec succes");
+
 export const changePassword = async (req, res) => {
   const connection = await db.getConnection();
+
   try {
-    await connection.beginTransaction();
+    const doctorId = Number(req.params.id);
+    const oldPassword = String(req.body?.old_password || "");
+    const newPassword = String(req.body?.new_password || "");
 
-    const { id } = req.params;
-    const { old_password, new_password } = req.body;
-
-    // Validation
-    if (!old_password || !new_password) {
-      return res
-        .status(400)
-        .json({ error: "Ancien et nouveau mot de passe requis" });
+    if (!oldPassword || !newPassword) {
+      return res.status(400).json({ error: "Ancien et nouveau mot de passe requis" });
     }
 
-    if (old_password.trim() === "" || new_password.trim() === "") {
-      return res
-        .status(400)
-        .json({ error: "Les mots de passe ne peuvent pas être vides" });
+    if (oldPassword.trim() === "" || newPassword.trim() === "") {
+      return res.status(400).json({ error: "Les mots de passe ne peuvent pas etre vides" });
     }
 
-    if (new_password.length < 6) {
+    if (newPassword.length < 6) {
       return res.status(400).json({
-        error: "Le nouveau mot de passe doit contenir au moins 6 caractères",
+        error: "Le nouveau mot de passe doit contenir au moins 6 caracteres",
       });
     }
 
-    // Get doctor data
+    await connection.beginTransaction();
+
     const [rows] = await connection.execute(
-      "SELECT email, password FROM doctors WHERE id = ?",
-      [id],
+      "SELECT email, password FROM doctors WHERE id = ? LIMIT 1",
+      [doctorId],
     );
 
     if (rows.length === 0) {
-      return res.status(404).json({ error: "Médecin non trouvé" });
+      await safeRollback(connection);
+      return res.status(404).json({ error: "Medecin non trouve" });
     }
 
-    // Verify old password
-    const match = await bcrypt.compare(old_password, rows[0].password);
+    const match = await bcrypt.compare(oldPassword, rows[0].password);
     if (!match) {
+      await safeRollback(connection);
       return res.status(400).json({ error: "Ancien mot de passe incorrect" });
     }
 
-    // Hash new password
-    const hashedPassword = await bcrypt.hash(new_password, 10);
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
 
-    // Update doctor password
-    await connection.execute("UPDATE doctors SET password = ? WHERE id = ?", [
-      hashedPassword,
-      id,
-    ]);
-
-    // Update user password
+    await connection.execute("UPDATE doctors SET password = ? WHERE id = ?", [hashedPassword, doctorId]);
     await connection.execute(
       "UPDATE users SET password = ? WHERE email = ? AND role = ?",
       [hashedPassword, rows[0].email, "doctor"],
@@ -420,15 +355,14 @@ export const changePassword = async (req, res) => {
 
     await connection.commit();
 
-    res.json({
-      message: "Mot de passe mis à jour avec succès",
-      doctor_id: id,
+    return res.json({
+      message: "Mot de passe mis a jour avec succes",
+      doctor_id: doctorId,
     });
-
   } catch (error) {
-    await connection.rollback();
+    await safeRollback(connection);
     console.error("Password change error:", error);
-    res.status(500).json({
+    return res.status(500).json({
       error: "Erreur lors du changement de mot de passe",
       details: error.message,
     });
@@ -437,46 +371,42 @@ export const changePassword = async (req, res) => {
   }
 };
 
-// Delete doctor
 export const deleteDoctor = async (req, res) => {
   const connection = await db.getConnection();
+
   try {
-    await connection.beginTransaction();
-
-    const { id } = req.params;
-
-    // Check if doctor exists
-    const [doctor] = await connection.execute(
-      "SELECT id, email FROM doctors WHERE id = ?",
-      [id],
-    );
-
-    if (doctor.length === 0) {
-      return res.status(404).json({ error: "Médecin non trouvé" });
+    const doctorId = Number(req.params.id);
+    if (!Number.isInteger(doctorId) || doctorId <= 0) {
+      return res.status(400).json({ error: "Identifiant medecin invalide" });
     }
 
-    const email = doctor[0].email;
+    await connection.beginTransaction();
 
-    // Delete doctor
-    await connection.execute("DELETE FROM doctors WHERE id = ?", [id]);
+    const [doctorRows] = await connection.execute(
+      "SELECT id, email FROM doctors WHERE id = ? LIMIT 1",
+      [doctorId],
+    );
 
-    // Delete associated user account
-    await connection.execute("DELETE FROM users WHERE email = ? AND role = ?", [
-      email,
-      "doctor",
-    ]);
+    if (doctorRows.length === 0) {
+      await safeRollback(connection);
+      return res.status(404).json({ error: "Medecin non trouve" });
+    }
+
+    const email = doctorRows[0].email;
+
+    await connection.execute("DELETE FROM doctors WHERE id = ?", [doctorId]);
+    await connection.execute("DELETE FROM users WHERE email = ? AND role = ?", [email, "doctor"]);
 
     await connection.commit();
 
-    res.json({
-      message: "Médecin et compte utilisateur supprimés avec succès",
-      deleted_doctor_id: id,
+    return res.json({
+      message: "Medecin et compte utilisateur supprimes avec succes",
+      deleted_doctor_id: doctorId,
     });
-
   } catch (error) {
-    await connection.rollback();
+    await safeRollback(connection);
     console.error("Delete error:", error);
-    res.status(500).json({
+    return res.status(500).json({
       error: "Erreur lors de la suppression",
       details: error.message,
     });
@@ -485,112 +415,86 @@ export const deleteDoctor = async (req, res) => {
   }
 };
 
-// Toggle doctor status
 export const toggleDoctorStatus = async (req, res) => {
   try {
     const { active } = req.body;
-    const { id } = req.params;
+    const doctorId = Number(req.params.id);
 
-    // Validate input
     if (typeof active !== "boolean") {
-      return res
-        .status(400)
-        .json({ error: "Le statut actif doit être true ou false" });
+      return res.status(400).json({ error: "Le statut actif doit etre true ou false" });
     }
 
-    // Check if doctor exists
-    const [doctor] = await db.execute("SELECT id FROM doctors WHERE id = ?", [
-      id,
-    ]);
-
-    if (doctor.length === 0) {
-      return res.status(404).json({ error: "Médecin non trouvé" });
+    const [doctorRows] = await db.execute("SELECT id FROM doctors WHERE id = ? LIMIT 1", [doctorId]);
+    if (doctorRows.length === 0) {
+      return res.status(404).json({ error: "Medecin non trouve" });
     }
 
-    // Update status
-    await db.execute("UPDATE doctors SET is_active = ? WHERE id = ?", [
-      active ? 1 : 0,
-      id,
-    ]);
+    await db.execute("UPDATE doctors SET is_active = ? WHERE id = ?", [active ? 1 : 0, doctorId]);
+    const doctor = await getDoctorSummaryById(db, doctorId);
 
-    // Get updated doctor
-    const [updatedDoctor] = await db.execute(
-      `SELECT id, nom, prenom, email, cin, specialty, is_active, created_at 
-       FROM doctors WHERE id = ?`,
-      [id],
-    );
-
-    res.json({
-      message: `Médecin ${active ? "activé" : "désactivé"} avec succès`,
-      doctor: updatedDoctor[0],
+    return res.json({
+      message: `Medecin ${active ? "active" : "desactive"} avec succes`,
+      doctor,
     });
-
   } catch (error) {
     console.error("Status update error:", error);
-    res.status(500).json({
+    return res.status(500).json({
       error: "Erreur lors du changement de statut",
       details: error.message,
     });
   }
 };
 
-// Get doctors by specialty
 export const getDoctorsBySpecialty = async (req, res) => {
   try {
-    const { specialty } = req.params;
+    const specialty = String(req.params.specialty || "").trim();
 
     const [rows] = await db.execute(
-      `SELECT id, nom, prenom, email, cin, specialty, is_active, created_at 
-       FROM doctors 
+      `SELECT id, nom, prenom, email, cin, specialty, is_active, created_at
+       FROM doctors
        WHERE specialty = ? AND is_active = 1
        ORDER BY nom, prenom`,
       [specialty],
     );
 
-    res.json({
+    return res.json({
       success: true,
-      specialty: specialty,
+      specialty,
       count: rows.length,
       doctors: rows,
     });
-
   } catch (error) {
     console.error("Error fetching doctors by specialty:", error);
-    res.status(500).json({
-      error: "Erreur lors de la récupération des médecins par spécialité",
+    return res.status(500).json({
+      error: "Erreur lors de la recuperation des medecins par specialite",
       details: error.message,
     });
   }
 };
 
-// Get available specialties
-export const getSpecialties = async (req, res) => {
+export const getSpecialties = async (_req, res) => {
   try {
     const [rows] = await db.execute(
-      `SELECT DISTINCT specialty, COUNT(*) as doctor_count 
-       FROM doctors 
-       WHERE is_active = 1 
-       GROUP BY specialty 
+      `SELECT DISTINCT specialty, COUNT(*) AS doctor_count
+       FROM doctors
+       WHERE is_active = 1
+       GROUP BY specialty
        ORDER BY specialty`,
     );
 
-    res.json({
+    return res.json({
       success: true,
       count: rows.length,
       specialties: rows,
     });
-
   } catch (error) {
     console.error("Error fetching specialties:", error);
-    res.status(500).json({
-      error: "Erreur lors de la récupération des spécialités",
+    return res.status(500).json({
+      error: "Erreur lors de la recuperation des specialites",
       details: error.message,
     });
   }
 };
-
-
-
 
 export default {
   getProfile,
@@ -604,4 +508,3 @@ export default {
   getDoctorsBySpecialty,
   getSpecialties,
 };
-

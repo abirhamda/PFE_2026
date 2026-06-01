@@ -9,13 +9,15 @@ const normalizeMatricule = (matricule) =>
     .replace(/\s+/g, "-");
 
 const DEMO_PATIENTS = [
-  { nom: "Benali", prenom: "Yassine", cin: "BK123456", telephone: "0611111111", date_naissance: "1990-03-12" },
-  { nom: "Alaoui", prenom: "Meriem", cin: "CD223344", telephone: "0622222222", date_naissance: "1987-07-21" },
-  { nom: "Tazi", prenom: "Imane", cin: "EF556677", telephone: "0633333333", date_naissance: "1995-11-05" },
-  { nom: "Chraibi", prenom: "Nabil", cin: "GH889900", telephone: "0644444444", date_naissance: "1982-01-30" },
-  { nom: "Rami", prenom: "Sara", cin: "IJ112233", telephone: "0655555555", date_naissance: "1998-09-14" },
-  { nom: "Kabbaj", prenom: "Hamza", cin: "KL445566", telephone: "0666666666", date_naissance: "1992-05-18" },
+  { nom: "Ben Amor", prenom: "Yassine", cin: "11010001", telephone: "28111111", date_naissance: "1990-03-12" },
+  { nom: "Trabelsi", prenom: "Meriem", cin: "11010002", telephone: "28111112", date_naissance: "1987-07-21" },
+  { nom: "Jallouli", prenom: "Imene", cin: "11010003", telephone: "28111113", date_naissance: "1995-11-05" },
+  { nom: "Masmoudi", prenom: "Nabil", cin: "11010004", telephone: "28111114", date_naissance: "1982-01-30" },
+  { nom: "Ben Salem", prenom: "Sarra", cin: "11010005", telephone: "28111115", date_naissance: "1998-09-14" },
+  { nom: "Gharbi", prenom: "Hamza", cin: "11010006", telephone: "28111116", date_naissance: "1992-05-18" },
 ];
+
+const shouldAutoSeedDemoPatients = () => String(process.env.AUTO_SEED_DEMO_PATIENTS || "").trim() === "1";
 
 const resolveActorContext = async (connection, user) => {
   const role = normalizeRole(user?.role);
@@ -120,6 +122,8 @@ const safeRollback = async (connection) => {
   }
 };
 
+const isDuplicateEntryError = (error) => error?.code === "ER_DUP_ENTRY";
+
 const buildGeneratedMatricule = async (connection, doctorId) => {
   const prefix = `PAT-${doctorId}-`;
   const [rows] = await connection.execute(
@@ -168,6 +172,22 @@ const resolveGlobalPatientId = async (connection, { nom, prenom, cin, telephone,
     }
     throw error;
   }
+};
+
+const ensureDoctorCinIsAvailable = async (connection, doctorId, cin, excludedPatientId = null) => {
+  if (!cin) {
+    return true;
+  }
+
+  const params = [doctorId, cin];
+  let sql = "SELECT id FROM doctor_patients WHERE doctor_id = ? AND cin = ? LIMIT 1";
+  if (excludedPatientId !== null) {
+    sql = "SELECT id FROM doctor_patients WHERE doctor_id = ? AND cin = ? AND id <> ? LIMIT 1";
+    params.push(excludedPatientId);
+  }
+
+  const [rows] = await connection.execute(sql, params);
+  return rows.length === 0;
 };
 
 const seedDemoPatientsIfEmpty = async (connection, doctorId) => {
@@ -331,7 +351,7 @@ export const listPatients = async (req, res) => {
     const hasSearch = searchRaw.length > 0;
     const search = `%${searchRaw}%`;
 
-    if (!hasSearch) {
+    if (!hasSearch && shouldAutoSeedDemoPatients()) {
       await seedDemoPatientsIfEmpty(connection, context.doctorId);
     }
 
@@ -380,6 +400,12 @@ export const createPatient = async (req, res) => {
     const { nom, prenom, cin, telephone, dateNaissance } = validation.data;
     await connection.beginTransaction();
 
+    const isCinAvailable = await ensureDoctorCinIsAvailable(connection, context.doctorId, cin);
+    if (!isCinAvailable) {
+      await safeRollback(connection);
+      return res.status(409).json({ error: "Ce CIN existe deja pour ce docteur" });
+    }
+
     const matricule = await buildGeneratedMatricule(connection, context.doctorId);
     const patientGlobalId = await resolveGlobalPatientId(connection, {
       nom,
@@ -422,6 +448,9 @@ export const createPatient = async (req, res) => {
   } catch (error) {
     await safeRollback(connection);
     console.error("Error creating doctor patient:", error);
+    if (isDuplicateEntryError(error)) {
+      return res.status(409).json({ error: "Ce CIN ou ce matricule existe deja pour ce docteur" });
+    }
     return res.status(500).json({ error: "Erreur lors de la creation du patient", details: error.message });
   } finally {
     connection.release();
@@ -452,6 +481,13 @@ export const updatePatient = async (req, res) => {
     }
 
     const { nom, prenom, cin, telephone, dateNaissance } = validation.data;
+    const isCinAvailable = await ensureDoctorCinIsAvailable(connection, context.doctorId, cin, patientId);
+    if (!isCinAvailable) {
+      return res.status(409).json({ error: "Ce CIN existe deja pour ce docteur" });
+    }
+
+    await connection.beginTransaction();
+
     const matricule = access.patient.matricule;
     const patientGlobalId = await resolveGlobalPatientId(connection, {
       nom,
@@ -484,13 +520,18 @@ export const updatePatient = async (req, res) => {
     );
 
     await linkUnknownAppointmentsToPatient(connection, context.doctorId, rows[0]);
+    await connection.commit();
 
     return res.json({
       message: "Patient mis a jour avec succes",
       patient: rows[0],
     });
   } catch (error) {
+    await safeRollback(connection);
     console.error("Error updating doctor patient:", error);
+    if (isDuplicateEntryError(error)) {
+      return res.status(409).json({ error: "Ce CIN existe deja pour ce docteur" });
+    }
     return res.status(500).json({ error: "Erreur lors de la mise a jour du patient", details: error.message });
   } finally {
     connection.release();

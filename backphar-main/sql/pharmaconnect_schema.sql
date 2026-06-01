@@ -1,4 +1,4 @@
--- PharmaConnect unified schema (roles: admin, pharmacist, doctor, supplier, pation, secretaire)
+-- MediCare unified schema (roles: admin, pharmacist, doctor, supplier, pation, secretaire)
 -- Compatible with MySQL 8+
 
 CREATE DATABASE IF NOT EXISTS application_medicale CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -13,7 +13,10 @@ DROP VIEW IF EXISTS medecins;
 
 DROP TABLE IF EXISTS notifications;
 DROP TABLE IF EXISTS demandes;
+DROP TABLE IF EXISTS supplier_partnership_requests;
 DROP TABLE IF EXISTS supplier_pharmacie;
+DROP TABLE IF EXISTS supplier_products;
+DROP TABLE IF EXISTS pharmacy_ordonnance_views;
 DROP TABLE IF EXISTS medicaments_stock;
 DROP TABLE IF EXISTS patient_documents;
 DROP TABLE IF EXISTS waiting_room_counters;
@@ -29,6 +32,7 @@ DROP TABLE IF EXISTS doctors;
 DROP TABLE IF EXISTS patient_portal_profiles;
 DROP TABLE IF EXISTS pharmacie;
 DROP TABLE IF EXISTS admin;
+DROP TABLE IF EXISTS password_reset_codes;
 DROP TABLE IF EXISTS users;
 
 SET FOREIGN_KEY_CHECKS = 1;
@@ -36,9 +40,26 @@ SET FOREIGN_KEY_CHECKS = 1;
 CREATE TABLE users (
   id INT AUTO_INCREMENT PRIMARY KEY,
   email VARCHAR(191) NOT NULL UNIQUE,
+  cin VARCHAR(30) NULL,
   password VARCHAR(255) NOT NULL,
   role ENUM('admin', 'pharmacist', 'doctor', 'supplier', 'pation', 'secretaire') NOT NULL,
-  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_users_cin (cin)
+) ENGINE=InnoDB;
+
+CREATE TABLE password_reset_codes (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  code_hash VARCHAR(255) NOT NULL,
+  expires_at DATETIME NOT NULL,
+  attempts INT NOT NULL DEFAULT 0,
+  used_at DATETIME NULL,
+  request_ip VARCHAR(45) NULL,
+  user_agent VARCHAR(255) NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_password_reset_codes_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  INDEX idx_password_reset_codes_user_active (user_id, used_at, expires_at),
+  INDEX idx_password_reset_codes_created_at (created_at)
 ) ENGINE=InnoDB;
 
 CREATE TABLE patient_portal_profiles (
@@ -57,6 +78,7 @@ CREATE TABLE patient_portal_profiles (
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   CONSTRAINT fk_patient_portal_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  UNIQUE KEY uq_patient_portal_profiles_cin (cin),
   INDEX idx_patient_portal_city (city)
 ) ENGINE=InnoDB;
 
@@ -77,6 +99,8 @@ CREATE TABLE pharmacie (
   telephone VARCHAR(30) NOT NULL,
   mot_de_passe VARCHAR(255) NOT NULL,
   president_pharmacie VARCHAR(120) NOT NULL,
+  address_line VARCHAR(255) NULL,
+  city VARCHAR(120) NULL,
   is_active TINYINT(1) NOT NULL DEFAULT 1,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
@@ -181,6 +205,7 @@ CREATE TABLE doctor_patients (
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   CONSTRAINT fk_doctor_patients_doctor FOREIGN KEY (doctor_id) REFERENCES doctors(id) ON DELETE CASCADE,
   CONSTRAINT fk_doctor_patients_global_patient FOREIGN KEY (patient_global_id) REFERENCES patients(id) ON DELETE SET NULL,
+  UNIQUE KEY uq_doctor_patients_doctor_cin (doctor_id, cin),
   UNIQUE KEY uq_doctor_patients_matricule (doctor_id, matricule),
   INDEX idx_doctor_patients_name (doctor_id, nom, prenom)
 ) ENGINE=InnoDB;
@@ -257,9 +282,27 @@ CREATE TABLE medicaments_stock (
   nom VARCHAR(140) NOT NULL,
   quantite INT NOT NULL DEFAULT 0,
   prix DECIMAL(10,2) NULL,
+  seuil_alerte INT NOT NULL DEFAULT 10,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   CONSTRAINT fk_stock_pharmacie FOREIGN KEY (id_pharmacie) REFERENCES pharmacie(id_pharmacie) ON DELETE CASCADE,
   UNIQUE KEY uq_stock_pharmacie_nom (id_pharmacie, nom)
+) ENGINE=InnoDB;
+
+CREATE TABLE supplier_products (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  supplier_id INT NOT NULL,
+  nom VARCHAR(140) NOT NULL,
+  description TEXT NULL,
+  prix DECIMAL(10,2) NULL,
+  quantite_disponible INT NOT NULL DEFAULT 0,
+  unite VARCHAR(40) NULL,
+  is_active TINYINT(1) NOT NULL DEFAULT 1,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT fk_supplier_products_supplier FOREIGN KEY (supplier_id) REFERENCES suppliers(id) ON DELETE CASCADE,
+  UNIQUE KEY uq_supplier_product_nom (supplier_id, nom),
+  INDEX idx_supplier_products_supplier (supplier_id, is_active)
 ) ENGINE=InnoDB;
 
 CREATE TABLE supplier_pharmacie (
@@ -271,6 +314,23 @@ CREATE TABLE supplier_pharmacie (
   CONSTRAINT fk_sp_pharmacie FOREIGN KEY (pharmacie_id) REFERENCES pharmacie(id_pharmacie) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
+CREATE TABLE supplier_partnership_requests (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  pharmacie_id INT NOT NULL,
+  supplier_id INT NOT NULL,
+  message TEXT NULL,
+  status ENUM('en_attente', 'acceptee', 'refusee') NOT NULL DEFAULT 'en_attente',
+  response_note TEXT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  responded_at DATETIME NULL,
+  CONSTRAINT fk_partnership_requests_pharmacie FOREIGN KEY (pharmacie_id) REFERENCES pharmacie(id_pharmacie) ON DELETE CASCADE,
+  CONSTRAINT fk_partnership_requests_supplier FOREIGN KEY (supplier_id) REFERENCES suppliers(id) ON DELETE CASCADE,
+  UNIQUE KEY uq_partnership_requests_pair (pharmacie_id, supplier_id),
+  INDEX idx_partnership_requests_supplier_status (supplier_id, status),
+  INDEX idx_partnership_requests_pharmacy_status (pharmacie_id, status)
+) ENGINE=InnoDB;
+
 CREATE TABLE demandes (
   id INT AUTO_INCREMENT PRIMARY KEY,
   pharmacie_id INT NOT NULL,
@@ -278,8 +338,10 @@ CREATE TABLE demandes (
   nom_medicament VARCHAR(140) NOT NULL,
   quantite INT NOT NULL,
   status ENUM('en_attente', 'acceptee', 'recue', 'non_livree', 'refusee') NOT NULL DEFAULT 'en_attente',
+  response_note TEXT NULL,
   date_acceptation DATETIME NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   CONSTRAINT fk_demandes_pharmacie FOREIGN KEY (pharmacie_id) REFERENCES pharmacie(id_pharmacie) ON DELETE CASCADE,
   CONSTRAINT fk_demandes_supplier FOREIGN KEY (supplier_id) REFERENCES suppliers(id) ON DELETE CASCADE,
   INDEX idx_demandes_status (status),
@@ -303,6 +365,19 @@ CREATE TABLE notifications (
   INDEX idx_notifications_status (status)
 ) ENGINE=InnoDB;
 
+CREATE TABLE pharmacy_ordonnance_views (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  pharmacie_id INT NOT NULL,
+  ordonnance_id INT NOT NULL,
+  view_count INT NOT NULL DEFAULT 1,
+  first_viewed_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  last_viewed_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT fk_pharmacy_ordonnance_views_pharmacy FOREIGN KEY (pharmacie_id) REFERENCES pharmacie(id_pharmacie) ON DELETE CASCADE,
+  CONSTRAINT fk_pharmacy_ordonnance_views_ordonnance FOREIGN KEY (ordonnance_id) REFERENCES ordonnances(id) ON DELETE CASCADE,
+  UNIQUE KEY uq_pharmacy_ordonnance_view (pharmacie_id, ordonnance_id),
+  INDEX idx_pharmacy_ordonnance_views_pharmacy (pharmacie_id, last_viewed_at)
+) ENGINE=InnoDB;
+
 CREATE OR REPLACE VIEW rendez_vous AS
 SELECT * FROM appointments;
 
@@ -313,6 +388,6 @@ CREATE OR REPLACE VIEW medecins AS
 SELECT * FROM doctors;
 
 -- Optional seed admin (replace hashed password before production)
--- INSERT INTO users (email, password, role) VALUES ('admin@pharmaconnect.local', '$2a$10$replace_me_with_bcrypt_hash', 'admin');
+-- INSERT INTO users (email, password, role) VALUES ('admin@medicare.local', '$2a$10$replace_me_with_bcrypt_hash', 'admin');
 -- INSERT INTO admin (full_name, email, mot_de_passe, phone, address)
--- VALUES ('System Admin', 'admin@pharmaconnect.local', '$2a$10$replace_me_with_bcrypt_hash', NULL, NULL);
+-- VALUES ('System Admin', 'admin@medicare.local', '$2a$10$replace_me_with_bcrypt_hash', NULL, NULL);

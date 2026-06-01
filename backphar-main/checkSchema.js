@@ -13,7 +13,17 @@ const connectionConfig = {
   port: Number(process.env.DB_PORT) || 3306,
 };
 const REQUIRED_COLUMNS = {
-  pharmacie: ["is_active", "created_at"],
+  password_reset_codes: [
+    "user_id",
+    "code_hash",
+    "expires_at",
+    "attempts",
+    "used_at",
+    "request_ip",
+    "user_agent",
+    "created_at",
+  ],
+  pharmacie: ["is_active", "created_at", "address_line", "city"],
   notifications: ["demande_id", "created_at"],
   ordonnances: ["doctor_id", "pation_id", "created_at"],
   medicaments_stock: ["created_at"],

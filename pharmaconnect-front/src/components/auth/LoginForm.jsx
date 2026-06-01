@@ -1,7 +1,8 @@
-import { useState } from "react";
-import { Lock, Mail, ShieldCheck, UserPlus } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { ArrowLeft, KeyRound, Lock, Mail, ShieldCheck, UserPlus } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
+import { ROLE_HOME_PATHS } from "../../lib/loginSpaces";
 import api from "../../lib/api";
 
 const initialRegisterForm = {
@@ -15,11 +16,15 @@ const initialRegisterForm = {
   city: "",
 };
 
-const LoginForm = () => {
+const LoginForm = ({ space, defaultMode = "login" }) => {
   const navigate = useNavigate();
   const { login } = useAuth();
 
-  const [mode, setMode] = useState("login");
+  const canRegister = Boolean(space?.allowRegister);
+  const resolvedDefaultMode =
+    defaultMode === "forgot" ? "forgot" : canRegister && defaultMode === "register" ? "register" : "login";
+
+  const [mode, setMode] = useState(resolvedDefaultMode);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [registerForm, setRegisterForm] = useState(initialRegisterForm);
@@ -27,6 +32,35 @@ const LoginForm = () => {
   const [success, setSuccess] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [resetEmail, setResetEmail] = useState("");
+  const [resetCode, setResetCode] = useState("");
+  const [resetPassword, setResetPassword] = useState("");
+  const [resetPasswordConfirmation, setResetPasswordConfirmation] = useState("");
+  const [resetStep, setResetStep] = useState("request");
+
+  useEffect(() => {
+    setMode(resolvedDefaultMode);
+    setResetStep("request");
+  }, [resolvedDefaultMode, space?.slug]);
+
+  const switchMode = (nextMode) => {
+    setMode(nextMode);
+    setError("");
+    setSuccess("");
+
+    if (nextMode !== "forgot") {
+      setResetStep("request");
+    }
+  };
+
+  const openForgotMode = () => {
+    switchMode("forgot");
+    setResetEmail(email.trim().toLowerCase());
+    setResetCode("");
+    setResetPassword("");
+    setResetPasswordConfirmation("");
+    setResetStep("request");
+  };
 
   const handleLoginSubmit = async (event) => {
     event.preventDefault();
@@ -37,8 +71,9 @@ const LoginForm = () => {
     try {
       const response = await api.post("/login", { email, password });
       const { user, token } = response.data;
+
       login({ ...user, token });
-      navigate("/", { replace: true });
+      navigate(ROLE_HOME_PATHS[user?.role] || "/redirect", { replace: true });
     } catch (loginError) {
       setError(loginError.response?.data?.error || "Echec de connexion");
     } finally {
@@ -65,6 +100,84 @@ const LoginForm = () => {
     }
   };
 
+  const handlePasswordResetRequest = async (event) => {
+    event.preventDefault();
+    setError("");
+    setSuccess("");
+    setIsLoading(true);
+
+    const targetEmail = resetEmail.trim().toLowerCase();
+    setResetEmail(targetEmail);
+
+    try {
+      const response = await api.post("/forgot-password", { email: targetEmail });
+      setSuccess(response.data?.message || "Si un compte existe avec cet email, un code a ete envoye.");
+      setResetStep("reset");
+    } catch (resetError) {
+      setError(resetError.response?.data?.error || "Demande de reinitialisation impossible");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handlePasswordResetSubmit = async (event) => {
+    event.preventDefault();
+    setError("");
+    setSuccess("");
+
+    if (resetPassword !== resetPasswordConfirmation) {
+      setError("Les mots de passe ne correspondent pas");
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const response = await api.post("/reset-password", {
+        email: resetEmail.trim().toLowerCase(),
+        code: resetCode,
+        newPassword: resetPassword,
+      });
+
+      setSuccess(response.data?.message || "Mot de passe reinitialise avec succes");
+      setEmail(resetEmail.trim().toLowerCase());
+      setPassword("");
+      setResetCode("");
+      setResetPassword("");
+      setResetPasswordConfirmation("");
+      setResetStep("request");
+      setMode("login");
+    } catch (resetError) {
+      setError(resetError.response?.data?.error || "Reinitialisation impossible");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const formSubmitHandler =
+    mode === "login"
+      ? handleLoginSubmit
+      : mode === "register"
+        ? handleRegisterSubmit
+        : resetStep === "request"
+          ? handlePasswordResetRequest
+          : handlePasswordResetSubmit;
+
+  const submitLabel = (() => {
+    if (isLoading) {
+      if (mode === "login") return "Connexion...";
+      if (mode === "register") return "Inscription...";
+      return resetStep === "request" ? "Envoi du code..." : "Reinitialisation...";
+    }
+
+    if (mode === "login") return "Se connecter";
+    if (mode === "register") return "Creer mon compte";
+    return resetStep === "request" ? "Envoyer le code" : "Reinitialiser le mot de passe";
+  })();
+
+  const headerIcon =
+    mode === "login" ? <ShieldCheck size={22} /> : mode === "forgot" ? <KeyRound size={22} /> : <UserPlus size={22} />;
+
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-slate-950 px-4 py-10">
       <div className="pointer-events-none absolute inset-0">
@@ -74,52 +187,61 @@ const LoginForm = () => {
       </div>
 
       <div className="relative w-full max-w-xl overflow-hidden rounded-3xl border border-white/10 bg-white/95 shadow-2xl shadow-slate-900/40">
-        <div className="bg-gradient-to-r from-cyan-700 to-teal-600 px-8 py-8 text-white">
+        <div className={`bg-gradient-to-r ${space.accentClassName} px-8 py-8 text-white`}>
+          <Link
+            to="/"
+            className="mb-6 inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.22em] text-white/90 transition hover:bg-white/20"
+          >
+            <ArrowLeft size={14} />
+            Retour
+          </Link>
+
           <div className="mb-3 inline-flex rounded-xl bg-white/20 p-2.5">
-            {mode === "login" ? <ShieldCheck size={22} /> : <UserPlus size={22} />}
+            {headerIcon}
           </div>
-          <h1 className="text-2xl font-semibold">PharmaConnect</h1>
-          <p className="mt-1 text-sm text-cyan-100">
-            {mode === "login" ? "Connectez-vous a votre espace securise" : "Creation de compte patient"}
-          </p>
+          <h1 className="text-3xl font-semibold">{space.title}</h1>
+          <p className="mt-2 text-sm leading-6 text-cyan-50">{space.description}</p>
         </div>
 
-        <div className="border-b border-slate-200 px-8 py-3">
+        <div className="border-b border-slate-200 px-8 py-4">
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
-              onClick={() => setMode("login")}
+              onClick={() => switchMode("login")}
               className={`rounded-xl px-3 py-2 text-sm font-semibold ${
                 mode === "login" ? "bg-cyan-100 text-cyan-700" : "text-slate-600 hover:bg-slate-100"
               }`}
             >
               Connexion
             </button>
-            <button
-              type="button"
-              onClick={() => setMode("register")}
-              className={`rounded-xl px-3 py-2 text-sm font-semibold ${
-                mode === "register" ? "bg-cyan-100 text-cyan-700" : "text-slate-600 hover:bg-slate-100"
-              }`}
-            >
-              Inscription patient
-            </button>
-            <button
-              type="button"
-              onClick={() => navigate("/doctors")}
-              className="rounded-xl px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100"
-            >
-              Voir les medecins
-            </button>
+
+            {canRegister ? (
+              <button
+                type="button"
+                onClick={() => switchMode("register")}
+                className={`rounded-xl px-3 py-2 text-sm font-semibold ${
+                  mode === "register" ? "bg-cyan-100 text-cyan-700" : "text-slate-600 hover:bg-slate-100"
+                }`}
+              >
+                Inscription patient
+              </button>
+            ) : null}
+
+            <Link to="/" className="rounded-xl px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100">
+              Annuaire public
+            </Link>
           </div>
         </div>
 
-        <form
-          onSubmit={mode === "login" ? handleLoginSubmit : handleRegisterSubmit}
-          className="space-y-5 px-8 py-7"
-        >
-          {error && <p className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p>}
-          {success && <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">{success}</p>}
+        <form onSubmit={formSubmitHandler} className="space-y-5 px-8 py-7">
+          {error ? (
+            <p className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p>
+          ) : null}
+          {success ? (
+            <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+              {success}
+            </p>
+          ) : null}
 
           {mode === "login" ? (
             <>
@@ -159,6 +281,95 @@ const LoginForm = () => {
                   </button>
                 </div>
               </label>
+
+              <div className="-mt-2 text-right">
+                <button
+                  type="button"
+                  onClick={openForgotMode}
+                  className="text-sm font-semibold text-cyan-700 transition hover:text-cyan-800"
+                >
+                  Mot de passe oublie ?
+                </button>
+              </div>
+            </>
+          ) : mode === "forgot" ? (
+            <>
+              <label className="block space-y-2">
+                <span className="text-sm font-medium text-slate-700">Email</span>
+                <div className="relative">
+                  <Mail className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={17} />
+                  <input
+                    type="email"
+                    value={resetEmail}
+                    onChange={(event) => setResetEmail(event.target.value)}
+                    required
+                    readOnly={resetStep === "reset"}
+                    placeholder="nom@exemple.com"
+                    className="w-full rounded-xl border border-slate-200 bg-white px-10 py-2.5 text-sm text-slate-900 outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100"
+                  />
+                </div>
+              </label>
+
+              {resetStep === "reset" ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setResetStep("request");
+                      setSuccess("");
+                      setError("");
+                    }}
+                    className="-mt-2 text-sm font-semibold text-cyan-700 transition hover:text-cyan-800"
+                  >
+                    Changer l'email
+                  </button>
+
+                  <label className="block space-y-2">
+                    <span className="text-sm font-medium text-slate-700">Code recu par email</span>
+                    <input
+                      value={resetCode}
+                      onChange={(event) => setResetCode(event.target.value.replace(/\D/g, "").slice(0, 6))}
+                      required
+                      inputMode="numeric"
+                      maxLength={6}
+                      placeholder="000000"
+                      className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-center text-lg font-semibold tracking-[0.35em] text-slate-900 outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100"
+                    />
+                  </label>
+
+                  <label className="block space-y-2">
+                    <span className="text-sm font-medium text-slate-700">Nouveau mot de passe</span>
+                    <div className="relative">
+                      <Lock className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={17} />
+                      <input
+                        type="password"
+                        value={resetPassword}
+                        onChange={(event) => setResetPassword(event.target.value)}
+                        required
+                        minLength={8}
+                        placeholder="Nouveau mot de passe"
+                        className="w-full rounded-xl border border-slate-200 bg-white px-10 py-2.5 text-sm text-slate-900 outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100"
+                      />
+                    </div>
+                  </label>
+
+                  <label className="block space-y-2">
+                    <span className="text-sm font-medium text-slate-700">Confirmer le mot de passe</span>
+                    <div className="relative">
+                      <Lock className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={17} />
+                      <input
+                        type="password"
+                        value={resetPasswordConfirmation}
+                        onChange={(event) => setResetPasswordConfirmation(event.target.value)}
+                        required
+                        minLength={8}
+                        placeholder="Confirmer le mot de passe"
+                        className="w-full rounded-xl border border-slate-200 bg-white px-10 py-2.5 text-sm text-slate-900 outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100"
+                      />
+                    </div>
+                  </label>
+                </>
+              ) : null}
             </>
           ) : (
             <div className="grid gap-3 md:grid-cols-2">
@@ -223,16 +434,20 @@ const LoginForm = () => {
           <button
             type="submit"
             disabled={isLoading}
-            className="inline-flex w-full items-center justify-center rounded-xl bg-gradient-to-r from-cyan-700 to-teal-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:from-cyan-800 hover:to-teal-700 disabled:cursor-not-allowed disabled:opacity-60"
+            className={`inline-flex w-full items-center justify-center rounded-xl bg-gradient-to-r ${space.accentClassName} px-4 py-2.5 text-sm font-semibold text-white transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-60`}
           >
-            {isLoading
-              ? mode === "login"
-                ? "Connexion..."
-                : "Inscription..."
-              : mode === "login"
-                ? "Se connecter"
-                : "Creer mon compte"}
+            {submitLabel}
           </button>
+
+          {mode === "forgot" ? (
+            <button
+              type="button"
+              onClick={() => switchMode("login")}
+              className="inline-flex w-full items-center justify-center rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+            >
+              Retour a la connexion
+            </button>
+          ) : null}
         </form>
       </div>
     </div>

@@ -41,13 +41,13 @@ const SidebarPation = ({ isOpen, onClose }) => {
         <div className="flex h-full flex-col p-4">
           <div className="rounded-2xl bg-gradient-to-br from-cyan-600 to-teal-600 p-4 text-white shadow-lg">
             <p className="text-xs uppercase tracking-wider text-cyan-100">Pation</p>
-            <h2 className="mt-1 text-lg font-semibold">PharmaConnect</h2>
+            <h2 className="mt-1 text-lg font-semibold">MediCare</h2>
             <p className="mt-3 text-sm text-cyan-50">{displayName}</p>
           </div>
 
           <nav className="mt-6 flex-1 space-y-2">
             <SidebarItem to="/patient" icon={<Home size={18} />} label="Tableau de bord" />
-            <SidebarItem to="/patient/discover" icon={<Search size={18} />} label="Trouver medecin" />
+            <SidebarItem to="/patient/discover" icon={<Search size={18} />} label="Recherche" />
             <SidebarItem to="/patient/appointments" icon={<CalendarDays size={18} />} label="Mes rendez-vous" />
             <SidebarItem to="/patient/ordonnances" icon={<FileText size={18} />} label="Mes ordonnances" />
             <SidebarItem to="/patient/documents" icon={<FolderOpen size={18} />} label="Mes documents" />

@@ -1,468 +1,301 @@
-"use client"
+import { useState } from "react";
+import { CalendarDays, CreditCard, Eye, FileSearch, FileText, Search, UserRound } from "lucide-react";
+import Button from "../../components/ui/Button";
+import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/Card";
+import EmptyState from "../../components/modules/EmptyState";
+import InlineAlert from "../../components/modules/InlineAlert";
+import LoadingState from "../../components/modules/LoadingState";
+import ModalPanel from "../../components/modules/ModalPanel";
+import ModuleHero from "../../components/modules/ModuleHero";
+import { formatDate, formatDateTime, getErrorMessage, inputClassName, textareaClassName } from "../../components/modules/moduleUtils";
+import api from "../../lib/api";
 
-import { useState, useEffect } from "react"
-import api from "../../lib/api"
-import { Search, FileText, User, Calendar, CheckCircle, Clock, AlertCircle, Eye } from "lucide-react"
+const SEARCH_MODE = {
+  cin: "cin",
+  identity: "identity",
+};
 
-const OrdonnancesPage = () => {
-  const [ordonnances, setOrdonnances] = useState([])
-  const [searchNom, setSearchNom] = useState("")
-  const [searchPrenom, setSearchPrenom] = useState("")
-  const [searchCin, setSearchCin] = useState("")
-  const [searchTriggered, setSearchTriggered] = useState(false)
-  const [loading, setLoading] = useState(true)
-  const [message, setMessage] = useState("")
-  const [error, setError] = useState("")
-  const [activeTab, setActiveTab] = useState("pending")
-  const [selectedOrdonnance, setSelectedOrdonnance] = useState(null)
+export default function OrdonnancesPage() {
+  const [searchMode, setSearchMode] = useState(SEARCH_MODE.cin);
+  const [searchForm, setSearchForm] = useState({
+    cin: "",
+    nom: "",
+    prenom: "",
+    date_naissance: "",
+  });
+  const [results, setResults] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [hasSearched, setHasSearched] = useState(false);
+  const [error, setError] = useState("");
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [openingId, setOpeningId] = useState(null);
+  const [selectedOrdonnance, setSelectedOrdonnance] = useState(null);
 
-  useEffect(() => {
-    fetchOrdonnances()
-  }, [])
+  const handleChange = (event) => {
+    const { name, value } = event.target;
+    setSearchForm((current) => ({ ...current, [name]: value }));
+  };
 
-  const fetchOrdonnances = async () => {
+  const resetSearch = () => {
+    setSearchForm({
+      cin: "",
+      nom: "",
+      prenom: "",
+      date_naissance: "",
+    });
+    setResults([]);
+    setHasSearched(false);
+    setError("");
+  };
+
+  const handleSearch = async (event) => {
+    event.preventDefault();
+    setLoading(true);
+    setError("");
+    setHasSearched(true);
+
     try {
-      setLoading(true)
-      const res = await api.get("/ordonnances")
-      setOrdonnances(Array.isArray(res.data) ? res.data : [])
-      setError("")
-    } catch (error) {
-      console.error("Erreur lors du chargement des ordonnances :", error)
-      setError("Erreur lors du chargement des ordonnances")
-      setOrdonnances([])
+      const params =
+        searchMode === SEARCH_MODE.cin
+          ? { cin: searchForm.cin.trim() }
+          : {
+              nom: searchForm.nom.trim(),
+              prenom: searchForm.prenom.trim(),
+              date_naissance: searchForm.date_naissance,
+            };
+
+      if (searchMode === SEARCH_MODE.cin && !params.cin) {
+        throw new Error("Saisissez le CIN du patient.");
+      }
+
+      if (searchMode === SEARCH_MODE.identity && (!params.nom || !params.prenom || !params.date_naissance)) {
+        throw new Error("Renseignez le nom, le prenom et la date de naissance.");
+      }
+
+      const response = await api.get("/ordonnances", { params });
+      setResults(Array.isArray(response.data) ? response.data : []);
+    } catch (requestError) {
+      setError(getErrorMessage(requestError, "Recherche impossible pour le moment."));
+      setResults([]);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
-  const handleEffectuer = async (id) => {
+  const openOrdonnance = async (ordonnanceId) => {
+    setDetailLoading(true);
+    setOpeningId(ordonnanceId);
+    setError("");
+
     try {
-      await api.put(`/ordonnances/${id}/status`, { status: "Effectuée" })
-      setOrdonnances((prev) => prev.map((ord) => (ord.id === id ? { ...ord, status: "Effectuée" } : ord)))
-      setMessage(`Ordonnance N°${id} marquée comme effectuée avec succès !`)
-      setError("")
-      setTimeout(() => setMessage(""), 3000)
-    } catch (error) {
-      console.error(error)
-      setError("Erreur lors de la mise à jour du statut")
-      setMessage("")
+      const response = await api.get(`/ordonnances/${ordonnanceId}`);
+      setSelectedOrdonnance(response.data || null);
+    } catch (requestError) {
+      setError(getErrorMessage(requestError, "Impossible de charger cette ordonnance."));
+    } finally {
+      setDetailLoading(false);
+      setOpeningId(null);
     }
-  }
-
-  const handleSearch = () => {
-    setSearchTriggered(true)
-  }
-
-  const clearSearch = () => {
-    setSearchNom("")
-    setSearchPrenom("")
-    setSearchCin("")
-    setSearchTriggered(false)
-  }
-
-  const pendingOrdonnances = ordonnances.filter((ord) => ord.status !== "Effectuée")
-  const completedOrdonnances = ordonnances.filter((ord) => ord.status === "Effectuée")
-
-  const filtered = pendingOrdonnances.filter(
-    (ord) =>
-      ord.nom.toLowerCase().includes(searchNom.toLowerCase()) &&
-      ord.prenom.toLowerCase().includes(searchPrenom.toLowerCase()) &&
-      ord.cin.includes(searchCin),
-  )
-
-  const displayedOrdonnances = activeTab === "pending" ? filtered : completedOrdonnances
+  };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
-      {/* Beautiful Header Section */}
-      <div className="bg-gradient-to-r from-[#1D10FA] to-purple-600 text-white py-8 px-6 shadow-2xl">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex items-center gap-4 mb-4">
-            <div className="bg-white/20 backdrop-blur-sm p-3 rounded-xl">
-              <FileText className="w-8 h-8" />
-            </div>
-            <div>
-              <h1 className="text-4xl font-bold">Gestion des Ordonnances</h1>
-            </div>
-          </div>
+    <div className="space-y-8">
+      <ModuleHero
+        eyebrow="Espace pharmacien"
+        title="Consultation ciblee des ordonnances"
+        description="Recherchez une ordonnance par CIN ou par identite patient."
+      />
 
-          {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
-              <div className="flex items-center gap-3">
-                <div className="bg-orange-400 p-2 rounded-lg">
-                  <Clock className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">{pendingOrdonnances.length}</p>
-                  <p className="text-blue-100 text-sm">En Attente</p>
-                </div>
-              </div>
-            </div>
+      <InlineAlert message={error} type="error" />
 
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
-              <div className="flex items-center gap-3">
-                <div className="bg-green-400 p-2 rounded-lg">
-                  <CheckCircle className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">{completedOrdonnances.length}</p>
-                  <p className="text-blue-100 text-sm">Effectuées</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
-              <div className="flex items-center gap-3">
-                <div className="bg-blue-400 p-2 rounded-lg">
-                  <FileText className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">{ordonnances.length}</p>
-                  <p className="text-blue-100 text-sm">Total</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="max-w-7xl mx-auto px-6 py-8">
-        {/* Success/Error Messages */}
-        {message && (
-          <div className="mb-6 p-4 bg-gradient-to-r from-green-50 to-emerald-50 border-l-4 border-green-400 rounded-lg shadow-md animate-fade-in">
-            <div className="flex items-center">
-              <CheckCircle className="w-5 h-5 text-green-400 mr-3" />
-              <p className="text-green-800 font-medium">{message}</p>
-            </div>
-          </div>
-        )}
-
-        {error && (
-          <div className="mb-6 p-4 bg-gradient-to-r from-red-50 to-pink-50 border-l-4 border-red-400 rounded-lg shadow-md animate-fade-in">
-            <div className="flex items-center">
-              <AlertCircle className="w-5 h-5 text-red-400 mr-3" />
-              <p className="text-red-800 font-medium">{error}</p>
-            </div>
-          </div>
-        )}
-
-        {/* Beautiful Tab Navigation */}
-        <div className="mb-8">
-          <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-2 shadow-xl border border-white/20 inline-flex">
-            <button
-              onClick={() => setActiveTab("pending")}
-              className={`px-6 py-3 rounded-xl font-semibold transition-all duration-200 flex items-center gap-2 ${
-                activeTab === "pending"
-                  ? "bg-gradient-to-r from-[#1D10FA] to-purple-600 text-white shadow-lg"
-                  : "text-gray-600 hover:text-gray-800 hover:bg-white/50"
-              }`}
-            >
-              <Clock className="w-5 h-5" />
-              Ordonnances en attente ({pendingOrdonnances.length})
-            </button>
-            <button
-              onClick={() => setActiveTab("completed")}
-              className={`px-6 py-3 rounded-xl font-semibold transition-all duration-200 flex items-center gap-2 ${
-                activeTab === "completed"
-                  ? "bg-gradient-to-r from-[#1D10FA] to-purple-600 text-white shadow-lg"
-                  : "text-gray-600 hover:text-gray-800 hover:bg-white/50"
-              }`}
-            >
-              <CheckCircle className="w-5 h-5" />
-              Ordonnances effectuées ({completedOrdonnances.length})
-            </button>
-          </div>
-        </div>
-
-        {/* Search Bar - Only show for pending tab */}
-        {activeTab === "pending" && (
-          <div className="mb-8 bg-white/70 backdrop-blur-sm rounded-2xl p-6 shadow-xl border border-white/20">
-            <div className="flex items-center gap-4 mb-4">
-              <Search className="w-6 h-6 text-[#1D10FA]" />
-              <h3 className="text-xl font-bold text-gray-800">Rechercher une ordonnance</h3>
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-4">
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-gray-700">Nom du patient</label>
-                <input
-                  type="text"
-                  placeholder="Nom"
-                  value={searchNom}
-                  onChange={(e) => setSearchNom(e.target.value)}
-                  className="w-full px-4 py-3 border-2 border-gray-200 focus:border-[#1D10FA] transition-colors duration-200 rounded-lg bg-white/50 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-[#1D10FA]/20"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-gray-700">Prénom du patient</label>
-                <input
-                  type="text"
-                  placeholder="Prénom"
-                  value={searchPrenom}
-                  onChange={(e) => setSearchPrenom(e.target.value)}
-                  className="w-full px-4 py-3 border-2 border-gray-200 focus:border-[#1D10FA] transition-colors duration-200 rounded-lg bg-white/50 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-[#1D10FA]/20"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-gray-700">CIN du patient</label>
-                <input
-                  type="text"
-                  placeholder="CIN"
-                  value={searchCin}
-                  onChange={(e) => setSearchCin(e.target.value)}
-                  className="w-full px-4 py-3 border-2 border-gray-200 focus:border-[#1D10FA] transition-colors duration-200 rounded-lg bg-white/50 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-[#1D10FA]/20"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-gray-700 opacity-0">Actions</label>
-                <div className="flex gap-2">
-                  <button
-                    onClick={handleSearch}
-                    className="flex-1 bg-gradient-to-r from-[#1D10FA] to-purple-600 text-white px-4 py-3 rounded-lg font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 flex items-center justify-center gap-2"
-                  >
-                    <Search className="w-4 h-4" />
-                    Rechercher
-                  </button>
-                  <button
-                    onClick={clearSearch}
-                    className="px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition-colors duration-200"
-                  >
-                    Effacer
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Loading State */}
-        {loading ? (
-          <div className="text-center py-16">
-            <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-8 shadow-xl border border-white/20 max-w-md mx-auto">
-              <div className="animate-spin w-12 h-12 border-4 border-[#1D10FA] border-t-transparent rounded-full mx-auto mb-4"></div>
-              <p className="text-gray-600 font-medium">Chargement des ordonnances...</p>
-            </div>
-          </div>
-        ) : displayedOrdonnances.length === 0 ? (
-          <div className="text-center py-16">
-            <div className="bg-gray-100 rounded-full w-24 h-24 mx-auto mb-6 flex items-center justify-center">
-              <FileText className="w-12 h-12 text-gray-400" />
-            </div>
-            <h3 className="text-xl font-semibold text-gray-700 mb-2">
-              {activeTab === "pending" ? "Aucune ordonnance en attente" : "Aucune ordonnance effectuée"}
-            </h3>
-            <p className="text-gray-500">
-              {searchTriggered && activeTab === "pending"
-                ? "Essayez avec d'autres termes de recherche"
-                : activeTab === "pending"
-                  ? "Toutes les ordonnances ont été traitées"
-                  : "Aucune ordonnance n'a encore été effectuée"}
-            </p>
-          </div>
-        ) : (
-          <div className="grid gap-6">
-            {displayedOrdonnances.map((ord, index) => (
-              <div
-                key={ord.id}
-                className="group hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 border-0 bg-white/80 backdrop-blur-sm overflow-hidden rounded-2xl shadow-xl"
-                style={{ animationDelay: `${index * 100}ms` }}
-              >
-                {/* Card Header */}
-                <div className="bg-gradient-to-r from-[#1D10FA] to-purple-600 p-6 text-white">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <div className="bg-white/20 backdrop-blur-sm p-3 rounded-full">
-                        <FileText className="w-6 h-6" />
-                      </div>
-                      <div>
-                        <h2 className="text-2xl font-bold">Ordonnance N°{ord.id}</h2>
-                        <p className="text-blue-100 text-sm flex items-center gap-2">
-                          <Calendar className="w-4 h-4" />
-                          Émise le {new Date(ord.created_at).toLocaleDateString("fr-FR")}
-                        </p>
-                      </div>
-                    </div>
-                    <div
-                      className={`px-4 py-2 rounded-full text-sm font-semibold ${
-                        ord.status === "Effectuée" ? "bg-green-100 text-green-800" : "bg-orange-100 text-orange-800"
-                      }`}
-                    >
-                      {ord.status === "Effectuée" ? "Effectuée" : "En attente"}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Card Body */}
-                <div className="p-6">
-                  <div className="grid md:grid-cols-2 gap-6">
-                    {/* Patient Information */}
-                    <div className="bg-gray-50 rounded-xl p-4">
-                      <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
-                        <User className="w-5 h-5 text-[#1D10FA]" />
-                        Informations Patient
-                      </h3>
-                      <div className="space-y-3">
-                        <div className="flex items-center gap-3">
-                          <span className="text-sm font-medium text-gray-500 w-16">Nom:</span>
-                          <span className="font-semibold text-gray-800">{ord.nom}</span>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <span className="text-sm font-medium text-gray-500 w-16">Prénom:</span>
-                          <span className="font-semibold text-gray-800">{ord.prenom}</span>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <span className="text-sm font-medium text-gray-500 w-16">CIN:</span>
-                          <span className="font-semibold text-gray-800">{ord.cin}</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Prescription */}
-                    <div className="bg-blue-50 rounded-xl p-4">
-                      <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
-                        <FileText className="w-5 h-5 text-[#1D10FA]" />
-                        Prescription
-                      </h3>
-                      <div className="bg-white rounded-lg p-4 max-h-32 overflow-y-auto">
-                        <pre className="text-sm text-gray-700 whitespace-pre-wrap font-mono">{ord.ordonnance}</pre>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Actions */}
-                  <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-200">
-                    <button
-                      onClick={() => setSelectedOrdonnance(ord)}
-                      className="bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 px-4 py-2 rounded-lg font-medium transition-all duration-200 flex items-center gap-2"
-                    >
-                      <Eye className="w-4 h-4" />
-                      Voir détails
-                    </button>
-
-                    {ord.status !== "Effectuée" && (
-                      <button
-                        onClick={() => handleEffectuer(ord.id)}
-                        className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-6 py-2 rounded-lg font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 flex items-center gap-2"
-                      >
-                        <CheckCircle className="w-4 h-4" />
-                        Marquer comme effectuée
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Prescription Details Modal */}
-      {selectedOrdonnance && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-white/90 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 max-w-2xl w-full max-h-[80vh] overflow-y-auto">
-            {/* Modal Header */}
-            <div className="bg-gradient-to-r from-[#1D10FA] to-purple-600 p-6 text-white rounded-t-2xl">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="bg-white/20 backdrop-blur-sm p-3 rounded-full">
-                    <FileText className="w-6 h-6" />
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-bold">Détails de l'Ordonnance N°{selectedOrdonnance.id}</h3>
-                    <p className="text-blue-100 text-sm">
-                      {selectedOrdonnance.nom} {selectedOrdonnance.prenom}
-                    </p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setSelectedOrdonnance(null)}
-                  className="text-white/80 hover:text-white transition-colors duration-200"
-                >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-            </div>
-
-            {/* Modal Body */}
-            <div className="p-6">
-              <div className="space-y-6">
-                <div>
-                  <h4 className="font-semibold text-gray-800 mb-3">Informations Patient</h4>
-                  <div className="bg-gray-50 rounded-lg p-4 space-y-2">
-                    <p>
-                      <strong>Nom complet:</strong> {selectedOrdonnance.nom} {selectedOrdonnance.prenom}
-                    </p>
-                    <p>
-                      <strong>CIN:</strong> {selectedOrdonnance.cin}
-                    </p>
-                    <p>
-                      <strong>Date d'émission:</strong>{" "}
-                      {new Date(selectedOrdonnance.created_at).toLocaleDateString("fr-FR")}
-                    </p>
-                  </div>
-                </div>
-
-                <div>
-                  <h4 className="font-semibold text-gray-800 mb-3">Prescription Complète</h4>
-                  <div className="bg-blue-50 rounded-lg p-4">
-                    <pre className="text-gray-700 whitespace-pre-wrap font-mono text-sm">
-                      {selectedOrdonnance.ordonnance}
-                    </pre>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Modal Footer */}
-            <div className="p-6 pt-0 flex justify-end gap-3">
+      <section>
+        <Card className="border-slate-200/90 bg-white/95 shadow-md">
+          <CardHeader>
+            <CardTitle>Rechercher une ordonnance</CardTitle>
+            <p className="mt-1 text-sm text-slate-500">Choisissez le mode de recherche adapte au document presente par le patient.</p>
+          </CardHeader>
+          <CardContent>
+            <div className="mb-5 flex flex-wrap gap-2">
               <button
-                onClick={() => setSelectedOrdonnance(null)}
-                className="px-6 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition-colors duration-200"
+                type="button"
+                onClick={() => setSearchMode(SEARCH_MODE.cin)}
+                className={`rounded-full px-4 py-2 text-sm font-medium transition ${
+                  searchMode === SEARCH_MODE.cin
+                    ? "bg-cyan-700 text-white shadow-sm"
+                    : "border border-slate-200 bg-white text-slate-600 hover:border-cyan-300 hover:text-cyan-700"
+                }`}
               >
-                Fermer
+                Recherche par CIN
               </button>
-              {selectedOrdonnance.status !== "Effectuée" && (
-                <button
-                  onClick={() => {
-                    handleEffectuer(selectedOrdonnance.id)
-                    setSelectedOrdonnance(null)
-                  }}
-                  className="px-6 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg font-semibold transition-all duration-200"
-                >
-                  Marquer comme effectuée
-                </button>
+              <button
+                type="button"
+                onClick={() => setSearchMode(SEARCH_MODE.identity)}
+                className={`rounded-full px-4 py-2 text-sm font-medium transition ${
+                  searchMode === SEARCH_MODE.identity
+                    ? "bg-cyan-700 text-white shadow-sm"
+                    : "border border-slate-200 bg-white text-slate-600 hover:border-cyan-300 hover:text-cyan-700"
+                }`}
+              >
+                Recherche par identite
+              </button>
+            </div>
+
+            <form onSubmit={handleSearch} className="space-y-4">
+              {searchMode === SEARCH_MODE.cin ? (
+                <label className="space-y-2">
+                  <span className="text-sm font-medium text-slate-700">CIN du patient</span>
+                  <input
+                    name="cin"
+                    value={searchForm.cin}
+                    onChange={handleChange}
+                    placeholder="Ex. 01234567"
+                    className={inputClassName}
+                  />
+                </label>
+              ) : (
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <label className="space-y-2 sm:col-span-2">
+                    <span className="text-sm font-medium text-slate-700">Nom</span>
+                    <input name="nom" value={searchForm.nom} onChange={handleChange} placeholder="Nom du patient" className={inputClassName} />
+                  </label>
+                  <label className="space-y-2">
+                    <span className="text-sm font-medium text-slate-700">Prenom</span>
+                    <input
+                      name="prenom"
+                      value={searchForm.prenom}
+                      onChange={handleChange}
+                      placeholder="Prenom du patient"
+                      className={inputClassName}
+                    />
+                  </label>
+                  <label className="space-y-2">
+                    <span className="text-sm font-medium text-slate-700">Date de naissance</span>
+                    <input name="date_naissance" type="date" value={searchForm.date_naissance} onChange={handleChange} className={inputClassName} />
+                  </label>
+                </div>
               )}
+
+              <div className="flex flex-wrap gap-3 pt-2">
+                <Button type="submit" leftIcon={<Search size={16} />} isLoading={loading}>
+                  Lancer la recherche
+                </Button>
+                <Button type="button" variant="outline" onClick={resetSearch}>
+                  Reinitialiser
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      </section>
+
+      <Card className="border-slate-200/90 bg-white/95 shadow-md">
+        <CardHeader className="flex flex-row items-center justify-between gap-4">
+          <div>
+            <CardTitle>Resultats de recherche</CardTitle>
+            <p className="mt-1 text-sm text-slate-500">Les ordonnances retrouventes apparaissent uniquement apres validation de la recherche.</p>
+          </div>
+          {hasSearched ? <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">{results.length} resultat(s)</span> : null}
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <LoadingState message="Recherche des ordonnances en cours..." />
+          ) : !hasSearched ? (
+            <EmptyState
+              icon={FileSearch}
+              title="Aucune recherche lancee"
+              description="Renseignez les informations patient puis lancez la recherche pour afficher une ordonnance."
+            />
+          ) : results.length === 0 ? (
+            <EmptyState
+              icon={FileText}
+              title="Aucune ordonnance trouvee"
+              description="Verifiez les informations saisies ou demandez un justificatif complementaire au patient."
+            />
+          ) : (
+            <div className="grid gap-4 xl:grid-cols-2">
+              {results.map((ordonnance) => (
+                <article key={ordonnance.id} className="rounded-3xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-5 shadow-sm">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-lg font-semibold text-slate-900">
+                        {ordonnance.nom} {ordonnance.prenom}
+                      </p>
+                      <p className="mt-1 text-sm text-slate-500">Ordonnance No {ordonnance.id}</p>
+                    </div>
+                    <Button type="button" size="sm" variant="outline" leftIcon={<Eye size={15} />} isLoading={detailLoading && openingId === ordonnance.id} onClick={() => openOrdonnance(ordonnance.id)}>
+                      Voir
+                    </Button>
+                  </div>
+
+                  <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                    <div className="rounded-2xl bg-white px-4 py-3 shadow-sm">
+                      <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+                        <CreditCard size={14} />
+                        CIN
+                      </p>
+                      <p className="mt-2 text-sm font-semibold text-slate-900">{ordonnance.cin || "Non renseigne"}</p>
+                    </div>
+                    <div className="rounded-2xl bg-white px-4 py-3 shadow-sm">
+                      <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+                        <CalendarDays size={14} />
+                        Date de creation
+                      </p>
+                      <p className="mt-2 text-sm font-semibold text-slate-900">{formatDateTime(ordonnance.created_at)}</p>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 rounded-2xl border border-slate-200 bg-white px-4 py-4">
+                    <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+                      <UserRound size={14} />
+                      Medecin
+                    </p>
+                    <p className="mt-2 text-sm font-semibold text-slate-900">{ordonnance.doctor_name?.trim() || "Medecin non renseigne"}</p>
+                    <p className="text-sm text-slate-500">{ordonnance.doctor_specialty || "Specialite non renseignee"}</p>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <ModalPanel
+        open={Boolean(selectedOrdonnance)}
+        title={selectedOrdonnance ? `Ordonnance No ${selectedOrdonnance.id}` : "Ordonnance"}
+        subtitle={selectedOrdonnance ? `${selectedOrdonnance.nom} ${selectedOrdonnance.prenom}` : ""}
+        onClose={() => setSelectedOrdonnance(null)}
+      >
+        {selectedOrdonnance ? (
+          <div className="space-y-5">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="rounded-2xl bg-slate-50 px-4 py-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">Patient</p>
+                <p className="mt-2 text-sm font-semibold text-slate-900">
+                  {selectedOrdonnance.nom} {selectedOrdonnance.prenom}
+                </p>
+                <p className="mt-1 text-sm text-slate-600">CIN: {selectedOrdonnance.cin || "Non renseigne"}</p>
+                <p className="mt-1 text-sm text-slate-600">Date de naissance: {formatDate(selectedOrdonnance.patient_date_naissance)}</p>
+              </div>
+
+              <div className="rounded-2xl bg-slate-50 px-4 py-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">Medecin</p>
+                <p className="mt-2 text-sm font-semibold text-slate-900">{selectedOrdonnance.doctor_name?.trim() || "Non renseigne"}</p>
+                <p className="mt-1 text-sm text-slate-600">{selectedOrdonnance.doctor_specialty || "Specialite non renseignee"}</p>
+                <p className="mt-1 text-sm text-slate-600">Creee le {formatDateTime(selectedOrdonnance.created_at)}</p>
+              </div>
+            </div>
+
+            <div className="rounded-3xl border border-slate-200 bg-white">
+              <div className="border-b border-slate-100 px-4 py-3">
+                <p className="text-sm font-semibold text-slate-900">Contenu de l'ordonnance</p>
+              </div>
+              <div className="px-4 py-4">
+                <textarea readOnly value={selectedOrdonnance.ordonnance || ""} className={`${textareaClassName} border-0 bg-slate-50 focus:border-0 focus:ring-0`} />
+              </div>
             </div>
           </div>
-        </div>
-      )}
-
-      {/* Custom Styles */}
-      <style jsx>{`
-        @keyframes fade-in {
-          from {
-            opacity: 0;
-            transform: translateY(-10px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-        .animate-fade-in {
-          animation: fade-in 0.3s ease-out;
-        }
-      `}</style>
+        ) : null}
+      </ModalPanel>
     </div>
-  )
+  );
 }
-
-export default OrdonnancesPage
-
-

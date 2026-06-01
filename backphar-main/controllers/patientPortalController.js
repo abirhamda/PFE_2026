@@ -6,6 +6,27 @@ const DEFAULT_SLOT_DURATION = 20;
 
 const normalizeEmail = (email) => String(email || "").trim().toLowerCase();
 const normalizeRole = (role) => String(role || "").trim().toLowerCase();
+const normalizeCin = (cin) => {
+  const value = String(cin || "").trim();
+  return value || null;
+};
+const isDuplicateEntryError = (error) => error?.code === "ER_DUP_ENTRY";
+
+const ensureCinIsAvailableForUser = async (connection, cin, excludedUserId = null) => {
+  if (!cin) {
+    return true;
+  }
+
+  const params = [cin];
+  let sql = "SELECT id FROM users WHERE cin = ? LIMIT 1";
+  if (excludedUserId !== null) {
+    sql = "SELECT id FROM users WHERE cin = ? AND id <> ? LIMIT 1";
+    params.push(excludedUserId);
+  }
+
+  const [rows] = await connection.execute(sql, params);
+  return rows.length === 0;
+};
 
 const pad2 = (num) => String(num).padStart(2, "0");
 
@@ -361,7 +382,7 @@ export const registerPatientPortalAccount = async (req, res) => {
     }
 
     const telephone = req.body?.telephone ? String(req.body.telephone).trim() : null;
-    const cin = req.body?.cin ? String(req.body.cin).trim() : null;
+    const cin = normalizeCin(req.body?.cin);
     const dateNaissance = parseDateOnlyString(req.body?.date_naissance);
     const city = req.body?.city ? String(req.body.city).trim() : null;
     const latitude = parseNumberOrNull(req.body?.latitude);
@@ -375,10 +396,16 @@ export const registerPatientPortalAccount = async (req, res) => {
       return res.status(409).json({ error: "Un compte avec cet email existe deja" });
     }
 
+    const isCinAvailable = await ensureCinIsAvailableForUser(connection, cin);
+    if (!isCinAvailable) {
+      await connection.rollback();
+      return res.status(409).json({ error: "Ce CIN est deja utilise par un autre utilisateur" });
+    }
+
     const hashedPassword = await bcrypt.hash(password, 10);
     const [userInsert] = await connection.execute(
-      "INSERT INTO users (email, password, role) VALUES (?, ?, 'pation')",
-      [email, hashedPassword],
+      "INSERT INTO users (email, cin, password, role) VALUES (?, ?, ?, 'pation')",
+      [email, cin, hashedPassword],
     );
 
     await connection.execute(
@@ -396,6 +423,9 @@ export const registerPatientPortalAccount = async (req, res) => {
   } catch (error) {
     await connection.rollback();
     console.error("Error registering patient portal account:", error);
+    if (isDuplicateEntryError(error)) {
+      return res.status(409).json({ error: "Ce CIN ou cet email existe deja" });
+    }
     return res.status(500).json({ error: "Erreur lors de l'inscription", details: error.message });
   } finally {
     connection.release();
@@ -440,7 +470,7 @@ export const updateMyPatientPortalProfile = async (req, res) => {
     const nom = String(req.body?.nom || profile.nom || "").trim();
     const prenom = String(req.body?.prenom || profile.prenom || "").trim();
     const telephone = req.body?.telephone !== undefined ? String(req.body.telephone || "").trim() || null : profile.telephone;
-    const cin = req.body?.cin !== undefined ? String(req.body.cin || "").trim() || null : profile.cin;
+    const cin = req.body?.cin !== undefined ? normalizeCin(req.body?.cin) : normalizeCin(profile.cin);
     const dateNaissance =
       req.body?.date_naissance !== undefined
         ? parseDateOnlyString(req.body?.date_naissance)
@@ -454,6 +484,13 @@ export const updateMyPatientPortalProfile = async (req, res) => {
       return res.status(400).json({ error: "nom et prenom sont obligatoires" });
     }
 
+    const isCinAvailable = await ensureCinIsAvailableForUser(connection, cin, userId);
+    if (!isCinAvailable) {
+      return res.status(409).json({ error: "Ce CIN est deja utilise par un autre utilisateur" });
+    }
+
+    await connection.beginTransaction();
+
     await connection.execute(
       `UPDATE patient_portal_profiles
        SET nom = ?, prenom = ?, telephone = ?, cin = ?, date_naissance = ?, city = ?, latitude = ?, longitude = ?, updated_at = NOW()
@@ -461,10 +498,18 @@ export const updateMyPatientPortalProfile = async (req, res) => {
       [nom, prenom, telephone, cin, dateNaissance, city, latitude, longitude, userId],
     );
 
+    await connection.execute("UPDATE users SET cin = ? WHERE id = ?", [cin, userId]);
+
+    await connection.commit();
+
     const updated = await getPatientProfileByUserId(connection, userId);
     return res.json({ message: "Profil patient mis a jour", profile: updated });
   } catch (error) {
+    await connection.rollback();
     console.error("Error updating patient portal profile:", error);
+    if (isDuplicateEntryError(error)) {
+      return res.status(409).json({ error: "Ce CIN existe deja" });
+    }
     return res.status(500).json({ error: "Erreur lors de la mise a jour du profil", details: error.message });
   } finally {
     connection.release();
@@ -582,9 +627,11 @@ export const updateProviderPublicProfile = async (req, res) => {
 export const searchPublicDoctors = async (req, res) => {
   const connection = await db.getConnection();
   try {
+    const query = String(req.query?.query || "").trim();
     const name = String(req.query?.name || "").trim();
     const specialty = String(req.query?.specialty || "").trim();
     const city = String(req.query?.city || "").trim();
+    const address = String(req.query?.address || "").trim();
     const patientLat = parseNumberOrNull(req.query?.lat);
     const patientLng = parseNumberOrNull(req.query?.lng);
     const radiusKm = Math.max(1, Math.min(200, Number(req.query?.radius_km || 50)));
@@ -592,6 +639,13 @@ export const searchPublicDoctors = async (req, res) => {
 
     const conditions = ["d.is_active = 1"];
     const params = [];
+
+    if (query) {
+      conditions.push(
+        "(d.nom LIKE ? OR d.prenom LIKE ? OR CONCAT(d.prenom, ' ', d.nom) LIKE ? OR p.display_name LIKE ? OR d.specialty LIKE ? OR p.city LIKE ? OR p.address_line LIKE ?)",
+      );
+      params.push(`%${query}%`, `%${query}%`, `%${query}%`, `%${query}%`, `%${query}%`, `%${query}%`, `%${query}%`);
+    }
 
     if (name) {
       conditions.push("(d.nom LIKE ? OR d.prenom LIKE ? OR CONCAT(d.prenom, ' ', d.nom) LIKE ? OR p.display_name LIKE ?)");
@@ -606,6 +660,11 @@ export const searchPublicDoctors = async (req, res) => {
     if (city) {
       conditions.push("(p.city LIKE ? OR p.address_line LIKE ?)");
       params.push(`%${city}%`, `%${city}%`);
+    }
+
+    if (address) {
+      conditions.push("(IFNULL(p.address_line, '') LIKE ? OR IFNULL(p.city, '') LIKE ?)");
+      params.push(`%${address}%`, `%${address}%`);
     }
 
     params.push(limit);

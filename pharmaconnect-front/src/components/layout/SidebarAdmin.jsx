@@ -1,11 +1,12 @@
 import React from "react";
-import { Home, LogOut, Settings, Store, Users } from "lucide-react";
+import { Home, LogOut, Settings, ShieldCheck, Store, Truck } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
 
-const SidebarItem = ({ to, icon, label }) => (
+const SidebarItem = ({ to, icon, label, onNavigate }) => (
   <NavLink
     to={to}
+    onClick={onNavigate}
     className={({ isActive }) =>
       `flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
         isActive
@@ -40,16 +41,17 @@ const SidebarAdmin = ({ isOpen, onClose }) => {
       >
         <div className="flex h-full flex-col p-4">
           <div className="rounded-2xl bg-gradient-to-br from-cyan-600 to-teal-600 p-4 text-white shadow-lg">
-            <p className="text-xs uppercase tracking-wider text-cyan-100">Administration</p>
-            <h2 className="mt-1 text-lg font-semibold">PharmaConnect</h2>
+            <p className="text-xs uppercase tracking-wider text-cyan-100">Administrateur</p>
+            <h2 className="mt-1 text-lg font-semibold">MediCare</h2>
             <p className="mt-3 text-sm text-cyan-50">{displayName}</p>
           </div>
 
           <nav className="mt-6 flex-1 space-y-2">
-            <SidebarItem to="/admin/dashboard" icon={<Home size={18} />} label="Dashboard" />
-            <SidebarItem to="/pharmacies" icon={<Store size={18} />} label="Pharmacies" />
-            <SidebarItem to="/admin/doctors" icon={<Users size={18} />} label="Docteurs" />
-            <SidebarItem to="/settings" icon={<Settings size={18} />} label="Parametres" />
+            <SidebarItem to="/admin/dashboard" icon={<Home size={18} />} label="Tableau de bord" onNavigate={onClose} />
+            <SidebarItem to="/admin/pharmacies" icon={<Store size={18} />} label="Pharmacies" onNavigate={onClose} />
+            <SidebarItem to="/admin/medecins" icon={<ShieldCheck size={18} />} label="Acces medecins" onNavigate={onClose} />
+            <SidebarItem to="/admin/suppliers" icon={<Truck size={18} />} label="Fournisseurs" onNavigate={onClose} />
+            <SidebarItem to="/admin/settings" icon={<Settings size={18} />} label="Parametres" onNavigate={onClose} />
           </nav>
 
           <button

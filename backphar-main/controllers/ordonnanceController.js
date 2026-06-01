@@ -1,4 +1,5 @@
 import db from "../db.js";
+import { resolvePharmacyContext } from "../utils/userContext.js";
 
 const normalizeRole = (role) => String(role || "").trim().toLowerCase();
 const normalizeEmail = (email) => String(email || "").trim().toLowerCase();
@@ -57,9 +58,13 @@ export const getAllOrdonnances = async (req, res) => {
 
     let query =
       `SELECT o.id, o.doctor_id, o.id_doctor, o.pation_id, o.cin, o.nom, o.prenom, o.ordonnance, o.status, o.created_at,
-              p.matricule AS patient_matricule
+              p.matricule AS patient_matricule,
+              p.date_naissance AS patient_date_naissance,
+              d.specialty AS doctor_specialty,
+              CONCAT(COALESCE(d.prenom, ''), ' ', COALESCE(d.nom, '')) AS doctor_name
        FROM ordonnances o
-       LEFT JOIN doctor_patients p ON p.id = o.pation_id AND p.doctor_id = o.doctor_id`;
+       LEFT JOIN doctor_patients p ON p.id = o.pation_id AND p.doctor_id = o.doctor_id
+       LEFT JOIN doctors d ON d.id = o.doctor_id`;
     const params = [];
 
     if (role === "doctor" || role === "secretaire") {
@@ -70,6 +75,26 @@ export const getAllOrdonnances = async (req, res) => {
 
       query += " WHERE o.doctor_id = ?";
       params.push(doctorId);
+    } else if (role === "pharmacist") {
+      const cin = String(req.query?.cin || "").trim();
+      const nom = String(req.query?.nom || "").trim().toLowerCase();
+      const prenom = String(req.query?.prenom || "").trim().toLowerCase();
+      const dateNaissance = String(req.query?.date_naissance || "").trim();
+
+      const hasCinSearch = Boolean(cin);
+      const hasIdentitySearch = Boolean(nom && prenom && dateNaissance);
+
+      if (!hasCinSearch && !hasIdentitySearch) {
+        return res.json([]);
+      }
+
+      if (hasCinSearch) {
+        query += " WHERE o.cin = ?";
+        params.push(cin);
+      } else {
+        query += " WHERE LOWER(o.nom) = ? AND LOWER(o.prenom) = ? AND p.date_naissance = ?";
+        params.push(nom, prenom, dateNaissance);
+      }
     }
 
     query += " ORDER BY o.created_at DESC";
@@ -174,9 +199,13 @@ export const getOrdonnanceById = async (req, res) => {
     const ordonnanceId = Number(req.params.id);
     const [rows] = await connection.execute(
       `SELECT o.id, o.doctor_id, o.id_doctor, o.pation_id, o.cin, o.nom, o.prenom, o.ordonnance, o.status, o.created_at,
-              p.matricule AS patient_matricule
+              p.matricule AS patient_matricule,
+              p.date_naissance AS patient_date_naissance,
+              d.specialty AS doctor_specialty,
+              CONCAT(COALESCE(d.prenom, ''), ' ', COALESCE(d.nom, '')) AS doctor_name
        FROM ordonnances o
        LEFT JOIN doctor_patients p ON p.id = o.pation_id AND p.doctor_id = o.doctor_id
+       LEFT JOIN doctors d ON d.id = o.doctor_id
        WHERE o.id = ?
        LIMIT 1`,
       [ordonnanceId],
@@ -195,6 +224,22 @@ export const getOrdonnanceById = async (req, res) => {
       if (Number(rows[0].doctor_id) !== Number(doctorId)) {
         return res.status(403).json({ error: "Acces refuse a cette ordonnance" });
       }
+    }
+
+    if (normalizeRole(req.user?.role) === "pharmacist") {
+      const pharmacy = await resolvePharmacyContext(connection, req.user);
+      if (!pharmacy) {
+        return res.status(403).json({ error: "Profil pharmacien invalide" });
+      }
+
+      await connection.execute(
+        `INSERT INTO pharmacy_ordonnance_views (pharmacie_id, ordonnance_id, view_count, first_viewed_at, last_viewed_at)
+         VALUES (?, ?, 1, NOW(), NOW())
+         ON DUPLICATE KEY UPDATE
+           view_count = view_count + 1,
+           last_viewed_at = NOW()`,
+        [pharmacy.id_pharmacie, ordonnanceId],
+      );
     }
 
     return res.json(rows[0]);

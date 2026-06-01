@@ -1,5 +1,5 @@
 {
-  "name": "pharmaconnect-back",
+  "name": "medicare-back",
   "version": "1.0.0",
   "main": "index.js",
   "type": "module",
@@ -8,6 +8,7 @@
     "dev": "npm run migrate && node server.js",
     "migrate": "node migrate.js",
     "schema:check": "node checkSchema.js",
+    "seed:tunisia": "node scripts/runSqlFile.js sql/tunisia_sousse_seed.sql",
     "seed:doctor5": "node scripts/seedDoctor5Fiches.js",
     "seed:display": "node scripts/fillDemoDisplayData.js",
     "start:with-migrate": "npm run start",
@@ -24,7 +25,8 @@
     "dotenv": "^16.5.0",
     "express": "^5.1.0",
     "jsonwebtoken": "^9.0.2",
-    "mysql2": "^3.14.1"
+    "mysql2": "^3.14.1",
+    "nodemailer": "^8.0.8"
   },
   "devDependencies": {
     "jest": "^30.0.4",

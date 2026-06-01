@@ -123,6 +123,25 @@ const dropIndexIfExists = async (connection, tableName, indexName) => {
   console.log(`[ok] Dropped index ${tableName}.${indexName}`);
 };
 
+const ensureIndex = async (connection, tableName, indexName, definition) => {
+  const [rows] = await connection.query(
+    `SELECT COUNT(*) AS count
+     FROM information_schema.statistics
+     WHERE table_schema = ?
+       AND table_name = ?
+       AND index_name = ?`,
+    [DB_NAME, tableName, indexName],
+  );
+
+  if (rows[0].count > 0) {
+    console.log(`[skip] Index ${tableName}.${indexName} already exists`);
+    return;
+  }
+
+  await connection.query(`ALTER TABLE \`${tableName}\` ADD ${definition}`);
+  console.log(`[ok] Added index ${tableName}.${indexName}`);
+};
+
 const dropTableIfExists = async (connection, tableName) => {
   await connection.query(`DROP TABLE IF EXISTS \`${tableName}\``);
   console.log(`[ok] Ensured table ${tableName} is removed`);
@@ -161,6 +180,214 @@ const ensureUsersRoleEnumIncludesRequiredRoles = async (connection) => {
 const ensureOrdonnancesCinNullable = async (connection) => {
   await connection.query("ALTER TABLE ordonnances MODIFY COLUMN cin VARCHAR(30) NULL");
   console.log("[ok] Ensured ordonnances.cin is nullable");
+};
+
+const normalizeNullableCinColumn = async (connection, tableName, columnName) => {
+  const [rows] = await connection.query(
+    `SELECT COUNT(*) AS count
+     FROM information_schema.columns
+     WHERE table_schema = ?
+       AND table_name = ?
+       AND column_name = ?`,
+    [DB_NAME, tableName, columnName],
+  );
+
+  if (rows[0].count === 0) {
+    console.log(`[skip] ${tableName}.${columnName} not found for normalization`);
+    return;
+  }
+
+  await connection.query(
+    `UPDATE \`${tableName}\`
+     SET \`${columnName}\` = NULLIF(TRIM(\`${columnName}\`), '')
+     WHERE \`${columnName}\` IS NOT NULL`,
+  );
+  console.log(`[ok] Normalized ${tableName}.${columnName}`);
+};
+
+const normalizeRequiredCinColumn = async (connection, tableName, columnName) => {
+  const [rows] = await connection.query(
+    `SELECT COUNT(*) AS count
+     FROM information_schema.columns
+     WHERE table_schema = ?
+       AND table_name = ?
+       AND column_name = ?`,
+    [DB_NAME, tableName, columnName],
+  );
+
+  if (rows[0].count === 0) {
+    console.log(`[skip] ${tableName}.${columnName} not found for normalization`);
+    return;
+  }
+
+  await connection.query(
+    `UPDATE \`${tableName}\`
+     SET \`${columnName}\` = TRIM(\`${columnName}\`)
+     WHERE \`${columnName}\` IS NOT NULL`,
+  );
+  console.log(`[ok] Trimmed ${tableName}.${columnName}`);
+};
+
+const throwIfDuplicateRows = async (connection, query, label) => {
+  const [rows] = await connection.query(query);
+  if (rows.length === 0) {
+    console.log(`[ok] No duplicates found for ${label}`);
+    return;
+  }
+
+  const sample = rows
+    .slice(0, 5)
+    .map((row) => Object.entries(row).map(([key, value]) => `${key}=${value}`).join(", "))
+    .join(" | ");
+
+  throw new Error(`Duplicate ${label} detected. Resolve these rows before retrying migration: ${sample}`);
+};
+
+const ensureCinUniquenessGuards = async (connection) => {
+  await ensureColumn(connection, "users", "cin", "VARCHAR(30) NULL");
+
+  await normalizeRequiredCinColumn(connection, "doctors", "cin");
+  await normalizeNullableCinColumn(connection, "users", "cin");
+  await normalizeNullableCinColumn(connection, "patient_portal_profiles", "cin");
+  await normalizeNullableCinColumn(connection, "patients", "cin");
+  await normalizeNullableCinColumn(connection, "doctor_patients", "cin");
+
+  await connection.query(
+    `UPDATE users u
+     INNER JOIN doctors d
+       ON d.email = u.email
+      AND u.role = 'doctor'
+     SET u.cin = TRIM(d.cin)
+     WHERE d.cin IS NOT NULL
+       AND TRIM(d.cin) <> ''
+       AND (u.cin IS NULL OR TRIM(u.cin) = '')`,
+  );
+  console.log("[ok] Backfilled users.cin from doctors");
+
+  await connection.query(
+    `UPDATE users u
+     INNER JOIN patient_portal_profiles p
+       ON p.user_id = u.id
+     SET u.cin = TRIM(p.cin)
+     WHERE p.cin IS NOT NULL
+       AND TRIM(p.cin) <> ''
+       AND (u.cin IS NULL OR TRIM(u.cin) = '')`,
+  );
+  console.log("[ok] Backfilled users.cin from patient portal profiles");
+
+  await throwIfDuplicateRows(
+    connection,
+    `SELECT TRIM(cin) AS cin_value,
+            COUNT(*) AS total,
+            GROUP_CONCAT(CONCAT(role, ':', email) ORDER BY id SEPARATOR ', ') AS accounts
+     FROM users
+     WHERE cin IS NOT NULL
+       AND TRIM(cin) <> ''
+     GROUP BY TRIM(cin)
+     HAVING COUNT(*) > 1
+     LIMIT 10`,
+    "users.cin",
+  );
+
+  await throwIfDuplicateRows(
+    connection,
+    `SELECT TRIM(cin) AS cin_value,
+            COUNT(*) AS total,
+            GROUP_CONCAT(CONCAT('user_id:', user_id, ' email:', email) ORDER BY id SEPARATOR ', ') AS profiles
+     FROM patient_portal_profiles
+     WHERE cin IS NOT NULL
+       AND TRIM(cin) <> ''
+     GROUP BY TRIM(cin)
+     HAVING COUNT(*) > 1
+     LIMIT 10`,
+    "patient_portal_profiles.cin",
+  );
+
+  await throwIfDuplicateRows(
+    connection,
+    `SELECT doctor_id,
+            TRIM(cin) AS cin_value,
+            COUNT(*) AS total,
+            GROUP_CONCAT(id ORDER BY id SEPARATOR ', ') AS patient_ids
+     FROM doctor_patients
+     WHERE cin IS NOT NULL
+       AND TRIM(cin) <> ''
+     GROUP BY doctor_id, TRIM(cin)
+     HAVING COUNT(*) > 1
+     LIMIT 10`,
+    "doctor_patients(doctor_id, cin)",
+  );
+
+  await ensureIndex(connection, "users", "uq_users_cin", "UNIQUE KEY `uq_users_cin` (`cin`)");
+  await ensureIndex(
+    connection,
+    "patient_portal_profiles",
+    "uq_patient_portal_profiles_cin",
+    "UNIQUE KEY `uq_patient_portal_profiles_cin` (`cin`)",
+  );
+  await ensureIndex(
+    connection,
+    "doctor_patients",
+    "uq_doctor_patients_doctor_cin",
+    "UNIQUE KEY `uq_doctor_patients_doctor_cin` (`doctor_id`, `cin`)",
+  );
+};
+
+const ensureSupplierExtensions = async (connection) => {
+  await connection.query(
+    `CREATE TABLE IF NOT EXISTS supplier_products (
+       id INT AUTO_INCREMENT PRIMARY KEY,
+       supplier_id INT NOT NULL,
+       nom VARCHAR(140) NOT NULL,
+       description TEXT NULL,
+       prix DECIMAL(10,2) NULL,
+       quantite_disponible INT NOT NULL DEFAULT 0,
+       unite VARCHAR(40) NULL,
+       is_active TINYINT(1) NOT NULL DEFAULT 1,
+       created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+       updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+       CONSTRAINT fk_supplier_products_supplier FOREIGN KEY (supplier_id) REFERENCES suppliers(id) ON DELETE CASCADE,
+       UNIQUE KEY uq_supplier_product_nom (supplier_id, nom),
+       INDEX idx_supplier_products_supplier (supplier_id, is_active)
+     ) ENGINE=InnoDB`,
+  );
+  console.log("[ok] Ensured table supplier_products exists");
+
+  await connection.query(
+    `CREATE TABLE IF NOT EXISTS supplier_partnership_requests (
+       id INT AUTO_INCREMENT PRIMARY KEY,
+       pharmacie_id INT NOT NULL,
+       supplier_id INT NOT NULL,
+       message TEXT NULL,
+       status ENUM('en_attente', 'acceptee', 'refusee') NOT NULL DEFAULT 'en_attente',
+       response_note TEXT NULL,
+       created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+       updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+       responded_at DATETIME NULL,
+       CONSTRAINT fk_partnership_requests_pharmacie FOREIGN KEY (pharmacie_id) REFERENCES pharmacie(id_pharmacie) ON DELETE CASCADE,
+       CONSTRAINT fk_partnership_requests_supplier FOREIGN KEY (supplier_id) REFERENCES suppliers(id) ON DELETE CASCADE,
+       UNIQUE KEY uq_partnership_requests_pair (pharmacie_id, supplier_id),
+       INDEX idx_partnership_requests_supplier_status (supplier_id, status),
+       INDEX idx_partnership_requests_pharmacy_status (pharmacie_id, status)
+     ) ENGINE=InnoDB`,
+  );
+  console.log("[ok] Ensured table supplier_partnership_requests exists");
+
+  await connection.query(
+    `CREATE TABLE IF NOT EXISTS pharmacy_ordonnance_views (
+       id INT AUTO_INCREMENT PRIMARY KEY,
+       pharmacie_id INT NOT NULL,
+       ordonnance_id INT NOT NULL,
+       view_count INT NOT NULL DEFAULT 1,
+       first_viewed_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+       last_viewed_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+       CONSTRAINT fk_pharmacy_ordonnance_views_pharmacy FOREIGN KEY (pharmacie_id) REFERENCES pharmacie(id_pharmacie) ON DELETE CASCADE,
+       CONSTRAINT fk_pharmacy_ordonnance_views_ordonnance FOREIGN KEY (ordonnance_id) REFERENCES ordonnances(id) ON DELETE CASCADE,
+       UNIQUE KEY uq_pharmacy_ordonnance_view (pharmacie_id, ordonnance_id),
+       INDEX idx_pharmacy_ordonnance_views_pharmacy (pharmacie_id, last_viewed_at)
+     ) ENGINE=InnoDB`,
+  );
+  console.log("[ok] Ensured table pharmacy_ordonnance_views exists");
 };
 
 const ensureGlobalPatientsManyToMany = async (connection) => {
@@ -292,6 +519,7 @@ const runMigration = async () => {
     console.log(`[ok] Schema sync executed (${expectedTables.length} tables declared).`);
     await ensureUsersRoleEnumIncludesRequiredRoles(connection);
     await ensureOrdonnancesCinNullable(connection);
+    await ensureSupplierExtensions(connection);
 
     await ensureColumn(connection, "notifications", "demande_id", "INT NULL");
     await ensureColumn(
@@ -307,14 +535,30 @@ const runMigration = async () => {
       "created_at",
       "TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP",
     );
+    await ensureColumn(connection, "pharmacie", "address_line", "VARCHAR(255) NULL");
+    await ensureColumn(connection, "pharmacie", "city", "VARCHAR(120) NULL");
     await ensureColumn(
       connection,
       "medicaments_stock",
       "created_at",
       "TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP",
     );
+    await ensureColumn(connection, "medicaments_stock", "seuil_alerte", "INT NOT NULL DEFAULT 10");
+    await ensureColumn(
+      connection,
+      "medicaments_stock",
+      "updated_at",
+      "TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP",
+    );
     await ensureColumn(connection, "ordonnances", "doctor_id", "INT NULL");
     await ensureColumn(connection, "ordonnances", "pation_id", "INT NULL");
+    await ensureColumn(connection, "demandes", "response_note", "TEXT NULL");
+    await ensureColumn(
+      connection,
+      "demandes",
+      "updated_at",
+      "TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP",
+    );
     await ensureColumn(connection, "appointments", "patient_id", "INT NULL");
     await ensureColumn(connection, "appointments", "booked_by_patient_user_id", "INT NULL");
     await ensureColumn(connection, "appointments", "patient_matricule", "VARCHAR(30) NULL");
@@ -330,6 +574,7 @@ const runMigration = async () => {
     );
     await ensureColumn(connection, "patient_fiche_notes", "entry_at", "DATETIME NOT NULL");
     await ensureGlobalPatientsManyToMany(connection);
+    await ensureCinUniquenessGuards(connection);
     await ensureColumnDropped(connection, "appointments", "notes");
     await ensureColumnDropped(connection, "appointments", "consultation_description");
     await ensureColumnDropped(connection, "appointments", "duration_minutes");

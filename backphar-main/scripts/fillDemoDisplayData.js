@@ -22,16 +22,16 @@ const DEFAULT_WORKING_HOURS = JSON.stringify({
 });
 
 const CITY_PRESETS = [
-  { city: "Casablanca", lat: 33.5731, lng: -7.5898, address: "Centre Ville" },
-  { city: "Rabat", lat: 34.0209, lng: -6.8416, address: "Avenue Hassan II" },
-  { city: "Marrakech", lat: 31.6295, lng: -7.9811, address: "Guéliz" },
-  { city: "Tanger", lat: 35.7595, lng: -5.8340, address: "Boulevard Pasteur" },
-  { city: "Fes", lat: 34.0181, lng: -5.0078, address: "Ville Nouvelle" },
+  { city: "Sousse", lat: 35.8332, lng: 10.5944, address: "Sahloul 1" },
+  { city: "Sousse", lat: 35.8361, lng: 10.6155, address: "Khezama Est" },
+  { city: "Sousse", lat: 35.8309, lng: 10.6415, address: "Boujaafar" },
+  { city: "Hammam Sousse", lat: 35.8608, lng: 10.6010, address: "Avenue de la Republique" },
+  { city: "Sousse", lat: 35.8248, lng: 10.6349, address: "Medina de Sousse" },
 ];
 
 const pickPreset = (index) => CITY_PRESETS[index % CITY_PRESETS.length];
 
-const buildPublicPhone = (doctorId) => `0609${String(doctorId).padStart(6, "0")}`;
+const buildPublicPhone = (doctorId) => `73${String(300000 + doctorId).padStart(6, "0")}`;
 
 const fillDoctorPublicProfiles = async (connection) => {
   const [doctors] = await connection.execute(
@@ -87,7 +87,7 @@ const fillDoctorPublicProfiles = async (connection) => {
         consultationFee,
         20,
         DEFAULT_WORKING_HOURS,
-        `${doctor.specialty || "Médecine générale"} - Consultation et suivi clinique.`,
+        `${doctor.specialty || "Medecine generale"} - Consultation et suivi clinique.`,
         visibilityEnabled,
         bookingEnabled,
       ],
@@ -109,7 +109,10 @@ const fillPatientPortalProfiles = async (connection) => {
   for (let i = 0; i < profiles.length; i += 1) {
     const profile = profiles[i];
     const preset = pickPreset(i + 1);
-    const phone = profile.telephone && String(profile.telephone).trim() ? profile.telephone : `0617${String(profile.id).padStart(6, "0")}`;
+    const phone =
+      profile.telephone && String(profile.telephone).trim()
+        ? profile.telephone
+        : `28${String(170000 + profile.id).padStart(6, "0")}`;
     const cin = profile.cin && String(profile.cin).trim() ? profile.cin : `PP${String(profile.id).padStart(7, "0")}`;
     const dateNaissance = profile.date_naissance || "1995-01-01";
     const city = profile.city && String(profile.city).trim() ? profile.city : preset.city;
@@ -135,7 +138,7 @@ const fillAppointmentsEmptyColumns = async (connection) => {
      SET
        a.patient_phone = CASE
          WHEN (a.patient_phone IS NULL OR a.patient_phone = '') AND p.telephone IS NOT NULL AND p.telephone <> '' THEN p.telephone
-         WHEN (a.patient_phone IS NULL OR a.patient_phone = '') THEN '0600000000'
+         WHEN (a.patient_phone IS NULL OR a.patient_phone = '') THEN '28000000'
          ELSE a.patient_phone
        END,
        a.patient_date_naissance = CASE
@@ -342,7 +345,7 @@ const run = async () => {
     if (connection) {
       await connection.rollback();
     }
-    console.error("[error] Remplissage demo echoue:", error.message);
+    console.error("[error] Remplissage complementaire echoue:", error.message);
     process.exitCode = 1;
   } finally {
     if (connection) {

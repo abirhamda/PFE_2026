@@ -1,14 +1,14 @@
-import express from 'express';
-import demandesController from '../controllers/demandesController.js';
+import express from "express";
+import demandesController from "../controllers/demandesController.js";
+import { authenticateToken, authorizeRoles } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-// AJOUTEZ JUSTE CETTE LIGNE
-router.get("/test", demandesController.testConnection)
-
-// Vos routes existantes
-router.get("/pharmacie/:id", demandesController.getDemandesByPharmacie)
-router.put("/:id/status", demandesController.updateDemandeStatus)
-router.post("/create", demandesController.createDemande)
+router.get("/test", demandesController.testConnection);
+router.get("/pharmacie/:id", authenticateToken, authorizeRoles("admin", "pharmacist"), demandesController.getDemandesByPharmacie);
+router.get("/me/pharmacy", authenticateToken, authorizeRoles("pharmacist"), demandesController.getMyDemandes);
+router.get("/me/supplier", authenticateToken, authorizeRoles("supplier"), demandesController.getMySupplierDemandes);
+router.put("/:id/status", authenticateToken, authorizeRoles("admin", "pharmacist", "supplier"), demandesController.updateDemandeStatus);
+router.post("/create", authenticateToken, authorizeRoles("pharmacist"), demandesController.createDemande);
 
 export default router;

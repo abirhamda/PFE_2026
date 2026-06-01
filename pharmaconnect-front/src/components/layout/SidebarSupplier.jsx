@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios";
-import { Bell, Building2, LogOut, Settings } from "lucide-react";
+import { Bell, Building2, LayoutDashboard, LogOut, Package2, UserRound } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
+import api from "../../lib/api";
 
 const SidebarItem = ({ to, icon, label, badge }) => (
   <NavLink
@@ -30,11 +30,9 @@ const SidebarSupplier = ({ isOpen, onClose }) => {
 
   useEffect(() => {
     const fetchNotifications = async () => {
-      if (!user?.id) return;
-
       try {
-        const res = await axios.get(`/api/notifications/fournisseur/${user.id}`);
-        const pending = Array.isArray(res.data) ? res.data.filter((item) => item.status === "en_attente") : [];
+        const res = await api.get("/suppliers/me/request-center");
+        const pending = Array.isArray(res.data?.items) ? res.data.items.filter((item) => item.status === "en_attente") : [];
         setNotificationCount(pending.length);
       } catch (error) {
         console.error("Erreur recuperation notifications fournisseur:", error);
@@ -61,14 +59,16 @@ const SidebarSupplier = ({ isOpen, onClose }) => {
         <div className="flex h-full flex-col p-4">
           <div className="rounded-2xl bg-gradient-to-br from-cyan-600 to-teal-600 p-4 text-white shadow-lg">
             <p className="text-xs uppercase tracking-wider text-cyan-100">Fournisseur</p>
-            <h2 className="mt-1 text-lg font-semibold">PharmaConnect</h2>
+            <h2 className="mt-1 text-lg font-semibold">MediCare</h2>
             <p className="mt-3 text-sm text-cyan-50">{user?.name || user?.email || "Fournisseur"}</p>
           </div>
 
           <nav className="mt-6 flex-1 space-y-2">
-            <SidebarItem to="/supplier" icon={<Building2 size={18} />} label="Pharmacies" />
-            <SidebarItem to="/supplier/notifications" icon={<Bell size={18} />} label="Notifications" badge={notificationCount} />
-            <SidebarItem to="/settings" icon={<Settings size={18} />} label="Parametres" />
+            <SidebarItem to="/supplier/dashboard" icon={<LayoutDashboard size={18} />} label="Dashboard" />
+            <SidebarItem to="/supplier/demandes" icon={<Bell size={18} />} label="Demandes" badge={notificationCount} />
+            <SidebarItem to="/supplier/pharmacies" icon={<Building2 size={18} />} label="Pharmacies" />
+            <SidebarItem to="/supplier/produits" icon={<Package2 size={18} />} label="Produits" />
+            <SidebarItem to="/supplier/profile" icon={<UserRound size={18} />} label="Profil" />
           </nav>
 
           <button

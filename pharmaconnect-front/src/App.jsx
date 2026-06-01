@@ -2,20 +2,26 @@
 import { AuthProvider, useAuth } from './hooks/useAuth';
 
 import LoginPage from './pages/auth/LoginPage';
+import VisitorHome from './pages/visitor/VisitorHome';
 
 import DashboardPage from './pages/pharmacist/DashboardPage';
 import OrdonnancesPage from './pages/pharmacist/OrdonnancesPage';
 import PharmacistSupplierPage from './pages/pharmacist/PharmacistSupplierPage';
+import PharmacyStockPage from './pages/pharmacist/PharmacyStockPage';
+import PharmacyDemandesPage from './pages/pharmacist/PharmacyDemandesPage';
 
 import PharmacyManagementPage from './pages/admin/PharmacyManagementPage';
 import DashboardAdminPage from './pages/admin/DashboardAdminPage';
 import DocteurPage from './pages/admin/DocteurPage';
+import DoctorAccessManagementPage from './pages/admin/DoctorAccessManagementPage';
+import SupplierManagementPage from './pages/admin/SupplierManagementPage';
 
 import DoctorDashboardPage from './pages/doctor/DoctorDashboardPage';
 import DoctorsOrdonnancesPage from './pages/doctor/DoctorsOrdonnancesPage';
 import DoctorRendezvousPage from './pages/doctor/DoctorRendezvousPage';
 import DoctorSecretariesPage from './pages/doctor/DoctorSecretariesPage';
 import DoctorPatientsPage from './pages/doctor/DoctorPatientsPage';
+import MedicalAiAnalysisPage from './pages/doctor/MedicalAiAnalysisPage';
 
 import SecretaryRendezvousPage from './pages/secretaire/SecretaryRendezvousPage';
 import SecretaryPatientsPage from './pages/secretaire/SecretaryPatientsPage';
@@ -23,6 +29,8 @@ import SecretaryOrdonnancesPage from './pages/secretaire/SecretaryOrdonnancesPag
 
 import PharmaciesListPage from './pages/supplier/PharmaciesListPage';
 import NotificationsPage from './pages/supplier/NotificationsPage';
+import SupplierDashboardPage from './pages/supplier/SupplierDashboardPage';
+import SupplierProductsPage from './pages/supplier/SupplierProductsPage';
 
 import PatientDashboardPage from './pages/pation/DashboardPage';
 import DiscoverDoctorsPage from './pages/pation/DiscoverDoctorsPage';
@@ -55,7 +63,7 @@ const RoleBasedRedirect = () => {
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/" replace />;
   }
 
   switch (user?.role) {
@@ -68,11 +76,11 @@ const RoleBasedRedirect = () => {
     case 'secretaire':
       return <Navigate to="/secretaire/rendezvous" replace />;
     case 'supplier':
-      return <Navigate to="/supplier" replace />;
+      return <Navigate to="/supplier/dashboard" replace />;
     case 'pation':
       return <Navigate to="/patient" replace />;
     default:
-      return <Navigate to="/login" replace />;
+      return <Navigate to="/" replace />;
   }
 };
 
@@ -82,8 +90,10 @@ function App() {
       <Router>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
-          <Route path="/doctors" element={<DiscoverDoctorsPage publicMode />} />
-          <Route path="/" element={<RoleBasedRedirect />} />
+          <Route path="/login/:roleSlug" element={<LoginPage />} />
+          <Route path="/redirect" element={<RoleBasedRedirect />} />
+          <Route path="/doctors" element={<VisitorHome initialScope="doctor" />} />
+          <Route path="/" element={<VisitorHome />} />
 
           <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
             <Route element={<AdminLayout />}>
@@ -91,21 +101,34 @@ function App() {
               <Route path="/pharmacies" element={<PharmacyManagementPage />} />
               <Route path="/admin/pharmacies" element={<PharmacyManagementPage />} />
               <Route path="/admin/doctors" element={<DocteurPage />} />
+              <Route path="/admin/medecins" element={<DoctorAccessManagementPage />} />
+              <Route path="/admin/suppliers" element={<SupplierManagementPage />} />
+              <Route path="/admin/settings" element={<SettingsPage />} />
             </Route>
           </Route>
 
           <Route element={<ProtectedRoute allowedRoles={['pharmacist']} />}>
             <Route element={<PharmacistLayout />}>
+              <Route path="/pharmacy" element={<Navigate to="/pharmacy/dashboard" replace />} />
               <Route path="/pharmacy/dashboard" element={<DashboardPage />} />
               <Route path="/pharmacy/ordonnances" element={<OrdonnancesPage />} />
-              <Route path="/pharmacy/supplier" element={<PharmacistSupplierPage />} />
+              <Route path="/pharmacy/stock" element={<PharmacyStockPage />} />
+              <Route path="/pharmacy/demandes" element={<PharmacyDemandesPage />} />
+              <Route path="/pharmacy/fournisseurs" element={<PharmacistSupplierPage />} />
+              <Route path="/pharmacy/profile" element={<ProfilePage />} />
+              <Route path="/pharmacy/settings" element={<SettingsPage />} />
             </Route>
           </Route>
 
           <Route element={<ProtectedRoute allowedRoles={['supplier']} />}>
             <Route element={<SupplierLayout />}>
-              <Route path="/supplier" element={<PharmaciesListPage />} />
-              <Route path="/supplier/notifications" element={<NotificationsPage />} />
+              <Route path="/supplier" element={<Navigate to="/supplier/dashboard" replace />} />
+              <Route path="/supplier/dashboard" element={<SupplierDashboardPage />} />
+              <Route path="/supplier/demandes" element={<NotificationsPage />} />
+              <Route path="/supplier/pharmacies" element={<PharmaciesListPage />} />
+              <Route path="/supplier/produits" element={<SupplierProductsPage />} />
+              <Route path="/supplier/profile" element={<ProfilePage />} />
+              <Route path="/supplier/settings" element={<SettingsPage />} />
             </Route>
           </Route>
 
@@ -116,6 +139,8 @@ function App() {
               <Route path="/docteur/rendezvous" element={<DoctorRendezvousPage />} />
               <Route path="/docteur/patients" element={<DoctorPatientsPage />} />
               <Route path="/docteur/secretaires" element={<DoctorSecretariesPage />} />
+              <Route path="/docteur/analyse" element={<MedicalAiAnalysisPage />} />
+              <Route path="/medecin/analyse" element={<MedicalAiAnalysisPage />} />
               <Route path="/docteur/profile" element={<ProfilePage />} />
               <Route path="/docteur/settings" element={<SettingsPage />} />
             </Route>

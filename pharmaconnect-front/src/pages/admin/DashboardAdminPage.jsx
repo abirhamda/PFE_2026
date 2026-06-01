@@ -1,409 +1,671 @@
-"use client"
+import React, { useEffect, useState } from "react";
+import {
+  Activity,
+  ArrowRight,
+  BadgeCheck,
+  BarChart3,
+  Building2,
+  RefreshCw,
+  Stethoscope,
+  Truck,
+  Users,
+} from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import Button from "../../components/ui/Button";
+import { Card, CardContent } from "../../components/ui/Card";
+import api from "../../lib/api";
 
-import { useState, useEffect } from "react"
-import axios from "axios"
-import { Users, Store, Activity, TrendingUp, TrendingDown, UserCheck, AlertCircle } from 'lucide-react'
+const isActiveRecord = (record) => Number(record?.is_active) === 1 || record?.is_active === true;
 
-const StatCard = ({ title, value, change, changeType, icon, color = "blue" }) => {
-  const colorClasses = {
-    blue: "from-blue-500 to-blue-600",
-    green: "from-green-500 to-green-600",
-    purple: "from-purple-500 to-purple-600",
-    orange: "from-orange-500 to-orange-600",
-    red: "from-red-500 to-red-600",
+const formatDate = (value) => {
+  if (!value) return "Date indisponible";
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return String(value);
+
+  return new Intl.DateTimeFormat("fr-FR", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(parsed);
+};
+
+const getSafeLabel = (value, fallback) => {
+  const label = String(value || "").trim();
+  return label || fallback;
+};
+
+const toPercent = (value, total) => {
+  if (!total) return 0;
+  return Math.round((value / total) * 100);
+};
+
+const buildMonthlySeries = (entries) => {
+  const monthFormatter = new Intl.DateTimeFormat("fr-FR", {
+    month: "short",
+    year: "2-digit",
+  });
+  const now = new Date();
+  const months = [];
+
+  for (let index = 5; index >= 0; index -= 1) {
+    const monthDate = new Date(now.getFullYear(), now.getMonth() - index, 1);
+    const key = `${monthDate.getFullYear()}-${String(monthDate.getMonth() + 1).padStart(2, "0")}`;
+
+    months.push({
+      key,
+      label: monthFormatter.format(monthDate),
+      total: 0,
+      doctors: 0,
+      pharmacies: 0,
+      suppliers: 0,
+    });
   }
 
-  return (
-    <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-xl border border-white/20 hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1">
-      <div className="flex items-center justify-between">
+  const monthMap = Object.fromEntries(months.map((month) => [month.key, month]));
+
+  entries.forEach((entry) => {
+    const parsed = new Date(entry.created_at);
+    if (Number.isNaN(parsed.getTime())) return;
+
+    const key = `${parsed.getFullYear()}-${String(parsed.getMonth() + 1).padStart(2, "0")}`;
+    const month = monthMap[key];
+    if (!month) return;
+
+    month.total += 1;
+    month[entry.type] += 1;
+  });
+
+  return months;
+};
+
+const buildTopSpecialties = (doctors) => {
+  const counts = doctors.reduce((accumulator, doctor) => {
+    const specialty = getSafeLabel(doctor?.specialty, "Non renseignee");
+    accumulator[specialty] = (accumulator[specialty] || 0) + 1;
+    return accumulator;
+  }, {});
+
+  return Object.entries(counts)
+    .map(([label, count]) => ({ label, count }))
+    .sort((left, right) => right.count - left.count || left.label.localeCompare(right.label, "fr"))
+    .slice(0, 5);
+};
+
+const StatCard = ({ title, value, subtitle, icon: Icon, accent }) => (
+  <Card className="border-slate-200/90 bg-white/95 shadow-md">
+    <CardContent className="p-6">
+      <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="text-gray-600 text-sm font-medium">{title}</p>
-          <p className="text-3xl font-bold text-gray-900 mt-2">{value}</p>
-          {change && (
-            <div
-              className={`flex items-center mt-2 text-sm ${
-                changeType === "increase" ? "text-green-600" : "text-red-600"
-              }`}
-            >
-              {changeType === "increase" ? (
-                <TrendingUp className="w-4 h-4 mr-1" />
-              ) : (
-                <TrendingDown className="w-4 h-4 mr-1" />
-              )}
-              <span>{change}</span>
-            </div>
-          )}
+          <p className="text-sm font-medium text-slate-500">{title}</p>
+          <p className="mt-3 text-4xl font-semibold text-slate-900">{value}</p>
+          <p className="mt-2 text-sm text-slate-500">{subtitle}</p>
         </div>
-        <div className={`bg-gradient-to-r ${colorClasses[color]} p-4 rounded-xl`}>
-          <div className="text-white">{icon}</div>
+        <div className={`rounded-2xl p-3 text-white shadow-lg ${accent}`}>
+          <Icon size={24} />
         </div>
       </div>
-    </div>
-  )
-}
+    </CardContent>
+  </Card>
+);
 
-const ActivityItem = ({ icon, title, description, time, type = "info" }) => {
-  const typeColors = {
-    info: "bg-blue-100 text-blue-600",
-    success: "bg-green-100 text-green-600",
-    warning: "bg-orange-100 text-orange-600",
-    error: "bg-red-100 text-red-600",
-  }
-
-  return (
-    <div className="flex items-start gap-4 p-4 hover:bg-gray-50 rounded-lg transition-colors duration-200">
-      <div className={`p-2 rounded-lg ${typeColors[type]}`}>{icon}</div>
-      <div className="flex-1">
-        <h4 className="font-medium text-gray-900">{title}</h4>
-        <p className="text-gray-600 text-sm">{description}</p>
-        <p className="text-gray-400 text-xs mt-1">{time}</p>
+const InsightCard = ({ title, value, helper, icon: Icon, tone }) => (
+  <div className="rounded-3xl border border-slate-200 bg-white/95 p-5 shadow-sm">
+    <div className="flex items-start gap-4">
+      <div className={`rounded-2xl p-3 ${tone}`}>
+        <Icon size={20} />
+      </div>
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">{title}</p>
+        <p className="mt-2 text-xl font-semibold text-slate-900">{value}</p>
+        <p className="mt-1 text-sm text-slate-500">{helper}</p>
       </div>
     </div>
-  )
-}
+  </div>
+);
 
-export default function Dashboard() {
-  const [stats, setStats] = useState({
-    doctors: { total: 0, active: 0, inactive: 0 },
-    pharmacies: { total: 0, active: 0, inactive: 0 },
-  })
-
-  const [recentData, setRecentData] = useState({
-    doctors: [],
-    pharmacies: [],
-  })
-
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState("")
-
-  // Fonction pour récupérer les données réelles
-  const fetchRealData = async () => {
-    try {
-      setLoading(true)
-      const token = localStorage.getItem("token") || sessionStorage.getItem("token")
-
-      if (!token) {
-        setError("Token d'authentification manquant")
-        return
-      }
-
-      const headers = {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      }
-
-      // Récupérer les médecins
-      console.log("🔍 Récupération des médecins...")
-      const doctorsResponse = await axios.get("/api/doctors", { headers })
-      const doctors = Array.isArray(doctorsResponse.data.doctors)
-        ? doctorsResponse.data.doctors
-        : Array.isArray(doctorsResponse.data)
-          ? doctorsResponse.data
-          : []
-
-      // Récupérer les pharmacies
-      console.log("🔍 Récupération des pharmacies...")
-      const pharmaciesResponse = await axios.get("/api/admin/pharmacies", { headers })
-      const pharmacies = Array.isArray(pharmaciesResponse.data) ? pharmaciesResponse.data : []
-
-      console.log("✅ Données récupérées:", { doctors: doctors.length, pharmacies: pharmacies.length })
-
-      // Calculer les statistiques des médecins
-      const doctorsActive = doctors.filter((doctor) => doctor.is_active === 1 || doctor.is_active === true).length
-      const doctorsInactive = doctors.length - doctorsActive
-
-      // Calculer les statistiques des pharmacies
-      const pharmaciesActive = pharmacies.filter(
-        (pharmacy) => pharmacy.is_active === 1 || pharmacy.is_active === true,
-      ).length
-      const pharmaciesInactive = pharmacies.length - pharmaciesActive
-
-      // Mettre à jour les stats
-      setStats({
-        doctors: {
-          total: doctors.length,
-          active: doctorsActive,
-          inactive: doctorsInactive,
-        },
-        pharmacies: {
-          total: pharmacies.length,
-          active: pharmaciesActive,
-          inactive: pharmaciesInactive,
-        },
-      })
-
-      // Garder les données récentes pour les activités
-      setRecentData({
-        doctors: doctors.slice(0, 5), // Les 5 derniers médecins
-        pharmacies: pharmacies.slice(0, 5), // Les 5 dernières pharmacies
-      })
-
-      setError("")
-    } catch (error) {
-      console.error("❌ Erreur lors de la récupération des données:", error)
-      setError("Erreur lors du chargement des données")
-      // Données par défaut en cas d'erreur
-      setStats({
-        doctors: { total: 0, active: 0, inactive: 0 },
-        pharmacies: { total: 0, active: 0, inactive: 0 },
-      })
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    fetchRealData()
-    // Actualiser les données toutes les 5 minutes
-    const interval = setInterval(fetchRealData, 5 * 60 * 1000)
-    return () => clearInterval(interval)
-  }, [])
-
-  // Générer les activités récentes basées sur les vraies données
-  const generateRecentActivities = () => {
-    const activities = []
-
-    // Ajouter les médecins récents
-    recentData.doctors.slice(0, 2).forEach((doctor, index) => {
-      activities.push({
-        icon: <UserCheck className="w-4 h-4" />,
-        title: "Médecin ajouté",
-        description: `Dr. ${doctor.prenom} ${doctor.nom} - ${doctor.specialty}`,
-        time: `Ajouté récemment`,
-        type: "success",
-      })
-    })
-
-    // Ajouter les pharmacies récentes
-    recentData.pharmacies.slice(0, 2).forEach((pharmacy, index) => {
-      activities.push({
-        icon: <Store className="w-4 h-4" />,
-        title: "Pharmacie ajoutée",
-        description: `${pharmacy.nom_pharmacie} - ${pharmacy.president_pharmacie}`,
-        time: `Ajoutée récemment`,
-        type: "info",
-      })
-    })
-
-    return activities.slice(0, 4) // Limiter à 4 activités
-  }
-
-  const recentActivities = generateRecentActivities()
-
-  // Calculer le taux d'activité global
-  const totalEntities = stats.doctors.total + stats.pharmacies.total
-  const totalActive = stats.doctors.active + stats.pharmacies.active
-  const activityRate = totalEntities > 0 ? ((totalActive / totalEntities) * 100).toFixed(1) : 0
-
-  if (loading) {
+const DistributionDonut = ({ items, total }) => {
+  if (!total) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center">
-        <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-8 shadow-xl border border-white/20">
-          <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full mx-auto"></div>
-          <p className="text-gray-600 mt-4 text-center">Chargement des données réelles...</p>
-        </div>
+      <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-10 text-center text-sm text-slate-500">
+        Aucune donnee disponible pour la repartition.
       </div>
-    )
+    );
   }
 
+  let progress = 0;
+  const slices = items
+    .map((item) => {
+      const start = progress;
+      progress += (item.count / total) * 100;
+      return `${item.color} ${start}% ${progress}%`;
+    })
+    .join(", ");
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
-      {/* Beautiful Header Section */}
-      <div className="bg-gradient-to-r from-[#1D10FA] to-purple-600 text-white py-8 px-6 shadow-2xl">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex items-center gap-4 mb-4">
-            <div className="bg-white/20 backdrop-blur-sm p-3 rounded-xl">
-              <Activity className="w-8 h-8" />
+    <div className="flex flex-col items-center gap-6 lg:flex-row lg:items-center lg:justify-between">
+      <div
+        className="relative flex h-52 w-52 items-center justify-center rounded-full shadow-inner"
+        style={{ background: `conic-gradient(${slices})` }}
+      >
+        <div className="flex h-32 w-32 flex-col items-center justify-center rounded-full bg-white shadow-sm">
+          <span className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-400">Total</span>
+          <span className="mt-1 text-4xl font-bold text-slate-900">{total}</span>
+          <span className="mt-1 text-sm text-slate-500">partenaires</span>
+        </div>
+      </div>
+
+      <div className="w-full space-y-3 lg:max-w-xs">
+        {items.map((item) => (
+          <div key={item.label} className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <span className="h-3 w-3 rounded-full" style={{ backgroundColor: item.color }} />
+                <span className="text-sm font-semibold text-slate-800">{item.label}</span>
+              </div>
+              <span className="text-sm font-semibold text-slate-900">{item.count}</span>
+            </div>
+            <p className="mt-1 text-xs text-slate-500">{toPercent(item.count, total)}% du portefeuille admin</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+const EvolutionChart = ({ data }) => {
+  const width = 520;
+  const height = 220;
+  const paddingX = 28;
+  const paddingY = 24;
+  const baselineY = height - paddingY;
+  const maxValue = Math.max(...data.map((item) => item.total), 1);
+  const chartWidth = width - paddingX * 2;
+  const chartHeight = height - paddingY * 2;
+  const stepX = data.length > 1 ? chartWidth / (data.length - 1) : 0;
+
+  const points = data.map((item, index) => {
+    const x = data.length === 1 ? width / 2 : paddingX + stepX * index;
+    const y = baselineY - (item.total / maxValue) * chartHeight;
+    return { x, y, total: item.total, label: item.label };
+  });
+
+  const polylinePoints = points.map((point) => `${point.x},${point.y}`).join(" ");
+  const areaPoints =
+    points.length > 0
+      ? `${points[0].x},${baselineY} ${polylinePoints} ${points[points.length - 1].x},${baselineY}`
+      : "";
+
+  const axisLabels = Array.from({ length: 4 }, (_, index) => {
+    const value = Math.round((maxValue * (3 - index)) / 3);
+    const y = paddingY + (chartHeight / 3) * index;
+    return { value, y };
+  });
+
+  return (
+    <div>
+      <div className="rounded-[28px] border border-slate-200 bg-slate-50/80 p-4">
+        <svg viewBox={`0 0 ${width} ${height}`} className="h-64 w-full">
+          {axisLabels.map((tick) => (
+            <g key={`${tick.value}-${tick.y}`}>
+              <line x1={paddingX} x2={width - paddingX} y1={tick.y} y2={tick.y} stroke="#dbeafe" strokeDasharray="5 5" />
+              <text x={6} y={tick.y + 4} fontSize="11" fill="#64748b">
+                {tick.value}
+              </text>
+            </g>
+          ))}
+
+          {areaPoints ? <polygon points={areaPoints} fill="rgba(8, 145, 178, 0.10)" /> : null}
+
+          {polylinePoints ? (
+            <polyline
+              points={polylinePoints}
+              fill="none"
+              stroke="#0891b2"
+              strokeWidth="4"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          ) : null}
+
+          {points.map((point) => (
+            <g key={point.label}>
+              <circle cx={point.x} cy={point.y} r="5" fill="#0f172a" stroke="#ffffff" strokeWidth="3" />
+            </g>
+          ))}
+        </svg>
+      </div>
+
+      <div className="mt-4 grid gap-3 sm:grid-cols-3 xl:grid-cols-6">
+        {data.map((item) => (
+          <div key={item.key} className="rounded-2xl border border-slate-200 bg-white px-3 py-3 text-center shadow-sm">
+            <p className="text-xs uppercase tracking-wide text-slate-500">{item.label}</p>
+            <p className="mt-1 text-2xl font-semibold text-slate-900">{item.total}</p>
+            <p className="mt-1 text-xs text-slate-500">
+              {item.doctors} med. | {item.pharmacies} pharm. | {item.suppliers} fourn.
+            </p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+const RankingBars = ({ items, emptyLabel }) => {
+  if (items.length === 0) {
+    return (
+      <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-10 text-center text-sm text-slate-500">
+        {emptyLabel}
+      </div>
+    );
+  }
+
+  const maxValue = Math.max(...items.map((item) => item.count), 1);
+
+  return (
+    <div className="space-y-4">
+      {items.map((item, index) => (
+        <div key={item.label} className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-slate-900">
+                {index + 1}. {item.label}
+              </p>
+              <p className="mt-1 text-xs text-slate-500">{toPercent(item.count, maxValue)}% du niveau du leader</p>
+            </div>
+            <span className="rounded-full bg-white px-3 py-1 text-sm font-semibold text-slate-900 shadow-sm">{item.count}</span>
+          </div>
+
+          <div className="mt-3 h-2.5 rounded-full bg-slate-200">
+            <div
+              className="h-2.5 rounded-full bg-gradient-to-r from-cyan-600 to-teal-500"
+              style={{ width: `${(item.count / maxValue) * 100}%` }}
+            />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+const StatusRows = ({ items }) => (
+  <div className="space-y-4">
+    {items.map((item) => (
+      <div key={item.label} className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="rounded-2xl p-2 text-white shadow-sm" style={{ background: item.color }}>
+              <item.icon size={16} />
             </div>
             <div>
-              <h1 className="text-4xl font-bold">Tableau de Bord</h1>
-              <p className="text-blue-100 text-lg">Vue d'ensemble de votre système de gestion</p>
+              <p className="text-sm font-semibold text-slate-900">{item.label}</p>
+              <p className="text-xs text-slate-500">
+                {item.active} actifs sur {item.count}
+              </p>
             </div>
           </div>
+          <span className="text-sm font-semibold text-slate-900">{toPercent(item.active, item.count)}%</span>
+        </div>
 
-          {/* Error Message */}
-          {error && (
-            <div className="bg-red-500/20 border border-red-300 rounded-lg p-4 mb-4">
-              <div className="flex items-center gap-2">
-                <AlertCircle className="w-5 h-5 text-red-300" />
-                <p className="text-red-100">{error}</p>
-              </div>
-            </div>
-          )}
-
-          {/* Quick Stats in Header */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
-              <div className="flex items-center gap-3">
-                <div className="bg-green-400 p-2 rounded-lg">
-                  <Activity className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">{totalActive}</p>
-                  <p className="text-blue-100 text-sm">Entités Actives</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
-              <div className="flex items-center gap-3">
-                <div className="bg-blue-400 p-2 rounded-lg">
-                  <Users className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">{totalEntities}</p>
-                  <p className="text-blue-100 text-sm">Total Entités</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
-              <div className="flex items-center gap-3">
-                <div className="bg-purple-400 p-2 rounded-lg">
-                  <TrendingUp className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">{activityRate}%</p>
-                  <p className="text-blue-100 text-sm">Taux d'Activité</p>
-                </div>
-              </div>
-            </div>
-          </div>
+        <div className="mt-3 h-2.5 rounded-full bg-slate-200">
+          <div className="h-2.5 rounded-full" style={{ width: `${toPercent(item.active, item.count)}%`, background: item.color }} />
         </div>
       </div>
+    ))}
+  </div>
+);
 
-      <div className="max-w-7xl mx-auto px-6 py-8">
-        {/* Refresh Button */}
-        <div className="flex justify-end mb-6">
-          <button
-            onClick={fetchRealData}
-            disabled={loading}
-            className="bg-gradient-to-r from-[#1D10FA] to-purple-600 text-white px-4 py-2 rounded-lg font-medium hover:shadow-lg transition-all duration-200 flex items-center gap-2 disabled:opacity-50"
-          >
-            <Activity className="w-4 h-4" />
-            {loading ? "Actualisation..." : "Actualiser"}
-          </button>
-        </div>
+export default function DashboardAdminPage() {
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [doctors, setDoctors] = useState([]);
+  const [pharmacies, setPharmacies] = useState([]);
+  const [suppliers, setSuppliers] = useState([]);
 
-        {/* Main Statistics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-          <StatCard
-            title="Total Médecins"
-            value={stats.doctors.total}
-            change={stats.doctors.total > 0 ? "Données réelles" : "Aucune donnée"}
-            changeType="increase"
-            icon={<Users className="w-6 h-6" />}
-            color="blue"
-          />
+  const loadDashboard = async () => {
+    try {
+      setLoading(true);
 
-          <StatCard
-            title="Médecins Actifs"
-            value={stats.doctors.active}
-            change={`${stats.doctors.inactive} inactifs`}
-            changeType={stats.doctors.active > stats.doctors.inactive ? "increase" : "decrease"}
-            icon={<UserCheck className="w-6 h-6" />}
-            color="green"
-          />
+      const [doctorsResponse, pharmaciesResponse, suppliersResponse] = await Promise.all([
+        api.get("/admin/doctors"),
+        api.get("/admin/pharmacies"),
+        api.get("/admin/suppliers"),
+      ]);
 
-          <StatCard
-            title="Pharmacies"
-            value={stats.pharmacies.total}
-            change={stats.pharmacies.total > 0 ? "Données réelles" : "Aucune donnée"}
-            changeType="increase"
-            icon={<Store className="w-6 h-6" />}
-            color="purple"
-          />
-        </div>
+      setDoctors(Array.isArray(doctorsResponse.data?.doctors) ? doctorsResponse.data.doctors : []);
+      setPharmacies(Array.isArray(pharmaciesResponse.data) ? pharmaciesResponse.data : []);
+      setSuppliers(Array.isArray(suppliersResponse.data) ? suppliersResponse.data : []);
+      setError("");
+    } catch (requestError) {
+      setError(
+        requestError?.response?.data?.error || requestError?.message || "Impossible de charger le tableau de bord admin",
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
 
-        {/* Detailed Statistics */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-          <div className="lg:col-span-2 bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-xl border border-white/20">
-            <h3 className="text-xl font-bold text-gray-900 mb-6">Répartition par Catégorie</h3>
-            <div className="space-y-6">
-              {/* Doctors Progress */}
+  useEffect(() => {
+    loadDashboard();
+  }, []);
+
+  const totals = {
+    doctors: doctors.length,
+    pharmacies: pharmacies.length,
+    suppliers: suppliers.length,
+  };
+
+  const activeTotals = {
+    doctors: doctors.filter((record) => isActiveRecord(record)).length,
+    pharmacies: pharmacies.filter((record) => isActiveRecord(record)).length,
+    suppliers: suppliers.filter((record) => isActiveRecord(record)).length,
+  };
+
+  const globalTotal = totals.doctors + totals.pharmacies + totals.suppliers;
+  const globalActive = activeTotals.doctors + activeTotals.pharmacies + activeTotals.suppliers;
+  const globalInactive = globalTotal - globalActive;
+
+  const portfolioMix = [
+    {
+      label: "Medecins",
+      count: totals.doctors,
+      active: activeTotals.doctors,
+      icon: Stethoscope,
+      color: "#0891b2",
+    },
+    {
+      label: "Pharmacies",
+      count: totals.pharmacies,
+      active: activeTotals.pharmacies,
+      icon: Building2,
+      color: "#10b981",
+    },
+    {
+      label: "Fournisseurs",
+      count: totals.suppliers,
+      active: activeTotals.suppliers,
+      icon: Truck,
+      color: "#f59e0b",
+    },
+  ];
+
+  const allPartnerEntries = [
+    ...doctors.map((record) => ({ type: "doctors", created_at: record.created_at })),
+    ...pharmacies.map((record) => ({ type: "pharmacies", created_at: record.created_at })),
+    ...suppliers.map((record) => ({ type: "suppliers", created_at: record.created_at })),
+  ];
+
+  const monthlySeries = buildMonthlySeries(allPartnerEntries);
+  const topSpecialties = buildTopSpecialties(doctors);
+  const leadingPortfolio = [...portfolioMix].sort((left, right) => right.count - left.count)[0];
+  const leadingSpecialty = topSpecialties[0];
+  const activationRate = toPercent(globalActive, globalTotal);
+  const mostRecentMonth = [...monthlySeries].reverse().find((month) => month.total > 0) || monthlySeries[monthlySeries.length - 1];
+
+  const recentActivity = [
+    ...doctors.map((record) => ({
+      id: `doctor-${record.id}`,
+      label: `Dr ${record.prenom || ""} ${record.nom || ""}`.trim(),
+      description: record.specialty || "Medecin",
+      created_at: record.created_at,
+      target: "/admin/doctors",
+      type: "Medecin",
+      accent: "bg-cyan-100 text-cyan-700",
+    })),
+    ...pharmacies.map((record) => ({
+      id: `pharmacy-${record.id_pharmacie}`,
+      label: record.nom_pharmacie,
+      description: record.president_pharmacie || "Pharmacie",
+      created_at: record.created_at,
+      target: "/admin/pharmacies",
+      type: "Pharmacie",
+      accent: "bg-emerald-100 text-emerald-700",
+    })),
+    ...suppliers.map((record) => ({
+      id: `supplier-${record.id}`,
+      label: `${record.prenom || ""} ${record.nom || ""}`.trim(),
+      description: record.email || "Fournisseur",
+      created_at: record.created_at,
+      target: "/admin/suppliers",
+      type: "Fournisseur",
+      accent: "bg-amber-100 text-amber-700",
+    })),
+  ]
+    .sort((left, right) => new Date(right.created_at || 0) - new Date(left.created_at || 0))
+    .slice(0, 6);
+
+  return (
+    <div className="space-y-8">
+      <section className="rounded-3xl bg-gradient-to-r from-cyan-700 via-cyan-600 to-teal-600 p-6 text-white shadow-xl">
+        <p className="text-xs uppercase tracking-wider text-cyan-100">Module administrateur</p>
+        <h1 className="mt-1 text-3xl font-bold">Tableau de bord administration</h1>
+        <p className="mt-1 text-sm text-cyan-100">
+          Vue de pilotage professionnelle pour suivre le volume, l'etat et les tendances des partenaires de l'application.
+        </p>
+      </section>
+
+      {error ? <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div> : null}
+
+      <section className="flex justify-end">
+        <Button type="button" variant="outline" leftIcon={<RefreshCw size={16} />} onClick={loadDashboard} isLoading={loading}>
+          Actualiser
+        </Button>
+      </section>
+
+      <section className="grid gap-5 xl:grid-cols-4">
+        <StatCard
+          title="Medecins"
+          value={totals.doctors}
+          subtitle={`${activeTotals.doctors} actifs`}
+          icon={Stethoscope}
+          accent="bg-gradient-to-br from-cyan-600 to-sky-600"
+        />
+        <StatCard
+          title="Pharmacies"
+          value={totals.pharmacies}
+          subtitle={`${activeTotals.pharmacies} actives`}
+          icon={Building2}
+          accent="bg-gradient-to-br from-emerald-500 to-teal-600"
+        />
+        <StatCard
+          title="Fournisseurs"
+          value={totals.suppliers}
+          subtitle={`${activeTotals.suppliers} actifs`}
+          icon={Truck}
+          accent="bg-gradient-to-br from-amber-500 to-orange-600"
+        />
+        <StatCard
+          title="Couverture admin"
+          value={globalTotal}
+          subtitle={`${globalActive} actifs, ${globalInactive} inactifs`}
+          icon={Users}
+          accent="bg-gradient-to-br from-slate-700 to-slate-900"
+        />
+      </section>
+
+      <section className="grid gap-4 xl:grid-cols-3">
+        <InsightCard
+          title="Categorie majoritaire"
+          value={leadingPortfolio ? leadingPortfolio.label : "Aucune donnee"}
+          helper={leadingPortfolio ? `${leadingPortfolio.count} comptes suivis actuellement.` : "Le portefeuille admin est vide."}
+          icon={BarChart3}
+          tone="bg-cyan-100 text-cyan-700"
+        />
+        <InsightCard
+          title="Specialite dominante"
+          value={leadingSpecialty ? leadingSpecialty.label : "Aucune specialite"}
+          helper={leadingSpecialty ? `${leadingSpecialty.count} medecin(s) sur la meme specialite.` : "Ajoutez des medecins pour alimenter l'analyse."}
+          icon={Stethoscope}
+          tone="bg-emerald-100 text-emerald-700"
+        />
+        <InsightCard
+          title="Taux d'activation"
+          value={`${activationRate}%`}
+          helper={
+            mostRecentMonth
+              ? `${mostRecentMonth.total} nouveau(x) partenaire(s) sur ${mostRecentMonth.label}.`
+              : "Aucune evolution recente disponible."
+          }
+          icon={Activity}
+          tone="bg-amber-100 text-amber-700"
+        />
+      </section>
+
+      <section className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
+        <Card className="border-slate-200/90 bg-white/95 shadow-md">
+          <CardContent className="p-6">
+            <div>
+              <h2 className="text-2xl font-semibold text-slate-900">Courbe d'evolution des partenaires</h2>
+              <p className="mt-1 text-sm text-slate-500">
+                Suivi des comptes medecins, pharmacies et fournisseurs ajoutes sur les six derniers mois.
+              </p>
+            </div>
+
+            <div className="mt-6">
+              <EvolutionChart data={monthlySeries} />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-slate-200/90 bg-white/95 shadow-md">
+          <CardContent className="p-6">
+            <div>
+              <h2 className="text-2xl font-semibold text-slate-900">Repartition du portefeuille</h2>
+              <p className="mt-1 text-sm text-slate-500">
+                Vue immediate sur la categorie de partenaires la plus representee dans l'application.
+              </p>
+            </div>
+
+            <div className="mt-6">
+              <DistributionDonut items={portfolioMix} total={globalTotal} />
+            </div>
+          </CardContent>
+        </Card>
+      </section>
+
+      <section className="grid gap-6 xl:grid-cols-2">
+        <Card className="border-slate-200/90 bg-white/95 shadow-md">
+          <CardContent className="p-6">
+            <div>
+              <h2 className="text-2xl font-semibold text-slate-900">Specialites medecins les plus presentes</h2>
+              <p className="mt-1 text-sm text-slate-500">
+                Ideal pour voir rapidement les poles medicaux les plus forts de votre ecosysteme.
+              </p>
+            </div>
+
+            <div className="mt-6">
+              <RankingBars items={topSpecialties} emptyLabel="Aucune specialite disponible pour le moment." />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-slate-200/90 bg-white/95 shadow-md">
+          <CardContent className="p-6">
+            <div>
+              <h2 className="text-2xl font-semibold text-slate-900">Etat operationnel par module</h2>
+              <p className="mt-1 text-sm text-slate-500">
+                Mesurez le taux d'activation reel pour prioriser les relances ou la moderation admin.
+              </p>
+            </div>
+
+            <div className="mt-6">
+              <StatusRows items={portfolioMix} />
+            </div>
+          </CardContent>
+        </Card>
+      </section>
+
+      <section className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
+        <Card className="border-slate-200/90 bg-white/95 shadow-md">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between gap-4">
               <div>
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-gray-700 font-medium">Médecins</span>
-                  <span className="text-gray-600">
-                    {stats.doctors.active}/{stats.doctors.total}
-                  </span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-3">
-                  <div
-                    className="bg-gradient-to-r from-blue-500 to-blue-600 h-3 rounded-full transition-all duration-500"
-                    style={{
-                      width: stats.doctors.total > 0 ? `${(stats.doctors.active / stats.doctors.total) * 100}%` : "0%",
-                    }}
-                  ></div>
-                </div>
+                <h2 className="text-2xl font-semibold text-slate-900">Activite recente</h2>
+                <p className="mt-1 text-sm text-slate-500">Les derniers comptes crees ou visibles dans l'administration.</p>
               </div>
-
-              {/* Pharmacies Progress */}
-              <div>
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-gray-700 font-medium">Pharmacies</span>
-                  <span className="text-gray-600">
-                    {stats.pharmacies.active}/{stats.pharmacies.total}
-                  </span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-3">
-                  <div
-                    className="bg-gradient-to-r from-purple-500 to-purple-600 h-3 rounded-full transition-all duration-500"
-                    style={{
-                      width:
-                        stats.pharmacies.total > 0
-                          ? `${(stats.pharmacies.active / stats.pharmacies.total) * 100}%`
-                          : "0%",
-                    }}
-                  ></div>
-                </div>
+              <div className="hidden rounded-full bg-cyan-50 px-3 py-1 text-xs font-semibold text-cyan-700 sm:inline-flex">
+                Supervision en direct
               </div>
             </div>
-          </div>
 
-          {/* Quick Actions */}
-          <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-xl border border-white/20">
-            <h3 className="text-xl font-bold text-gray-900 mb-6">Actions Rapides</h3>
-            <div className="space-y-3">
-              <button
-                onClick={() => (window.location.href = "/admin/doctors")}
-                className="w-full bg-gradient-to-r from-[#1D10FA] to-purple-600 text-white p-3 rounded-lg font-medium hover:shadow-lg transition-all duration-200 flex items-center gap-2"
-              >
-                <Users className="w-4 h-4" />
-                Gérer les médecins
-              </button>
-
-              <button
-                onClick={() => (window.location.href = "/admin/pharmacies")}
-                className="w-full bg-gradient-to-r from-purple-500 to-purple-600 text-white p-3 rounded-lg font-medium hover:shadow-lg transition-all duration-200 flex items-center gap-2"
-              >
-                <Store className="w-4 h-4" />
-                Gérer les pharmacies
-              </button>
+            <div className="mt-6 space-y-3">
+              {recentActivity.length === 0 ? (
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-10 text-center text-sm text-slate-500">
+                  Aucune activite a afficher pour le moment.
+                </div>
+              ) : (
+                recentActivity.map((entry) => (
+                  <button
+                    key={entry.id}
+                    type="button"
+                    onClick={() => navigate(entry.target)}
+                    className="flex w-full items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-4 text-left transition hover:border-cyan-300 hover:bg-cyan-50/40"
+                  >
+                    <div>
+                      <div className="flex items-center gap-3">
+                        <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${entry.accent}`}>{entry.type}</span>
+                        <p className="text-sm font-semibold text-slate-900">{entry.label}</p>
+                      </div>
+                      <p className="mt-2 text-sm text-slate-500">{entry.description}</p>
+                    </div>
+                    <div className="text-right text-xs text-slate-400">
+                      <p>{formatDate(entry.created_at)}</p>
+                    </div>
+                  </button>
+                ))
+              )}
             </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
 
-        {/* Recent Activity */}
-        <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-xl border border-white/20">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-xl font-bold text-gray-900">Activité Récente</h3>
-            <button className="text-[#1D10FA] hover:text-purple-600 font-medium text-sm">Voir tout</button>
-          </div>
+        <Card className="border-slate-200/90 bg-white/95 shadow-md">
+          <CardContent className="p-6">
+            <h2 className="text-2xl font-semibold text-slate-900">Acces rapides</h2>
+            <p className="mt-1 text-sm text-slate-500">Passez directement au module que vous voulez administrer.</p>
 
-          <div className="space-y-2">
-            {recentActivities.length > 0 ? (
-              recentActivities.map((activity, index) => <ActivityItem key={index} {...activity} />)
-            ) : (
-              <div className="text-center py-8 text-gray-500">
-                <Activity className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                <p>Aucune activité récente</p>
-                <p className="text-sm">Les nouvelles activités apparaîtront ici</p>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
+            <div className="mt-6 space-y-3">
+              {[
+                {
+                  label: "Gerer les medecins",
+                  helper: "Ajout, activation, recherche et suppression",
+                  icon: Stethoscope,
+                  target: "/admin/doctors",
+                },
+                {
+                  label: "Gerer les pharmacies",
+                  helper: "Suivi des comptes pharmaciens et officines",
+                  icon: Building2,
+                  target: "/admin/pharmacies",
+                },
+                {
+                  label: "Gerer les fournisseurs",
+                  helper: "Module admin complet pour les fournisseurs",
+                  icon: Truck,
+                  target: "/admin/suppliers",
+                },
+              ].map((item) => (
+                <button
+                  key={item.label}
+                  type="button"
+                  onClick={() => navigate(item.target)}
+                  className="flex w-full items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-left transition hover:border-cyan-300 hover:bg-cyan-50"
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="rounded-2xl bg-cyan-100 p-3 text-cyan-700">
+                      <item.icon size={18} />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-slate-900">{item.label}</p>
+                      <p className="mt-1 text-sm text-slate-500">{item.helper}</p>
+                    </div>
+                  </div>
+                  <ArrowRight size={16} className="text-slate-400" />
+                </button>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </section>
     </div>
-  )
+  );
 }

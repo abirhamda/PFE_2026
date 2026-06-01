@@ -41,7 +41,7 @@ const SidebarSecretary = ({ isOpen, onClose }) => {
         <div className="flex h-full flex-col p-4">
           <div className="rounded-2xl bg-gradient-to-br from-cyan-600 to-teal-600 p-4 text-white shadow-lg">
             <p className="text-xs uppercase tracking-wider text-cyan-100">Secretaire</p>
-            <h2 className="mt-1 text-lg font-semibold">PharmaConnect</h2>
+            <h2 className="mt-1 text-lg font-semibold">MediCare</h2>
             <p className="mt-3 text-sm text-cyan-50">{displayName}</p>
           </div>
 

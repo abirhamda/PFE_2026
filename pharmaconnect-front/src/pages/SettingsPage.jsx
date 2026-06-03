@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { CalendarDays, Globe2, Save, Settings as SettingsIcon, ShieldCheck, Stethoscope } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 import api from "../lib/api";
@@ -59,11 +59,26 @@ const toNumberOrNull = (value) => {
   return Number.isFinite(parsed) ? parsed : null;
 };
 
+const inputCls =
+  "w-full border border-border rounded-lg px-3 py-2.5 text-sm text-text-primary bg-card placeholder-text-muted outline-none transition focus:ring-2 focus:ring-accent/30 focus:border-accent";
+
 const Field = ({ label, children }) => (
   <label className="space-y-1.5">
-    <span className="text-sm font-medium text-slate-700">{label}</span>
+    <span className="block text-xs font-medium text-text-secondary uppercase tracking-wide">{label}</span>
     {children}
   </label>
+);
+
+const SectionCard = ({ icon: Icon, title, children }) => (
+  <section className="bg-card rounded-card border border-border shadow-card p-5">
+    <div className="mb-4 flex items-center gap-2.5">
+      <div className="rounded-lg bg-accent-light p-2 text-accent">
+        <Icon size={15} />
+      </div>
+      <h2 className="text-sm font-semibold text-text-primary">{title}</h2>
+    </div>
+    {children}
+  </section>
 );
 
 export default function SettingsPage() {
@@ -184,149 +199,85 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="mx-auto max-w-5xl space-y-5">
-      <section className="flex items-center gap-3 rounded-[26px] border border-cyan-200/80 bg-gradient-to-r from-cyan-700 to-teal-600 px-5 py-4 text-white shadow-lg shadow-cyan-900/10">
-        <div className="rounded-2xl bg-white/15 p-2.5 backdrop-blur-sm">
-          <SettingsIcon className="h-5 w-5 text-white" />
+    <div className="mx-auto max-w-3xl space-y-5">
+      {/* Page header */}
+      <div className="bg-primary rounded-card border border-primary/20 shadow-card px-5 py-4 flex items-center gap-3">
+        <div className="rounded-lg bg-white/15 p-2 flex-shrink-0">
+          <SettingsIcon size={18} className="text-white" />
         </div>
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-cyan-100">Configuration</p>
-          <h1 className="mt-1 text-2xl font-semibold text-white">Parametres</h1>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-white/50">Configuration</p>
+          <h1 className="text-lg font-semibold text-white">Parametres</h1>
         </div>
-      </section>
+      </div>
 
-      {message && <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{message}</div>}
-      {error && <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>}
+      {message && (
+        <div className="rounded-card border-l-4 border-medical-success bg-medical-success-bg px-4 py-3 text-sm text-medical-success">
+          {message}
+        </div>
+      )}
+      {error && (
+        <div className="rounded-card border-l-4 border-medical-danger bg-medical-danger-bg px-4 py-3 text-sm text-medical-danger">
+          {error}
+        </div>
+      )}
 
       {isProvider ? (
-        <form onSubmit={handleProviderSubmit} className="space-y-5">
-          <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-            <div className="mb-4 flex items-center gap-2">
-              <div className="rounded-xl bg-cyan-50 p-2 text-cyan-700">
-                <Globe2 size={16} />
-              </div>
-              <h2 className="text-lg font-semibold text-slate-900">Profil public du cabinet</h2>
-            </div>
-
+        <form onSubmit={handleProviderSubmit} className="space-y-4">
+          <SectionCard icon={Globe2} title="Profil public du cabinet">
             {loading ? (
-              <div className="rounded-xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500">
+              <div className="rounded-card border border-dashed border-border bg-gray-50 p-8 text-center text-sm text-text-secondary">
                 Chargement...
               </div>
             ) : (
               <div className="grid gap-3 md:grid-cols-2">
                 <Field label="Nom affiche au public">
-                  <input
-                    value={providerForm.display_name}
-                    onChange={(event) => setProviderForm((prev) => ({ ...prev, display_name: event.target.value }))}
-                    className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm"
-                  />
+                  <input value={providerForm.display_name} onChange={(event) => setProviderForm((prev) => ({ ...prev, display_name: event.target.value }))} className={inputCls} />
                 </Field>
                 <Field label="Numero public">
-                  <input
-                    value={providerForm.public_phone}
-                    onChange={(event) => setProviderForm((prev) => ({ ...prev, public_phone: event.target.value }))}
-                    className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm"
-                  />
+                  <input value={providerForm.public_phone} onChange={(event) => setProviderForm((prev) => ({ ...prev, public_phone: event.target.value }))} className={inputCls} />
                 </Field>
                 <Field label="Adresse complete">
-                  <input
-                    value={providerForm.address_line}
-                    onChange={(event) => setProviderForm((prev) => ({ ...prev, address_line: event.target.value }))}
-                    className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm"
-                  />
+                  <input value={providerForm.address_line} onChange={(event) => setProviderForm((prev) => ({ ...prev, address_line: event.target.value }))} className={inputCls} />
                 </Field>
                 <Field label="Ville">
-                  <input
-                    value={providerForm.city}
-                    onChange={(event) => setProviderForm((prev) => ({ ...prev, city: event.target.value }))}
-                    className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm"
-                  />
+                  <input value={providerForm.city} onChange={(event) => setProviderForm((prev) => ({ ...prev, city: event.target.value }))} className={inputCls} />
                 </Field>
                 <Field label="Tarif consultation (MAD)">
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={providerForm.consultation_fee}
-                    onChange={(event) => setProviderForm((prev) => ({ ...prev, consultation_fee: event.target.value }))}
-                    className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm"
-                  />
+                  <input type="number" min="0" step="0.01" value={providerForm.consultation_fee} onChange={(event) => setProviderForm((prev) => ({ ...prev, consultation_fee: event.target.value }))} className={inputCls} />
                 </Field>
                 <Field label="Duree consultation (minutes)">
-                  <input
-                    type="number"
-                    min="5"
-                    max="120"
-                    value={providerForm.consultation_duration_min}
-                    onChange={(event) =>
-                      setProviderForm((prev) => ({
-                        ...prev,
-                        consultation_duration_min: Number(event.target.value) || 20,
-                      }))
-                    }
-                    className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm"
-                  />
+                  <input type="number" min="5" max="120" value={providerForm.consultation_duration_min} onChange={(event) => setProviderForm((prev) => ({ ...prev, consultation_duration_min: Number(event.target.value) || 20 }))} className={inputCls} />
                 </Field>
-                <Field label="Presentation cabinet">
-                  <textarea
-                    value={providerForm.bio}
-                    onChange={(event) => setProviderForm((prev) => ({ ...prev, bio: event.target.value }))}
-                    rows={3}
-                    className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm"
-                  />
-                </Field>
+                <div className="md:col-span-2">
+                  <Field label="Presentation cabinet">
+                    <textarea value={providerForm.bio} onChange={(event) => setProviderForm((prev) => ({ ...prev, bio: event.target.value }))} rows={3} className={`${inputCls} resize-y`} />
+                  </Field>
+                </div>
               </div>
             )}
-          </section>
+          </SectionCard>
 
-          <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-            <div className="mb-4 flex items-center gap-2">
-              <div className="rounded-xl bg-cyan-50 p-2 text-cyan-700">
-                <ShieldCheck size={16} />
-              </div>
-              <h2 className="text-lg font-semibold text-slate-900">Acces patient en ligne</h2>
-            </div>
-
-            <div className="grid gap-3 md:grid-cols-2">
-              <label className="flex items-center justify-between rounded-xl border border-slate-200 px-4 py-3">
-                <span className="text-sm font-medium text-slate-700">Afficher le medecin publiquement</span>
-                <input
-                  type="checkbox"
-                  checked={providerForm.online_visibility}
-                  onChange={(event) =>
-                    setProviderForm((prev) => ({ ...prev, online_visibility: event.target.checked }))
-                  }
-                  className="h-4 w-4 accent-cyan-600"
-                />
+          <SectionCard icon={ShieldCheck} title="Acces patient en ligne">
+            <div className="grid gap-2.5 md:grid-cols-2">
+              <label className="flex items-center justify-between rounded-lg border border-border px-4 py-3 cursor-pointer hover:bg-gray-50 transition-colors">
+                <span className="text-sm text-text-primary">Afficher le medecin publiquement</span>
+                <input type="checkbox" checked={providerForm.online_visibility} onChange={(event) => setProviderForm((prev) => ({ ...prev, online_visibility: event.target.checked }))} className="h-4 w-4 accent-primary" />
               </label>
 
-              <label className="flex items-center justify-between rounded-xl border border-slate-200 px-4 py-3">
-                <span className="text-sm font-medium text-slate-700">Autoriser la reservation en ligne</span>
-                <input
-                  type="checkbox"
-                  checked={providerForm.online_booking_enabled}
-                  onChange={(event) =>
-                    setProviderForm((prev) => ({ ...prev, online_booking_enabled: event.target.checked }))
-                  }
-                  className="h-4 w-4 accent-cyan-600"
-                />
+              <label className="flex items-center justify-between rounded-lg border border-border px-4 py-3 cursor-pointer hover:bg-gray-50 transition-colors">
+                <span className="text-sm text-text-primary">Autoriser la reservation en ligne</span>
+                <input type="checkbox" checked={providerForm.online_booking_enabled} onChange={(event) => setProviderForm((prev) => ({ ...prev, online_booking_enabled: event.target.checked }))} className="h-4 w-4 accent-primary" />
               </label>
             </div>
-          </section>
+          </SectionCard>
 
-          <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-            <div className="mb-4 flex items-center gap-2">
-              <div className="rounded-xl bg-cyan-50 p-2 text-cyan-700">
-                <CalendarDays size={16} />
-              </div>
-              <h2 className="text-lg font-semibold text-slate-900">Horaires publics</h2>
-            </div>
-
+          <SectionCard icon={CalendarDays} title="Horaires publics">
             <div className="space-y-2">
               {WORKING_DAYS.map((day) => (
-                <div key={day.key} className="grid items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 md:grid-cols-[140px,90px,1fr,1fr]">
-                  <span className="text-sm font-medium text-slate-700">{day.label}</span>
-                  <label className="inline-flex items-center gap-2 text-xs text-slate-600">
+                <div key={day.key} className="grid items-center gap-2.5 rounded-lg border border-border bg-gray-50 px-3 py-2.5 md:grid-cols-[140px,80px,1fr,1fr]">
+                  <span className="text-sm text-text-primary">{day.label}</span>
+                  <label className="inline-flex items-center gap-2 text-xs text-text-secondary">
                     <input
                       type="checkbox"
                       checked={providerForm.working_hours[day.key]?.enabled || false}
@@ -342,7 +293,7 @@ export default function SettingsPage() {
                           },
                         }))
                       }
-                      className="h-4 w-4 accent-cyan-600"
+                      className="h-4 w-4 accent-primary"
                     />
                     Actif
                   </label>
@@ -361,7 +312,7 @@ export default function SettingsPage() {
                         },
                       }))
                     }
-                    className="rounded-lg border border-slate-200 px-2 py-1.5 text-sm"
+                    className="rounded-lg border border-border px-2 py-1.5 text-sm text-text-primary bg-card outline-none focus:border-accent focus:ring-2 focus:ring-accent/30"
                   />
                   <input
                     type="time"
@@ -378,58 +329,42 @@ export default function SettingsPage() {
                         },
                       }))
                     }
-                    className="rounded-lg border border-slate-200 px-2 py-1.5 text-sm"
+                    className="rounded-lg border border-border px-2 py-1.5 text-sm text-text-primary bg-card outline-none focus:border-accent focus:ring-2 focus:ring-accent/30"
                   />
                 </div>
               ))}
             </div>
-          </section>
+          </SectionCard>
 
           <div className="flex justify-end">
             <button
               type="submit"
               disabled={saving || loading}
-              className="inline-flex items-center gap-2 rounded-xl bg-cyan-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-cyan-700 disabled:opacity-60"
+              className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-hover disabled:opacity-60 transition-colors"
             >
-              <Save size={15} />
+              <Save size={14} />
               {saving ? "Enregistrement..." : "Enregistrer"}
             </button>
           </div>
         </form>
       ) : (
-        <form onSubmit={handleGenericSubmit} className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <div className="mb-4 flex items-center gap-2">
-            <div className="rounded-xl bg-cyan-50 p-2 text-cyan-700">
-              {role === "admin" ? <ShieldCheck size={16} /> : <Stethoscope size={16} />}
+        <form onSubmit={handleGenericSubmit} className="bg-card rounded-card border border-border shadow-card p-5">
+          <div className="mb-4 flex items-center gap-2.5">
+            <div className="rounded-lg bg-accent-light p-2 text-accent">
+              {role === "admin" ? <ShieldCheck size={15} /> : <Stethoscope size={15} />}
             </div>
-            <h2 className="text-lg font-semibold text-slate-900">{genericSettingsTitle}</h2>
+            <h2 className="text-sm font-semibold text-text-primary">{genericSettingsTitle}</h2>
           </div>
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <Field label="Nom">
-              <input
-                name="name"
-                value={genericForm.name}
-                onChange={(event) => setGenericForm((prev) => ({ ...prev, name: event.target.value }))}
-                className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
-              />
+              <input name="name" value={genericForm.name} onChange={(event) => setGenericForm((prev) => ({ ...prev, name: event.target.value }))} className={inputCls} />
             </Field>
             <Field label="Email">
-              <input
-                type="email"
-                name="email"
-                value={genericForm.email}
-                onChange={(event) => setGenericForm((prev) => ({ ...prev, email: event.target.value }))}
-                className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
-              />
+              <input type="email" name="email" value={genericForm.email} onChange={(event) => setGenericForm((prev) => ({ ...prev, email: event.target.value }))} className={inputCls} />
             </Field>
             <Field label="Langue">
-              <select
-                name="language"
-                value={genericForm.language}
-                onChange={(event) => setGenericForm((prev) => ({ ...prev, language: event.target.value }))}
-                className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
-              >
+              <select name="language" value={genericForm.language} onChange={(event) => setGenericForm((prev) => ({ ...prev, language: event.target.value }))} className={inputCls}>
                 <option value="fr">Francais</option>
                 <option value="en">English</option>
                 <option value="ar">Arabic</option>
@@ -437,36 +372,20 @@ export default function SettingsPage() {
             </Field>
           </div>
 
-          <div className="mt-4 space-y-3">
-            <label className="flex items-center justify-between rounded-xl border border-slate-200 px-4 py-3">
-              <span className="text-sm font-medium text-slate-700">Notifications in-app</span>
-              <input
-                type="checkbox"
-                checked={genericForm.notifications}
-                onChange={(event) => setGenericForm((prev) => ({ ...prev, notifications: event.target.checked }))}
-                className="h-4 w-4 accent-cyan-600"
-              />
+          <div className="mt-4 space-y-2.5">
+            <label className="flex items-center justify-between rounded-lg border border-border px-4 py-3 cursor-pointer hover:bg-gray-50 transition-colors">
+              <span className="text-sm text-text-primary">Notifications in-app</span>
+              <input type="checkbox" checked={genericForm.notifications} onChange={(event) => setGenericForm((prev) => ({ ...prev, notifications: event.target.checked }))} className="h-4 w-4 accent-primary" />
             </label>
-            <label className="flex items-center justify-between rounded-xl border border-slate-200 px-4 py-3">
-              <span className="text-sm font-medium text-slate-700">Notifications email</span>
-              <input
-                type="checkbox"
-                checked={genericForm.emailNotifications}
-                onChange={(event) =>
-                  setGenericForm((prev) => ({ ...prev, emailNotifications: event.target.checked }))
-                }
-                className="h-4 w-4 accent-cyan-600"
-              />
+            <label className="flex items-center justify-between rounded-lg border border-border px-4 py-3 cursor-pointer hover:bg-gray-50 transition-colors">
+              <span className="text-sm text-text-primary">Notifications email</span>
+              <input type="checkbox" checked={genericForm.emailNotifications} onChange={(event) => setGenericForm((prev) => ({ ...prev, emailNotifications: event.target.checked }))} className="h-4 w-4 accent-primary" />
             </label>
           </div>
 
           <div className="pt-4">
-            <button
-              type="submit"
-              className="inline-flex items-center gap-2 rounded-xl bg-cyan-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-cyan-700 disabled:opacity-60"
-              disabled={saving}
-            >
-              <Save size={15} />
+            <button type="submit" disabled={saving} className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-hover disabled:opacity-60 transition-colors">
+              <Save size={14} />
               {saving ? "Enregistrement..." : "Enregistrer"}
             </button>
           </div>

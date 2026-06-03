@@ -12,14 +12,7 @@ import StatusPill from "../../components/modules/StatusPill";
 import { formatCurrency, formatDateTime, getErrorMessage, inputClassName, textareaClassName } from "../../components/modules/moduleUtils";
 import api from "../../lib/api";
 
-const EMPTY_FORM = {
-  nom: "",
-  description: "",
-  prix: "",
-  quantite_disponible: 0,
-  unite: "",
-  is_active: true,
-};
+const EMPTY_FORM = { nom: "", description: "", prix: "", quantite_disponible: 0, unite: "", is_active: true };
 
 const getStockStatus = (item) => {
   if (Number(item.quantite_disponible || 0) <= 0) return "rupture";
@@ -42,19 +35,14 @@ export default function SupplierProductsPage() {
 
   const loadProducts = async (search = deferredSearchTerm) => {
     setLoading(true);
-
     try {
       const response = await api.get("/supplier-products/me", {
         params: search.trim() ? { search: search.trim() } : undefined,
       });
-
       setItems(Array.isArray(response.data?.items) ? response.data.items : []);
       setStats(response.data?.stats || {});
     } catch (requestError) {
-      setNotice({
-        type: "error",
-        message: getErrorMessage(requestError, "Impossible de charger les produits fournisseur."),
-      });
+      setNotice({ type: "error", message: getErrorMessage(requestError, "Impossible de charger les produits fournisseur.") });
       setItems([]);
       setStats({});
     } finally {
@@ -62,9 +50,7 @@ export default function SupplierProductsPage() {
     }
   };
 
-  useEffect(() => {
-    loadProducts();
-  }, [deferredSearchTerm]);
+  useEffect(() => { loadProducts(); }, [deferredSearchTerm]);
 
   useEffect(() => {
     if (!notice) return undefined;
@@ -72,37 +58,22 @@ export default function SupplierProductsPage() {
     return () => window.clearTimeout(timer);
   }, [notice]);
 
-  const openCreateModal = () => {
-    setEditingItem(null);
-    setFormData(EMPTY_FORM);
-    setModalOpen(true);
-  };
+  const openCreateModal = () => { setEditingItem(null); setFormData(EMPTY_FORM); setModalOpen(true); };
 
   const openEditModal = (item) => {
     setEditingItem(item);
-    setFormData({
-      nom: item.nom || "",
-      description: item.description || "",
-      prix: item.prix ?? "",
-      quantite_disponible: Number(item.quantite_disponible || 0),
-      unite: item.unite || "",
-      is_active: Boolean(item.is_active),
-    });
+    setFormData({ nom: item.nom || "", description: item.description || "", prix: item.prix ?? "", quantite_disponible: Number(item.quantite_disponible || 0), unite: item.unite || "", is_active: Boolean(item.is_active) });
     setModalOpen(true);
   };
 
   const handleChange = (event) => {
     const { name, value, type, checked } = event.target;
-    setFormData((current) => ({
-      ...current,
-      [name]: type === "checkbox" ? checked : value,
-    }));
+    setFormData((current) => ({ ...current, [name]: type === "checkbox" ? checked : value }));
   };
 
   const handleSave = async (event) => {
     event.preventDefault();
     setSubmitLoading(true);
-
     try {
       const payload = {
         nom: formData.nom.trim(),
@@ -112,7 +83,6 @@ export default function SupplierProductsPage() {
         unite: formData.unite.trim(),
         is_active: Boolean(formData.is_active),
       };
-
       if (editingItem) {
         await api.put(`/supplier-products/${editingItem.id}`, payload);
         setNotice({ type: "success", message: "Produit mis a jour avec succes." });
@@ -120,139 +90,109 @@ export default function SupplierProductsPage() {
         await api.post("/supplier-products/me", payload);
         setNotice({ type: "success", message: "Produit ajoute avec succes." });
       }
-
       setModalOpen(false);
       setEditingItem(null);
       setFormData(EMPTY_FORM);
       await loadProducts();
     } catch (requestError) {
-      setNotice({
-        type: "error",
-        message: getErrorMessage(requestError, "Enregistrement du produit impossible."),
-      });
+      setNotice({ type: "error", message: getErrorMessage(requestError, "Enregistrement du produit impossible.") });
     } finally {
       setSubmitLoading(false);
     }
   };
 
   const handleDelete = async (item) => {
-    if (!window.confirm(`Supprimer le produit ${item.nom} ?`)) {
-      return;
-    }
-
+    if (!window.confirm(`Supprimer le produit ${item.nom} ?`)) return;
     setDeletingId(item.id);
-
     try {
       await api.delete(`/supplier-products/${item.id}`);
       setNotice({ type: "success", message: "Produit supprime avec succes." });
       await loadProducts();
     } catch (requestError) {
-      setNotice({
-        type: "error",
-        message: getErrorMessage(requestError, "Suppression du produit impossible."),
-      });
+      setNotice({ type: "error", message: getErrorMessage(requestError, "Suppression du produit impossible.") });
     } finally {
       setDeletingId(null);
     }
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <ModuleHero
         eyebrow="Espace fournisseur"
         title="Catalogue produits"
-        description="Maintenez un catalogue propre, recherchable et exploitable pour piloter les demandes de reapprovisionnement sans friction."
+        description="Maintenez un catalogue propre, recherchable et exploitable pour piloter les demandes de reapprovisionnement."
         actions={
           <>
-            <Button variant="outline" className="border-white/40 bg-white/10 text-white hover:bg-white/20" onClick={() => setSearchTerm("")}>
-              Reinitialiser la recherche
-            </Button>
-            <Button variant="accent" className="bg-white text-cyan-700 hover:bg-cyan-50" leftIcon={<Plus size={16} />} onClick={openCreateModal}>
-              Ajouter un produit
-            </Button>
+            <Button variant="outline" className="border-white/30 bg-white/10 text-white hover:bg-white/20" onClick={() => setSearchTerm("")}>Reinitialiser</Button>
+            <Button variant="outline" className="bg-white text-primary hover:bg-gray-50 border-white" leftIcon={<Plus size={15} />} onClick={openCreateModal}>Ajouter un produit</Button>
           </>
         }
       />
 
       <InlineAlert message={notice?.message} type={notice?.type || "info"} />
 
-      <section className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
-        <MetricCard icon={Package2} label="Produits" value={stats.total || 0} helper="Total des references fournisseur" tone="cyan" />
-        <MetricCard icon={CheckCircle2} label="Actifs" value={stats.actifs || 0} helper="Produits visibles pour l'exploitation" tone="emerald" />
-        <MetricCard icon={XCircle} label="Ruptures" value={stats.rupture || 0} helper="Produits epuises a recharger ou desactiver" tone="rose" />
-        <MetricCard icon={Search} label="Faible stock" value={stats.faible_stock || 0} helper="Produits sous le niveau de vigilance" tone="amber" />
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <MetricCard icon={Package2}    label="Produits"     value={stats.total || 0}       helper="Total des references fournisseur"         tone="cyan" />
+        <MetricCard icon={CheckCircle2}label="Actifs"       value={stats.actifs || 0}       helper="Produits visibles pour l'exploitation"  tone="emerald" />
+        <MetricCard icon={XCircle}     label="Ruptures"     value={stats.rupture || 0}      helper="Produits epuises a recharger"            tone="rose" />
+        <MetricCard icon={Search}      label="Faible stock" value={stats.faible_stock || 0} helper="Produits sous le niveau de vigilance"    tone="amber" />
       </section>
 
-      <Card className="border-slate-200/90 bg-white/95 shadow-md">
+      <Card>
         <CardHeader className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <CardTitle>Produits disponibles</CardTitle>
-            <p className="mt-1 text-sm text-slate-500">La recherche s'effectue sur le nom, la description et l'unite du produit.</p>
+            <p className="mt-0.5 text-xs text-text-secondary">La recherche s'effectue sur le nom, la description et l'unite.</p>
           </div>
           <div className="relative w-full lg:max-w-sm">
-            <Search className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-            <input
-              type="search"
-              value={searchTerm}
-              onChange={(event) => setSearchTerm(event.target.value)}
-              placeholder="Rechercher un produit..."
-              className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3 pl-11 pr-4 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-cyan-500 focus:bg-white focus:ring-4 focus:ring-cyan-100"
-            />
+            <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" size={16} />
+            <input type="search" value={searchTerm} onChange={(event) => setSearchTerm(event.target.value)} placeholder="Rechercher un produit..." className={`${inputClassName} pl-9`} />
           </div>
         </CardHeader>
         <CardContent>
           {loading ? (
             <LoadingState message="Chargement du catalogue..." />
           ) : items.length === 0 ? (
-            <EmptyState
-              icon={Package2}
-              title="Aucun produit a afficher"
-              description={searchTerm ? "Aucun resultat pour cette recherche." : "Ajoutez votre premier produit pour alimenter le catalogue fournisseur."}
-            />
+            <EmptyState icon={Package2} title="Aucun produit a afficher" description={searchTerm ? "Aucun resultat pour cette recherche." : "Ajoutez votre premier produit pour alimenter le catalogue."} />
           ) : (
             <div className="grid gap-4 xl:grid-cols-2">
               {items.map((item) => {
                 const stockStatus = getStockStatus(item);
-
                 return (
-                  <article key={item.id} className="rounded-3xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-5 shadow-sm">
+                  <article key={item.id} className="bg-card rounded-card border border-border shadow-card p-5">
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <h3 className="text-lg font-semibold text-slate-900">{item.nom}</h3>
-                        <p className="mt-1 text-sm text-slate-500">Mise a jour le {formatDateTime(item.updated_at)}</p>
+                        <h3 className="text-sm font-semibold text-text-primary">{item.nom}</h3>
+                        <p className="mt-0.5 text-xs text-text-secondary">Mis a jour le {formatDateTime(item.updated_at)}</p>
                       </div>
                       <div className="flex items-center gap-2">
                         <StatusPill status={stockStatus} />
-                        <span className={`rounded-full px-3 py-1 text-xs font-semibold ${item.is_active ? "bg-cyan-100 text-cyan-700" : "bg-slate-100 text-slate-700"}`}>
+                        <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${item.is_active ? "bg-accent-light text-accent" : "bg-gray-100 text-gray-600"}`}>
                           {item.is_active ? "Actif" : "Inactif"}
                         </span>
                       </div>
                     </div>
 
-                    <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                      <div className="rounded-2xl bg-white px-4 py-3 shadow-sm">
-                        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Quantite</p>
-                        <p className="mt-2 text-2xl font-semibold text-slate-900">{item.quantite_disponible}</p>
+                    <div className="mt-4 grid gap-2.5 sm:grid-cols-2">
+                      <div className="rounded-lg bg-gray-50 border border-border px-3 py-2.5">
+                        <p className="text-[10px] font-semibold uppercase tracking-wide text-text-secondary">Quantite</p>
+                        <p className="mt-1 text-lg font-semibold text-text-primary">{item.quantite_disponible}</p>
                       </div>
-                      <div className="rounded-2xl bg-white px-4 py-3 shadow-sm">
-                        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Prix</p>
-                        <p className="mt-2 text-base font-semibold text-slate-900">{formatCurrency(item.prix)}</p>
+                      <div className="rounded-lg bg-gray-50 border border-border px-3 py-2.5">
+                        <p className="text-[10px] font-semibold uppercase tracking-wide text-text-secondary">Prix</p>
+                        <p className="mt-1 text-sm font-semibold text-text-primary">{formatCurrency(item.prix)}</p>
                       </div>
                     </div>
 
-                    <div className="mt-4 rounded-2xl border border-slate-200 bg-white px-4 py-4">
-                      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Description</p>
-                      <p className="mt-2 text-sm text-slate-600">{item.description || "Aucune description renseignee."}</p>
-                      <p className="mt-2 text-sm font-semibold text-slate-900">{item.unite ? `Unite: ${item.unite}` : "Unite non renseignee"}</p>
+                    <div className="mt-3 rounded-lg bg-gray-50 border border-border px-3 py-2.5">
+                      <p className="text-[10px] font-semibold uppercase tracking-wide text-text-secondary">Description</p>
+                      <p className="mt-1 text-xs text-text-secondary">{item.description || "Aucune description renseignee."}</p>
+                      <p className="mt-0.5 text-xs font-medium text-text-primary">{item.unite ? `Unite: ${item.unite}` : "Unite non renseignee"}</p>
                     </div>
 
-                    <div className="mt-5 flex flex-wrap gap-3">
-                      <Button type="button" size="sm" variant="secondary" leftIcon={<PencilLine size={15} />} onClick={() => openEditModal(item)}>
-                        Modifier
-                      </Button>
-                      <Button type="button" size="sm" variant="danger" leftIcon={<Trash2 size={15} />} isLoading={deletingId === item.id} onClick={() => handleDelete(item)}>
-                        Supprimer
-                      </Button>
+                    <div className="mt-4 flex flex-wrap gap-2.5">
+                      <Button type="button" size="sm" variant="primary" leftIcon={<PencilLine size={13} />} onClick={() => openEditModal(item)}>Modifier</Button>
+                      <Button type="button" size="sm" variant="danger"  leftIcon={<Trash2 size={13} />}    isLoading={deletingId === item.id} onClick={() => handleDelete(item)}>Supprimer</Button>
                     </div>
                   </article>
                 );
@@ -265,48 +205,38 @@ export default function SupplierProductsPage() {
       <ModalPanel
         open={modalOpen}
         title={editingItem ? "Modifier le produit" : "Ajouter un produit"}
-        subtitle={editingItem ? "Ajustez la fiche produit sans quitter l'espace fournisseur." : "Creez une nouvelle reference disponible pour vos demandes."}
-        onClose={() => {
-          if (!submitLoading) {
-            setModalOpen(false);
-            setEditingItem(null);
-            setFormData(EMPTY_FORM);
-          }
-        }}
+        subtitle={editingItem ? "Ajustez la fiche produit." : "Creez une nouvelle reference disponible."}
+        onClose={() => { if (!submitLoading) { setModalOpen(false); setEditingItem(null); setFormData(EMPTY_FORM); } }}
         footer={
           <div className="flex flex-wrap justify-end gap-3">
-            <Button type="button" variant="outline" disabled={submitLoading} onClick={() => setModalOpen(false)}>
-              Annuler
-            </Button>
-            <Button type="submit" form="product-form" isLoading={submitLoading}>
-              {editingItem ? "Enregistrer" : "Ajouter"}
-            </Button>
+            <Button type="button" variant="outline" disabled={submitLoading} onClick={() => setModalOpen(false)}>Annuler</Button>
+            <Button type="submit" form="product-form" isLoading={submitLoading}>{editingItem ? "Enregistrer" : "Ajouter"}</Button>
           </div>
         }
       >
         <form id="product-form" onSubmit={handleSave} className="grid gap-4 sm:grid-cols-2">
-          <label className="space-y-2 sm:col-span-2">
-            <span className="text-sm font-medium text-slate-700">Nom du produit</span>
+          <label className="space-y-1.5 sm:col-span-2">
+            <span className="block text-xs font-medium text-text-secondary uppercase tracking-wide">Nom du produit</span>
             <input name="nom" value={formData.nom} onChange={handleChange} className={inputClassName} placeholder="Ex. Paracetamol 500 mg" required />
           </label>
-          <label className="space-y-2">
-            <span className="text-sm font-medium text-slate-700">Quantite disponible</span>
+          <label className="space-y-1.5">
+            <span className="block text-xs font-medium text-text-secondary uppercase tracking-wide">Quantite disponible</span>
             <input name="quantite_disponible" type="number" min="0" value={formData.quantite_disponible} onChange={handleChange} className={inputClassName} required />
           </label>
-          <label className="space-y-2">
-            <span className="text-sm font-medium text-slate-700">Unite</span>
+          <label className="space-y-1.5">
+            <span className="block text-xs font-medium text-text-secondary uppercase tracking-wide">Unite</span>
             <input name="unite" value={formData.unite} onChange={handleChange} className={inputClassName} placeholder="Boite, flacon..." />
           </label>
-          <label className="space-y-2 sm:col-span-2">
-            <span className="text-sm font-medium text-slate-700">Prix (TND)</span>
+          <label className="space-y-1.5 sm:col-span-2">
+            <span className="block text-xs font-medium text-text-secondary uppercase tracking-wide">Prix (TND)</span>
             <input name="prix" type="number" min="0" step="0.01" value={formData.prix} onChange={handleChange} className={inputClassName} placeholder="Optionnel" />
           </label>
-          <label className="space-y-2 sm:col-span-2">
-            <span className="text-sm font-medium text-slate-700">Description</span>
+          <label className="space-y-1.5 sm:col-span-2">
+            <span className="block text-xs font-medium text-text-secondary uppercase tracking-wide">Description</span>
             <textarea name="description" value={formData.description} onChange={handleChange} className={textareaClassName} placeholder="Informations utiles pour le traitement ou la vente." />
           </label>
-          <label className="sm:col-span-2 flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
-            <input type="checkbox" name="is_active" checked={Boolean(formData.is_active)} onChange={handleChange} className="h-4 w-4 rounded border-slate-300 text-cyan-700 focus:ring-cyan-500" />
+          <label className="sm:col-span-2 flex items-center gap-3 rounded-lg border border-border bg-gray-50 px-4 py-3 text-sm text-text-primary cursor-pointer hover:bg-gray-100 transition-colors">
+            <input type="checkbox" name="is_active" checked={Boolean(formData.is_active)} onChange={handleChange} className="h-4 w-4 rounded border-border accent-primary" />
             Produit actif dans le catalogue
           </label>
         </form>

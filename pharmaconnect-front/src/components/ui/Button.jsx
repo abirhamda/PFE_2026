@@ -14,35 +14,58 @@ const Button = ({
   ...props
 }) => {
   const baseStyles =
-    "inline-flex items-center justify-center rounded-xl font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50";
+    "inline-flex items-center justify-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50";
 
   const variantStyles = {
-    primary: "bg-cyan-700 text-white hover:bg-cyan-800 focus-visible:ring-cyan-600",
-    secondary: "bg-slate-700 text-white hover:bg-slate-800 focus-visible:ring-slate-600",
-    accent: "bg-teal-600 text-white hover:bg-teal-700 focus-visible:ring-teal-500",
-    outline: "border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 focus-visible:ring-slate-400",
-    ghost: "bg-transparent text-slate-700 hover:bg-slate-100 focus-visible:ring-slate-400",
-    link: "bg-transparent text-cyan-700 hover:underline focus-visible:ring-cyan-600",
-    danger: "bg-rose-600 text-white hover:bg-rose-700 focus-visible:ring-rose-500",
-    success: "bg-emerald-600 text-white hover:bg-emerald-700 focus-visible:ring-emerald-500",
+    primary:
+      "bg-primary hover:bg-primary-hover text-white focus-visible:ring-primary",
+    secondary:
+      "bg-primary/80 hover:bg-primary text-white focus-visible:ring-primary",
+    accent:
+      "bg-accent hover:bg-accent/90 text-white focus-visible:ring-accent",
+    outline:
+      "border border-border bg-card text-text-primary hover:bg-gray-50 focus-visible:ring-accent",
+    ghost:
+      "bg-transparent text-text-primary hover:bg-gray-100 focus-visible:ring-accent",
+    link:
+      "bg-transparent text-accent hover:underline focus-visible:ring-accent",
+    danger:
+      "bg-medical-danger-bg text-medical-danger hover:bg-red-100 focus-visible:ring-medical-danger",
+    "danger-solid":
+      "bg-medical-danger text-white hover:bg-red-700 focus-visible:ring-medical-danger",
+    success:
+      "bg-medical-success-bg text-medical-success hover:bg-green-100 focus-visible:ring-medical-success",
+    "success-solid":
+      "bg-medical-success text-white hover:bg-green-700 focus-visible:ring-medical-success",
   };
 
   const sizeStyles = {
-    xs: "h-7 px-2 text-xs",
-    sm: "h-8 px-3 text-sm",
-    md: "h-10 px-4 text-sm",
-    lg: "h-11 px-6 text-base",
-    xl: "h-12 px-8 text-lg",
+    xs: "h-7 px-2 text-xs gap-1",
+    sm: "h-8 px-3 text-sm gap-1.5",
+    md: "h-10 px-4 text-sm gap-2",
+    lg: "h-11 px-6 text-base gap-2",
+    xl: "h-12 px-8 text-lg gap-2",
   };
 
   return (
     <button
-      className={cn(baseStyles, variantStyles[variant], sizeStyles[size], fullWidth && "w-full", className)}
+      className={cn(
+        baseStyles,
+        variantStyles[variant] || variantStyles.primary,
+        sizeStyles[size],
+        fullWidth && "w-full",
+        className,
+      )}
       disabled={isLoading || disabled}
       {...props}
     >
       {isLoading && (
-        <svg className="mr-2 h-4 w-4 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+        <svg
+          className="animate-spin w-4 h-4"
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+        >
           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
           <path
             className="opacity-75"
@@ -51,9 +74,9 @@ const Button = ({
           />
         </svg>
       )}
-      {!isLoading && leftIcon && <span className="mr-2">{leftIcon}</span>}
+      {!isLoading && leftIcon && <span>{leftIcon}</span>}
       {children}
-      {!isLoading && rightIcon && <span className="ml-2">{rightIcon}</span>}
+      {!isLoading && rightIcon && <span>{rightIcon}</span>}
     </button>
   );
 };

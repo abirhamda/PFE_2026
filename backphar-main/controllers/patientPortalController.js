@@ -636,6 +636,9 @@ export const searchPublicDoctors = async (req, res) => {
     const patientLng = parseNumberOrNull(req.query?.lng);
     const radiusKm = Math.max(1, Math.min(200, Number(req.query?.radius_km || 50)));
     const limit = Math.max(1, Math.min(40, Number(req.query?.limit || 20)));
+    const includeAvailability = ["1", "true", "yes"].includes(
+      String(req.query?.include_availability || "").trim().toLowerCase(),
+    );
 
     const conditions = ["d.is_active = 1"];
     const params = [];
@@ -700,11 +703,11 @@ export const searchPublicDoctors = async (req, res) => {
 
       const onlineVisible = Boolean(Number(row.online_visibility || 0));
       const onlineBookable = onlineVisible && Boolean(Number(row.online_booking_enabled || 0));
-      const slots = onlineBookable
+      const slots = includeAvailability && onlineBookable
         ? await buildAvailableSlots(connection, Number(row.doctor_id), row, { daysAhead: 28, slotLimit: 84 })
         : [];
 
-      doctors.push({
+      const doctor = {
         doctor_id: Number(row.doctor_id),
         display_name: row.display_name,
         nom: row.nom,
@@ -720,8 +723,13 @@ export const searchPublicDoctors = async (req, res) => {
         bio: row.bio || null,
         online_visibility: onlineVisible,
         online_booking_enabled: onlineBookable,
-        available_slots: slots,
-      });
+      };
+
+      if (includeAvailability) {
+        doctor.available_slots = slots;
+      }
+
+      doctors.push(doctor);
     }
 
     if (patientLat !== null && patientLng !== null) {
@@ -966,6 +974,50 @@ export const getMyBookedAppointments = async (req, res) => {
   }
 };
 
+export const cancelMyBookedAppointment = async (req, res) => {
+  const connection = await db.getConnection();
+  try {
+    const userId = Number(req.user?.id);
+    if (!Number.isInteger(userId) || userId <= 0) {
+      return res.status(400).json({ error: "Token utilisateur invalide" });
+    }
+
+    const appointmentId = Number(req.params.appointmentId);
+    if (!Number.isInteger(appointmentId) || appointmentId <= 0) {
+      return res.status(400).json({ error: "appointmentId invalide" });
+    }
+
+    const [rows] = await connection.execute(
+      `SELECT id, appointment_at
+       FROM appointments
+       WHERE id = ? AND booked_by_patient_user_id = ?
+       LIMIT 1`,
+      [appointmentId, userId],
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ error: "Rendez-vous introuvable" });
+    }
+
+    const appointmentDate = new Date(String(rows[0].appointment_at).replace(" ", "T"));
+    if (Number.isNaN(appointmentDate.getTime()) || appointmentDate.getTime() <= Date.now()) {
+      return res.status(400).json({ error: "Seuls les rendez-vous a venir peuvent etre annules" });
+    }
+
+    await connection.execute("DELETE FROM appointments WHERE id = ? AND booked_by_patient_user_id = ?", [
+      appointmentId,
+      userId,
+    ]);
+
+    return res.json({ message: "Rendez-vous annule avec succes" });
+  } catch (error) {
+    console.error("Error cancelling patient appointment:", error);
+    return res.status(500).json({ error: "Erreur lors de l'annulation du rendez-vous", details: error.message });
+  } finally {
+    connection.release();
+  }
+};
+
 export const getMyOrdonnances = async (req, res) => {
   const connection = await db.getConnection();
   try {
@@ -1038,6 +1090,7 @@ export default {
   getPublicDoctorAvailability,
   bookAppointmentOnline,
   getMyBookedAppointments,
+  cancelMyBookedAppointment,
   getMyOrdonnances,
   getMyDocuments,
 };

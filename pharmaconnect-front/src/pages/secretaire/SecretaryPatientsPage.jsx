@@ -13,6 +13,9 @@ const initialForm = {
   date_naissance: "",
 };
 
+const inputCls =
+  "w-full border border-border rounded-lg px-3 py-2.5 text-sm text-text-primary bg-card placeholder-text-muted outline-none transition focus:ring-2 focus:ring-accent/30 focus:border-accent";
+
 const PatientEditModal = ({ patient, onClose, onSave }) => {
   const [form, setForm] = useState({
     nom: patient?.nom || "",
@@ -50,31 +53,35 @@ const PatientEditModal = ({ patient, onClose, onSave }) => {
   if (!patient) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/35 p-4 backdrop-blur-sm">
-      <form onSubmit={handleSubmit} className="w-full max-w-2xl rounded-2xl bg-white p-6 shadow-2xl">
-        <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-xl font-semibold text-slate-900">Modifier le patient</h3>
-          <button type="button" onClick={onClose} className="text-sm text-slate-500 hover:text-slate-700">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <form onSubmit={handleSubmit} className="w-full max-w-2xl bg-card rounded-card border border-border shadow-card-hover p-6">
+        <div className="mb-5 flex items-center justify-between">
+          <h3 className="text-base font-semibold text-text-primary">Modifier le patient</h3>
+          <button type="button" onClick={onClose} className="text-sm text-text-secondary hover:text-text-primary transition-colors">
             Fermer
           </button>
         </div>
 
-        {error && <div className="mb-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</div>}
+        {error && (
+          <div className="mb-4 rounded-card border-l-4 border-medical-danger bg-medical-danger-bg px-4 py-3 text-sm text-medical-danger">
+            {error}
+          </div>
+        )}
 
         <div className="grid gap-3 md:grid-cols-2">
-          <input name="nom" value={form.nom} onChange={handleChange} placeholder="Nom" required className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm" />
-          <input name="prenom" value={form.prenom} onChange={handleChange} placeholder="Prenom" required className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm" />
-          <input name="cin" value={form.cin} onChange={handleChange} placeholder="CIN" className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm" />
-          <input name="telephone" value={form.telephone} onChange={handleChange} placeholder="Telephone" className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm" />
-          <input name="date_naissance" type="date" value={form.date_naissance} onChange={handleChange} className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm" />
+          <input name="nom"       value={form.nom}       onChange={handleChange} placeholder="Nom"       required className={inputCls} />
+          <input name="prenom"    value={form.prenom}    onChange={handleChange} placeholder="Prenom"    required className={inputCls} />
+          <input name="cin"       value={form.cin}       onChange={handleChange} placeholder="CIN"                className={inputCls} />
+          <input name="telephone" value={form.telephone} onChange={handleChange} placeholder="Telephone"          className={inputCls} />
+          <input name="date_naissance" type="date" value={form.date_naissance} onChange={handleChange}            className={inputCls} />
         </div>
 
-        <div className="mt-4 flex justify-end gap-2">
-          <button type="button" onClick={onClose} className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50">
+        <div className="mt-5 flex justify-end gap-2.5">
+          <button type="button" onClick={onClose} className="rounded-lg border border-border px-4 py-2 text-sm text-text-primary hover:bg-gray-50 transition-colors">
             Annuler
           </button>
-          <button type="submit" disabled={saving} className="inline-flex items-center gap-1 rounded-xl bg-cyan-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-cyan-700 disabled:opacity-60">
-            <Pencil size={14} /> {saving ? "Mise a jour..." : "Mettre a jour"}
+          <button type="submit" disabled={saving} className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-hover disabled:opacity-60 transition-colors">
+            <Pencil size={13} /> {saving ? "Mise a jour..." : "Mettre a jour"}
           </button>
         </div>
       </form>
@@ -148,13 +155,7 @@ const SecretaryPatientsPage = ({
     const date_naissance = /^\d{4}-\d{2}-\d{2}$/.test(rawBirthDate) ? rawBirthDate : "";
     const appointmentId = String(searchParams.get("appointment_id") || "").trim();
 
-    setForm({
-      nom,
-      prenom,
-      cin,
-      telephone,
-      date_naissance,
-    });
+    setForm({ nom, prenom, cin, telephone, date_naissance });
     setError("");
     setMessage(
       appointmentId
@@ -265,103 +266,118 @@ const SecretaryPatientsPage = ({
   };
 
   return (
-    <div className="space-y-6">
-      <section className="rounded-3xl bg-gradient-to-r from-cyan-700 to-teal-600 p-6 text-white shadow-xl">
-        <h1 className="text-3xl font-bold">{title}</h1>
-        {subtitle ? <p className="mt-1 text-sm text-cyan-100">{subtitle}</p> : null}
-      </section>
+    <div className="space-y-5">
+      {/* Header */}
+      <div className="bg-primary rounded-card border border-primary/20 shadow-card px-5 py-4">
+        <h1 className="text-lg font-semibold text-white">{title}</h1>
+        {subtitle ? <p className="mt-0.5 text-sm text-white/65">{subtitle}</p> : null}
+      </div>
 
-      {message && <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-emerald-700">{message}</div>}
-      {error && <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-rose-700">{error}</div>}
+      {message && (
+        <div className="rounded-card border-l-4 border-medical-success bg-medical-success-bg px-4 py-3 text-sm text-medical-success">
+          {message}
+        </div>
+      )}
+      {error && (
+        <div className="rounded-card border-l-4 border-medical-danger bg-medical-danger-bg px-4 py-3 text-sm text-medical-danger">
+          {error}
+        </div>
+      )}
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <div className="mb-4 flex items-center gap-2">
-          <div className="rounded-lg bg-cyan-50 p-2 text-cyan-700">
+      {/* Add patient form */}
+      <section className="bg-card rounded-card border border-border shadow-card p-5">
+        <div className="mb-4 flex items-center gap-2.5">
+          <div className="rounded-lg bg-accent-light p-2 text-accent">
             <Plus size={15} />
           </div>
-          <h2 className="text-lg font-semibold text-slate-900">Ajouter un patient</h2>
+          <h2 className="text-sm font-semibold text-text-primary">Ajouter un patient</h2>
         </div>
 
         <form onSubmit={onSubmit} className="grid gap-3 md:grid-cols-3">
-          <input value={form.nom} onChange={(event) => setForm((prev) => ({ ...prev, nom: event.target.value }))} placeholder="Nom" required className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm" />
-          <input value={form.prenom} onChange={(event) => setForm((prev) => ({ ...prev, prenom: event.target.value }))} placeholder="Prenom" required className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm" />
-          <input value={form.cin} onChange={(event) => setForm((prev) => ({ ...prev, cin: event.target.value }))} placeholder="CIN" className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm" />
-          <input value={form.telephone} onChange={(event) => setForm((prev) => ({ ...prev, telephone: event.target.value }))} placeholder="Telephone" className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm" />
-          <input type="date" value={form.date_naissance} onChange={(event) => setForm((prev) => ({ ...prev, date_naissance: event.target.value }))} className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm" />
+          <input value={form.nom}           onChange={(event) => setForm((prev) => ({ ...prev, nom: event.target.value }))}           placeholder="Nom"       required className={inputCls} />
+          <input value={form.prenom}        onChange={(event) => setForm((prev) => ({ ...prev, prenom: event.target.value }))}        placeholder="Prenom"    required className={inputCls} />
+          <input value={form.cin}           onChange={(event) => setForm((prev) => ({ ...prev, cin: event.target.value }))}           placeholder="CIN"                className={inputCls} />
+          <input value={form.telephone}     onChange={(event) => setForm((prev) => ({ ...prev, telephone: event.target.value }))}     placeholder="Telephone"          className={inputCls} />
+          <input type="date" value={form.date_naissance} onChange={(event) => setForm((prev) => ({ ...prev, date_naissance: event.target.value }))} className={inputCls} />
 
-          <div className="flex justify-end gap-2 md:col-span-3">
-            <button type="button" onClick={resetForm} className="inline-flex items-center gap-1 rounded-xl border border-slate-200 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50">
-              <X size={14} /> Vider
+          <div className="flex justify-end gap-2.5 md:col-span-3">
+            <button type="button" onClick={resetForm} className="inline-flex items-center gap-1.5 rounded-lg border border-border px-4 py-2 text-sm text-text-primary hover:bg-gray-50 transition-colors">
+              <X size={13} /> Vider
             </button>
-            <button type="submit" className="inline-flex items-center gap-1 rounded-xl bg-cyan-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-cyan-700">
-              <Plus size={14} /> Ajouter patient
+            <button type="submit" className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-hover transition-colors">
+              <Plus size={13} /> Ajouter patient
             </button>
           </div>
         </form>
       </section>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      {/* Patient list */}
+      <section className="bg-card rounded-card border border-border shadow-card p-5">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-lg font-semibold text-slate-900">Liste des patients ({patients.length})</h2>
-          <div className="relative w-full md:w-80">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") loadPatients(event.currentTarget.value);
-              }}
-              placeholder="Rechercher par nom, prenom, matricule, CIN..."
-              className="w-full rounded-xl border border-slate-200 py-2.5 pl-9 pr-3 text-sm"
-            />
+          <h2 className="text-sm font-semibold text-text-primary">Liste des patients ({patients.length})</h2>
+          <div className="flex gap-2.5 flex-wrap">
+            <div className="relative w-full md:w-72">
+              <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
+              <input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                onKeyDown={(event) => { if (event.key === "Enter") loadPatients(event.currentTarget.value); }}
+                placeholder="Rechercher par nom, matricule, CIN..."
+                className={`${inputCls} pl-9`}
+              />
+            </div>
+            <button onClick={() => loadPatients(search)} className="rounded-lg border border-border px-4 py-2 text-sm text-text-primary hover:bg-gray-50 transition-colors">
+              Rechercher
+            </button>
           </div>
-          <button onClick={() => loadPatients(search)} className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50">
-            Rechercher
-          </button>
         </div>
 
         {loading ? (
-          <div className="rounded-xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500">Chargement...</div>
+          <div className="rounded-card border border-dashed border-border bg-gray-50 p-8 text-center text-sm text-text-secondary">
+            Chargement...
+          </div>
         ) : sortedPatients.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-slate-300 p-8 text-center text-slate-500">
-            <UserRoundPlus className="mx-auto mb-2" size={22} />
-            Aucun patient trouve.
+          <div className="rounded-card border border-dashed border-border bg-gray-50 p-8 text-center text-text-secondary">
+            <UserRoundPlus className="mx-auto mb-2 text-text-muted" size={22} />
+            <p className="text-sm">Aucun patient trouve.</p>
           </div>
         ) : (
-          <div className="overflow-hidden rounded-xl border border-slate-200">
+          <div className="overflow-hidden rounded-card border border-border">
             <div className="overflow-x-auto">
-              <table className="min-w-full">
-                <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50 border-b border-border">
                   <tr>
-                    <th className="px-4 py-3">Patient</th>
-                    <th className="px-4 py-3">Matricule</th>
-                    <th className="px-4 py-3">Coordonnees</th>
-                    <th className="px-4 py-3">Naissance</th>
-                    <th className="px-4 py-3 text-right">Actions</th>
+                    {["Patient", "Matricule", "Coordonnees", "Naissance", "Actions"].map((col) => (
+                      <th key={col} className="px-4 py-3 text-left text-xs font-semibold text-text-secondary uppercase tracking-wider">
+                        {col}
+                      </th>
+                    ))}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 bg-white">
+                <tbody className="divide-y divide-border">
                   {sortedPatients.map((patient) => (
-                    <tr key={patient.id} className="hover:bg-slate-50/70">
-                      <td className="px-4 py-3">
-                        <p className="font-semibold text-slate-900">{patient.prenom} {patient.nom}</p>
-                        <p className="text-xs text-slate-500">CIN: {patient.cin || "-"}</p>
+                    <tr key={patient.id} className="hover:bg-gray-50/50 transition-colors">
+                      <td className="px-4 py-3.5">
+                        <p className="font-medium text-text-primary">{patient.prenom} {patient.nom}</p>
+                        <p className="text-xs text-text-secondary">CIN: {patient.cin || "-"}</p>
                       </td>
-                      <td className="px-4 py-3">
-                        <span className="rounded-full bg-cyan-50 px-2.5 py-1 text-xs font-semibold text-cyan-700">{patient.matricule}</span>
+                      <td className="px-4 py-3.5">
+                        <span className="rounded-full bg-accent-light px-2.5 py-0.5 text-xs font-medium text-accent">
+                          {patient.matricule}
+                        </span>
                       </td>
-                      <td className="px-4 py-3 text-sm text-slate-600">{patient.telephone || "-"}</td>
-                      <td className="px-4 py-3 text-sm text-slate-600">{patient.date_naissance || "-"}</td>
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-3.5 text-sm text-text-secondary">{patient.telephone || "-"}</td>
+                      <td className="px-4 py-3.5 text-sm text-text-secondary">{patient.date_naissance || "-"}</td>
+                      <td className="px-4 py-3.5">
                         <div className="flex justify-end gap-2">
-                          <button onClick={() => openFiche(patient.id)} className="inline-flex items-center gap-1 rounded-lg border border-cyan-200 bg-cyan-50 px-3 py-2 text-sm text-cyan-700 hover:bg-cyan-100">
-                            <Eye size={15} /> Fiche
+                          <button onClick={() => openFiche(patient.id)} className="inline-flex items-center gap-1.5 rounded-lg border border-accent-light bg-accent-light px-3 py-2 text-sm text-accent hover:bg-accent/10 transition-colors">
+                            <Eye size={14} /> Fiche
                           </button>
-                          <button onClick={() => setEditingPatient(patient)} className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50">
-                            <Pencil size={15} /> Modifier
+                          <button onClick={() => setEditingPatient(patient)} className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-sm text-text-primary hover:bg-gray-100 transition-colors">
+                            <Pencil size={14} /> Modifier
                           </button>
-                          <button onClick={() => onDelete(patient.id)} className="inline-flex items-center gap-1 rounded-lg border border-rose-200 px-3 py-2 text-sm text-rose-700 hover:bg-rose-50">
-                            <Trash2 size={15} /> Supprimer
+                          <button onClick={() => onDelete(patient.id)} className="inline-flex items-center gap-1.5 rounded-lg border border-medical-danger/30 bg-medical-danger-bg px-3 py-2 text-sm text-medical-danger hover:bg-red-100 transition-colors">
+                            <Trash2 size={14} /> Supprimer
                           </button>
                         </div>
                       </td>

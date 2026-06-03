@@ -1,28 +1,28 @@
 import React from "react";
 
 const statusMap = {
-  disponible: "bg-emerald-100 text-emerald-700",
-  faible_stock: "bg-amber-100 text-amber-700",
-  rupture: "bg-rose-100 text-rose-700",
-  en_attente: "bg-amber-100 text-amber-700",
-  acceptee: "bg-emerald-100 text-emerald-700",
-  recue: "bg-cyan-100 text-cyan-700",
-  refusee: "bg-rose-100 text-rose-700",
-  non_livree: "bg-slate-100 text-slate-700",
-  partenaire: "bg-cyan-100 text-cyan-700",
-  disponible_supplier: "bg-slate-100 text-slate-700",
+  disponible:          "bg-medical-success-bg text-medical-success",
+  faible_stock:        "bg-medical-warning-bg text-medical-warning",
+  rupture:             "bg-medical-danger-bg text-medical-danger",
+  en_attente:          "bg-medical-warning-bg text-medical-warning",
+  acceptee:            "bg-medical-success-bg text-medical-success",
+  recue:               "bg-accent-light text-accent",
+  refusee:             "bg-medical-danger-bg text-medical-danger",
+  non_livree:          "bg-gray-100 text-gray-600",
+  partenaire:          "bg-accent-light text-accent",
+  disponible_supplier: "bg-gray-100 text-gray-600",
 };
 
 const labels = {
-  disponible: "Disponible",
-  faible_stock: "Faible stock",
-  rupture: "Rupture",
-  en_attente: "En attente",
-  acceptee: "Acceptee",
-  recue: "Recue",
-  refusee: "Refusee",
-  non_livree: "Non livree",
-  partenaire: "Partenaire",
+  disponible:          "Disponible",
+  faible_stock:        "Faible stock",
+  rupture:             "Rupture",
+  en_attente:          "En attente",
+  acceptee:            "Acceptee",
+  recue:               "Recue",
+  refusee:             "Refusee",
+  non_livree:          "Non livree",
+  partenaire:          "Partenaire",
   disponible_supplier: "Disponible",
 };
 
@@ -31,5 +31,9 @@ export default function StatusPill({ status, children, className = "" }) {
   const tone = statusMap[key] || statusMap.disponible_supplier;
   const label = children || labels[key] || String(status || "Statut");
 
-  return <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${tone} ${className}`}>{label}</span>;
+  return (
+    <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${tone} ${className}`}>
+      {label}
+    </span>
+  );
 }

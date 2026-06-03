@@ -8,6 +8,7 @@ import {
   Search,
   ShieldOff,
   Stethoscope,
+  Users,
   X,
 } from "lucide-react";
 import api from "../../lib/api";
@@ -33,54 +34,93 @@ const formatDate = (value) => {
 const extractError = (error, fallback) =>
   error?.response?.data?.error || error?.response?.data?.message || error?.message || fallback;
 
+const getDoctorInitials = (doctor) => {
+  const name = [doctor.prenom, doctor.nom].filter(Boolean).join(" ") || "Dr";
+  return name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
+};
+
 const StatusBadge = ({ active }) => (
   <span
-    className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${
-      active ? "bg-emerald-50 text-[#2e7d5e] ring-1 ring-emerald-200" : "bg-rose-50 text-rose-700 ring-1 ring-rose-200"
+    className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ${
+      active
+        ? "bg-medical-success-bg text-medical-success"
+        : "bg-medical-danger-bg text-medical-danger"
     }`}
   >
-    {active ? <BadgeCheck size={13} /> : <ShieldOff size={13} />}
-    {active ? "Autorise" : "Bloque"}
+    {active ? <BadgeCheck size={12} /> : <ShieldOff size={12} />}
+    {active ? "Autorisé" : "Bloqué"}
   </span>
 );
 
-const ModalShell = ({ title, children, onClose }) => (
-  <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-sm">
-    <div className="w-full max-w-2xl overflow-hidden rounded-lg border border-slate-200 bg-white shadow-2xl">
-      <div className="flex items-center justify-between border-b border-slate-200 bg-[#1a3a5c] px-5 py-4 text-white">
-        <h2 className="text-lg font-semibold tracking-normal">{title}</h2>
+const ModalOverlay = ({ children }) => (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+    {children}
+  </div>
+);
+
+const ModalCard = ({ title, icon, onClose, children }) => (
+  <ModalOverlay>
+    <div className="w-full max-w-sm bg-card rounded-xl border border-border shadow-card-hover overflow-hidden">
+      <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+        <div className="flex items-center gap-2 text-text-primary">
+          {icon}
+          <h2 className="text-sm font-semibold tracking-wide">{title}</h2>
+        </div>
         <button
           type="button"
           onClick={onClose}
-          className="rounded-lg p-2 text-white/80 transition hover:bg-white/10 hover:text-white"
+          className="rounded-lg p-1.5 text-text-muted hover:bg-gray-100 hover:text-text-primary transition-colors"
           aria-label="Fermer"
         >
-          <X size={18} />
+          <X size={16} />
         </button>
       </div>
       {children}
     </div>
-  </div>
+  </ModalOverlay>
+);
+
+const LargeModalCard = ({ title, onClose, children }) => (
+  <ModalOverlay>
+    <div className="w-full max-w-2xl bg-card rounded-xl border border-border shadow-card-hover overflow-hidden">
+      <div className="flex items-center justify-between px-5 py-4 border-b border-border bg-primary text-white">
+        <h2 className="text-sm font-semibold tracking-wide">{title}</h2>
+        <button
+          type="button"
+          onClick={onClose}
+          className="rounded-lg p-1.5 text-white/70 hover:bg-white/10 hover:text-white transition-colors"
+          aria-label="Fermer"
+        >
+          <X size={16} />
+        </button>
+      </div>
+      {children}
+    </div>
+  </ModalOverlay>
 );
 
 const ConfirmModal = ({ doctor, nextActive, saving, onCancel, onConfirm }) => {
   if (!doctor) return null;
 
   return (
-    <ModalShell title={nextActive ? "Autoriser le medecin" : "Bloquer le medecin"} onClose={onCancel}>
-      <div className="space-y-5 p-5">
-        <p className="text-sm leading-6 text-slate-700">
+    <ModalCard
+      title={nextActive ? "Autoriser le médecin" : "Bloquer le médecin"}
+      icon={nextActive ? <BadgeCheck size={16} className="text-medical-success" /> : <ShieldOff size={16} className="text-medical-danger" />}
+      onClose={onCancel}
+    >
+      <div className="p-5 space-y-5">
+        <p className="text-sm text-text-secondary leading-relaxed">
           Confirmer le changement de statut pour{" "}
-          <span className="font-semibold text-slate-900">
+          <span className="font-semibold text-text-primary">
             Dr {doctor.prenom} {doctor.nom}
           </span>
           .
         </p>
-        <div className="flex justify-end gap-3">
+        <div className="flex gap-3 justify-end">
           <button
             type="button"
             onClick={onCancel}
-            className="inline-flex h-10 items-center justify-center rounded-lg border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-border bg-card px-4 text-sm font-medium text-text-primary transition-colors hover:bg-gray-50"
           >
             Annuler
           </button>
@@ -88,16 +128,18 @@ const ConfirmModal = ({ doctor, nextActive, saving, onCancel, onConfirm }) => {
             type="button"
             onClick={onConfirm}
             disabled={saving}
-            className={`inline-flex h-10 items-center justify-center gap-2 rounded-lg px-4 text-sm font-semibold text-white transition disabled:opacity-60 ${
-              nextActive ? "bg-[#2e7d5e] hover:bg-[#25664d]" : "bg-rose-600 hover:bg-rose-700"
+            className={`inline-flex h-10 items-center justify-center gap-2 rounded-lg px-4 text-sm font-medium text-white transition-colors disabled:opacity-60 ${
+              nextActive
+                ? "bg-medical-success hover:bg-green-700"
+                : "bg-medical-danger hover:bg-red-700"
             }`}
           >
-            {saving ? <Loader2 className="animate-spin" size={16} /> : null}
+            {saving && <Loader2 className="animate-spin" size={15} />}
             {nextActive ? "Autoriser" : "Bloquer"}
           </button>
         </div>
       </div>
-    </ModalShell>
+    </ModalCard>
   );
 };
 
@@ -105,26 +147,26 @@ const DetailModal = ({ doctor, onClose }) => {
   if (!doctor) return null;
 
   const rows = [
-    ["Nom", doctor.nom || "-"],
-    ["Prenom", doctor.prenom || "-"],
-    ["Email", doctor.email || "-"],
-    ["Specialite", doctor.specialty || "-"],
-    ["CIN", doctor.cin || "-"],
+    ["Nom",              doctor.nom || "-"],
+    ["Prénom",           doctor.prenom || "-"],
+    ["Email",            doctor.email || "-"],
+    ["Spécialité",       doctor.specialty || "-"],
+    ["CIN",              doctor.cin || "-"],
     ["Date inscription", formatDate(doctor.created_at)],
-    ["Statut", isAuthorized(doctor) ? "Autorise" : "Bloque"],
+    ["Statut",           isAuthorized(doctor) ? "Autorisé" : "Bloqué"],
   ];
 
   return (
-    <ModalShell title="Details du medecin" onClose={onClose}>
+    <LargeModalCard title="Détails du médecin" onClose={onClose}>
       <div className="grid gap-3 p-5 sm:grid-cols-2">
         {rows.map(([label, value]) => (
-          <div key={label} className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</p>
-            <p className="mt-1 break-words text-sm font-medium text-slate-900">{value}</p>
+          <div key={label} className="rounded-lg border border-border bg-gray-50 px-4 py-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">{label}</p>
+            <p className="mt-1 break-words text-sm font-medium text-text-primary">{value}</p>
           </div>
         ))}
       </div>
-    </ModalShell>
+    </LargeModalCard>
   );
 };
 
@@ -132,26 +174,32 @@ const AddDoctorModal = ({ open, form, saving, error, onChange, onSubmit, onClose
   if (!open) return null;
 
   return (
-    <ModalShell title="Ajouter un medecin" onClose={onClose}>
+    <LargeModalCard title="Ajouter un médecin" onClose={onClose}>
       <form onSubmit={onSubmit} className="space-y-5 p-5">
-        {error ? <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div> : null}
+        {error && (
+          <div className="rounded-card border-l-4 border-medical-danger bg-medical-danger-bg px-4 py-3 text-sm text-medical-danger">
+            {error}
+          </div>
+        )}
 
         <div className="grid gap-4 sm:grid-cols-2">
           {[
-            { key: "nom", label: "Nom" },
-            { key: "prenom", label: "Prenom" },
-            { key: "email", label: "Email", type: "email", full: true },
-            { key: "specialty", label: "Specialite" },
-            { key: "cin", label: "CIN" },
-            { key: "password", label: "Mot de passe", type: "password", full: true },
+            { key: "nom",      label: "Nom" },
+            { key: "prenom",   label: "Prénom" },
+            { key: "email",    label: "Email",          type: "email",    full: true },
+            { key: "specialty",label: "Spécialité" },
+            { key: "cin",      label: "CIN" },
+            { key: "password", label: "Mot de passe",   type: "password", full: true },
           ].map((field) => (
             <label key={field.key} className={field.full ? "block sm:col-span-2" : "block"}>
-              <span className="mb-2 block text-sm font-semibold text-slate-700">{field.label}</span>
+              <span className="block text-xs font-medium text-text-secondary mb-1.5 uppercase tracking-wide">
+                {field.label}
+              </span>
               <input
                 type={field.type || "text"}
                 value={form[field.key]}
                 onChange={(event) => onChange(field.key, event.target.value)}
-                className="h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-[#1a3a5c] focus:ring-2 focus:ring-blue-100"
+                className="w-full border border-border rounded-lg px-3 py-2 text-sm text-text-primary bg-card placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent transition-all"
                 required
               />
             </label>
@@ -162,21 +210,21 @@ const AddDoctorModal = ({ open, form, saving, error, onChange, onSubmit, onClose
           <button
             type="button"
             onClick={onClose}
-            className="inline-flex h-10 items-center justify-center rounded-lg border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-border bg-card px-4 text-sm font-medium text-text-primary transition-colors hover:bg-gray-50"
           >
             Annuler
           </button>
           <button
             type="submit"
             disabled={saving}
-            className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-[#1a3a5c] px-4 text-sm font-semibold text-white transition hover:bg-[#14304c] disabled:opacity-60"
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-white transition-colors hover:bg-primary-hover disabled:opacity-60"
           >
-            {saving ? <Loader2 className="animate-spin" size={16} /> : <Plus size={16} />}
+            {saving ? <Loader2 className="animate-spin" size={15} /> : <Plus size={15} />}
             Ajouter
           </button>
         </div>
       </form>
-    </ModalShell>
+    </LargeModalCard>
   );
 };
 
@@ -202,7 +250,7 @@ export default function DoctorAccessManagementPage() {
       setDoctors(Array.isArray(response.data?.doctors) ? response.data.doctors : []);
     } catch (requestError) {
       setDoctors([]);
-      setError(extractError(requestError, "Impossible de charger les medecins"));
+      setError(extractError(requestError, "Impossible de charger les médecins"));
     } finally {
       setLoading(false);
     }
@@ -246,10 +294,10 @@ export default function DoctorAccessManagementPage() {
       } else {
         await loadDoctors();
       }
-      setMessage(`Acces medecin ${selectedNextActive ? "autorise" : "bloque"} avec succes.`);
+      setMessage(`Accès médecin ${selectedNextActive ? "autorisé" : "bloqué"} avec succès.`);
       setSelectedDoctor(null);
     } catch (requestError) {
-      setError(extractError(requestError, "Impossible de modifier le statut du medecin"));
+      setError(extractError(requestError, "Impossible de modifier le statut du médecin"));
     } finally {
       setSaving(false);
     }
@@ -275,157 +323,191 @@ export default function DoctorAccessManagementPage() {
       } else {
         await loadDoctors();
       }
-      setMessage("Medecin ajoute avec succes.");
+      setMessage("Médecin ajouté avec succès.");
       setAddForm(emptyDoctorForm);
       setAddOpen(false);
     } catch (requestError) {
-      setAddError(extractError(requestError, "Impossible d'ajouter le medecin"));
+      setAddError(extractError(requestError, "Impossible d'ajouter le médecin"));
     } finally {
       setSaving(false);
     }
   };
 
+  const totalCount      = doctors.length;
+  const authorizedCount = doctors.filter(isAuthorized).length;
+  const blockedCount    = doctors.filter((d) => !isAuthorized(d)).length;
+
   return (
     <div className="space-y-5">
-      <section className="flex flex-col gap-4 rounded-lg bg-[#1a3a5c] px-5 py-4 text-white shadow-sm lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-white/10">
-            <Stethoscope size={22} />
-          </div>
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-blue-100">Administration IA</p>
-            <h1 className="text-2xl font-semibold tracking-normal">Gestion des acces medecins</h1>
-          </div>
-        </div>
-        <button
-          type="button"
-          onClick={() => setAddOpen(true)}
-          className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-white px-4 text-sm font-semibold text-[#1a3a5c] transition hover:bg-blue-50"
-        >
-          <Plus size={16} />
-          Ajouter un medecin
-        </button>
-      </section>
 
-      {message ? (
-        <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-[#2e7d5e]">
+      {/* Stat cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {[
+          { label: "Total médecins",  value: totalCount,      icon: <Users size={20} className="text-accent" />,           bg: "bg-accent-light" },
+          { label: "Autorisés",       value: authorizedCount, icon: <BadgeCheck size={20} className="text-medical-success" />, bg: "bg-medical-success-bg" },
+          { label: "Bloqués",         value: blockedCount,    icon: <ShieldOff size={20} className="text-medical-danger" />,  bg: "bg-medical-danger-bg" },
+        ].map(({ label, value, icon, bg }) => (
+          <div key={label} className="bg-card rounded-card border border-border shadow-card p-5">
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-xs font-semibold text-text-secondary uppercase tracking-wide">{label}</p>
+              <div className={`w-9 h-9 rounded-lg ${bg} flex items-center justify-center`}>{icon}</div>
+            </div>
+            <p className="text-3xl font-semibold text-text-primary">{value}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Messages */}
+      {message && (
+        <div className="rounded-card border-l-4 border-medical-success bg-medical-success-bg p-4 text-sm text-medical-success">
           {message}
         </div>
-      ) : null}
-      {error ? <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div> : null}
-
-      <section className="grid gap-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm lg:grid-cols-[1fr_auto] lg:items-center">
-        <div className="relative">
-          <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={17} />
-          <input
-            type="search"
-            value={searchTerm}
-            onChange={(event) => setSearchTerm(event.target.value)}
-            placeholder="Rechercher par nom ou email"
-            className="h-11 w-full rounded-lg border border-slate-300 bg-white px-10 text-sm text-slate-900 outline-none transition focus:border-[#1a3a5c] focus:ring-2 focus:ring-blue-100"
-          />
+      )}
+      {error && (
+        <div className="rounded-card border-l-4 border-medical-danger bg-medical-danger-bg p-4 text-sm text-medical-danger">
+          {error}
         </div>
+      )}
 
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600">
-            <Filter size={16} />
-            Statut
+      {/* Search + filter bar */}
+      <div className="bg-card rounded-card border border-border shadow-card p-4">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="relative flex-1">
+            <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" size={16} />
+            <input
+              type="search"
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
+              placeholder="Rechercher par nom ou email..."
+              className="w-full border border-border rounded-lg px-10 py-2 text-sm text-text-primary bg-card placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent transition-all"
+            />
           </div>
-          <div className="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-1">
-            {[
-              { key: "all", label: "Tous" },
-              { key: "authorized", label: "Autorises" },
-              { key: "blocked", label: "Bloques" },
-            ].map((item) => (
-              <button
-                key={item.key}
-                type="button"
-                onClick={() => setStatusFilter(item.key)}
-                className={`rounded-md px-3 py-2 text-sm font-semibold transition ${
-                  statusFilter === item.key ? "bg-[#1a3a5c] text-white" : "text-slate-600 hover:bg-white"
-                }`}
-              >
-                {item.label}
-              </button>
-            ))}
+
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-2 text-sm text-text-secondary">
+              <Filter size={15} />
+              Statut :
+            </div>
+            <div className="inline-flex rounded-lg border border-border bg-gray-50 p-1">
+              {[
+                { key: "all",        label: "Tous" },
+                { key: "authorized", label: "Autorisés" },
+                { key: "blocked",    label: "Bloqués" },
+              ].map((item) => (
+                <button
+                  key={item.key}
+                  type="button"
+                  onClick={() => setStatusFilter(item.key)}
+                  className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+                    statusFilter === item.key
+                      ? "bg-primary text-white"
+                      : "text-text-secondary hover:text-text-primary"
+                  }`}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setAddOpen(true)}
+              className="inline-flex items-center gap-2 bg-primary hover:bg-primary-hover text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+            >
+              <Plus size={15} />
+              Ajouter un médecin
+            </button>
           </div>
         </div>
-      </section>
+      </div>
 
-      <section className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-slate-200 text-sm">
-            <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+      {/* Table */}
+      <div className="overflow-hidden rounded-card border border-border bg-card shadow-card">
+        <table className="w-full text-sm">
+          <thead className="bg-gray-50 border-b border-border">
+            <tr>
+              {["Médecin", "Email", "Spécialité", "Inscription", "Statut", "Actions"].map((col) => (
+                <th
+                  key={col}
+                  className="px-4 py-3 text-left text-xs font-semibold text-text-secondary uppercase tracking-wider"
+                >
+                  {col}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border">
+            {loading ? (
               <tr>
-                <th className="px-4 py-3">Nom</th>
-                <th className="px-4 py-3">Prenom</th>
-                <th className="px-4 py-3">Email</th>
-                <th className="px-4 py-3">Specialite</th>
-                <th className="px-4 py-3">Date inscription</th>
-                <th className="px-4 py-3">Statut</th>
-                <th className="px-4 py-3">Actions</th>
+                <td colSpan={6} className="px-4 py-12 text-center text-text-secondary">
+                  <span className="inline-flex items-center gap-2">
+                    <Loader2 className="animate-spin" size={17} />
+                    Chargement des médecins...
+                  </span>
+                </td>
               </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 bg-white">
-              {loading ? (
-                <tr>
-                  <td colSpan={7} className="px-4 py-12 text-center text-slate-500">
-                    <span className="inline-flex items-center gap-2">
-                      <Loader2 className="animate-spin" size={18} />
-                      Chargement des medecins...
-                    </span>
-                  </td>
-                </tr>
-              ) : filteredDoctors.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="px-4 py-12 text-center text-slate-500">
-                    Aucun medecin trouve.
-                  </td>
-                </tr>
-              ) : (
-                filteredDoctors.map((doctor) => {
-                  const active = isAuthorized(doctor);
+            ) : filteredDoctors.length === 0 ? (
+              <tr>
+                <td colSpan={6} className="px-4 py-12 text-center text-text-secondary">
+                  <Stethoscope size={28} className="mx-auto mb-2 text-text-muted" />
+                  <p>Aucun médecin trouvé.</p>
+                </td>
+              </tr>
+            ) : (
+              filteredDoctors.map((doctor) => {
+                const active = isAuthorized(doctor);
 
-                  return (
-                    <tr key={doctor.id} className="hover:bg-slate-50">
-                      <td className="px-4 py-3 font-medium text-slate-900">{doctor.nom || "-"}</td>
-                      <td className="px-4 py-3 text-slate-700">{doctor.prenom || "-"}</td>
-                      <td className="px-4 py-3 text-slate-700">{doctor.email || "-"}</td>
-                      <td className="px-4 py-3 text-slate-700">{doctor.specialty || "-"}</td>
-                      <td className="px-4 py-3 text-slate-700">{formatDate(doctor.created_at)}</td>
-                      <td className="px-4 py-3">
-                        <StatusBadge active={active} />
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex flex-wrap gap-2">
-                          <button
-                            type="button"
-                            onClick={() => setSelectedDoctor(doctor)}
-                            className={`inline-flex h-9 items-center justify-center gap-2 rounded-lg px-3 text-xs font-semibold text-white transition ${
-                              active ? "bg-rose-600 hover:bg-rose-700" : "bg-[#2e7d5e] hover:bg-[#25664d]"
-                            }`}
-                          >
-                            {active ? <ShieldOff size={14} /> : <BadgeCheck size={14} />}
-                            {active ? "Bloquer" : "Autoriser"}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setDetailDoctor(doctor)}
-                            className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
-                          >
-                            <Eye size={14} />
-                            Details
-                          </button>
+                return (
+                  <tr key={doctor.id} className="hover:bg-gray-50/50 transition-colors">
+                    <td className="px-4 py-3.5">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-accent-light text-accent text-xs font-semibold flex items-center justify-center flex-shrink-0">
+                          {getDoctorInitials(doctor)}
                         </div>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
-      </section>
+                        <div>
+                          <p className="font-medium text-text-primary">
+                            {[doctor.prenom, doctor.nom].filter(Boolean).join(" ") || "-"}
+                          </p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3.5 text-text-secondary">{doctor.email || "-"}</td>
+                    <td className="px-4 py-3.5 text-text-secondary">{doctor.specialty || "-"}</td>
+                    <td className="px-4 py-3.5 text-text-secondary">{formatDate(doctor.created_at)}</td>
+                    <td className="px-4 py-3.5">
+                      <StatusBadge active={active} />
+                    </td>
+                    <td className="px-4 py-3.5">
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedDoctor(doctor)}
+                          className={`inline-flex h-8 items-center justify-center gap-1.5 rounded-lg px-3 text-xs font-medium text-white transition-colors ${
+                            active
+                              ? "bg-medical-danger hover:bg-red-700"
+                              : "bg-medical-success hover:bg-green-700"
+                          }`}
+                        >
+                          {active ? <ShieldOff size={13} /> : <BadgeCheck size={13} />}
+                          {active ? "Bloquer" : "Autoriser"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setDetailDoctor(doctor)}
+                          className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-border bg-card px-3 text-xs font-medium text-text-primary transition-colors hover:bg-gray-50"
+                        >
+                          <Eye size={13} />
+                          Détails
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+        </table>
+      </div>
 
       <ConfirmModal
         doctor={selectedDoctor}

@@ -4,13 +4,13 @@ import { Link } from "react-router-dom";
 import api from "../../lib/api";
 
 const StatCard = ({ title, value, icon }) => (
-  <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-    <div className="flex items-center justify-between">
+  <div className="bg-card rounded-card border border-border shadow-card p-5">
+    <div className="flex items-start justify-between gap-3">
       <div>
-        <p className="text-xs uppercase tracking-wide text-slate-500">{title}</p>
-        <p className="mt-1 text-3xl font-bold text-slate-900">{value}</p>
+        <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">{title}</p>
+        <p className="mt-2.5 text-3xl font-semibold text-text-primary">{value}</p>
       </div>
-      <div className="rounded-xl bg-cyan-50 p-2.5 text-cyan-700">{icon}</div>
+      <div className="rounded-lg bg-accent-light p-2.5 text-accent flex-shrink-0">{icon}</div>
     </div>
   </div>
 );
@@ -47,36 +47,49 @@ const PatientDashboardPage = () => {
   }, []);
 
   return (
-    <div className="space-y-6">
-      <section className="rounded-3xl bg-gradient-to-r from-cyan-700 via-cyan-600 to-teal-600 p-6 text-white shadow-xl">
-        <h1 className="text-3xl font-bold">Espace patient</h1>
-        <p className="mt-1 text-sm text-cyan-100">
+    <div className="space-y-5">
+      {/* Header */}
+      <div className="bg-primary rounded-card border border-primary/20 shadow-card p-5">
+        <h1 className="text-xl font-semibold text-white">Espace patient</h1>
+        <p className="mt-1 text-sm text-white/65">
           {profile ? `Bienvenue ${profile.prenom} ${profile.nom}` : "Suivez vos soins et rendez-vous."}
         </p>
-      </section>
+      </div>
 
-      {error && <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-rose-700">{error}</div>}
+      {error && (
+        <div className="rounded-card border-l-4 border-medical-danger bg-medical-danger-bg px-4 py-3 text-sm text-medical-danger">
+          {error}
+        </div>
+      )}
 
+      {/* Stats */}
       <section className="grid gap-4 md:grid-cols-3">
-        <StatCard title="Rendez-vous" value={loading ? "..." : appointmentsCount} icon={<CalendarDays size={18} />} />
-        <StatCard title="Ordonnances" value={loading ? "..." : ordonnancesCount} icon={<FileText size={18} />} />
-        <StatCard title="Profil" value={loading ? "..." : profile ? "OK" : "-"} icon={<UserCircle2 size={18} />} />
+        <StatCard title="Rendez-vous"  value={loading ? "..." : appointmentsCount} icon={<CalendarDays size={18} />} />
+        <StatCard title="Ordonnances"  value={loading ? "..." : ordonnancesCount}  icon={<FileText size={18} />} />
+        <StatCard title="Profil"       value={loading ? "..." : profile ? "OK" : "-"} icon={<UserCircle2 size={18} />} />
       </section>
 
+      {/* Quick links */}
       <section className="grid gap-4 md:grid-cols-2">
-        <Link to="/patient/discover" className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm hover:bg-slate-50">
-          <p className="inline-flex items-center gap-2 text-lg font-semibold text-slate-900">
-            <Search size={18} />
+        <Link
+          to="/patient/discover"
+          className="bg-card rounded-card border border-border shadow-card p-5 hover:border-accent/30 hover:shadow-card-hover transition-all"
+        >
+          <p className="inline-flex items-center gap-2 text-sm font-semibold text-text-primary">
+            <Search size={17} className="text-accent" />
             Chercher un medecin
           </p>
-          <p className="mt-1 text-sm text-slate-500">Par specialite, localisation, nom et distance.</p>
+          <p className="mt-1.5 text-sm text-text-secondary">Par specialite, localisation, nom et distance.</p>
         </Link>
-        <Link to="/patient/appointments" className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm hover:bg-slate-50">
-          <p className="inline-flex items-center gap-2 text-lg font-semibold text-slate-900">
-            <CalendarDays size={18} />
+        <Link
+          to="/patient/appointments"
+          className="bg-card rounded-card border border-border shadow-card p-5 hover:border-accent/30 hover:shadow-card-hover transition-all"
+        >
+          <p className="inline-flex items-center gap-2 text-sm font-semibold text-text-primary">
+            <CalendarDays size={17} className="text-accent" />
             Mes rendez-vous
           </p>
-          <p className="mt-1 text-sm text-slate-500">Consulter vos reservations et votre historique.</p>
+          <p className="mt-1.5 text-sm text-text-secondary">Consulter vos reservations et votre historique.</p>
         </Link>
       </section>
     </div>

@@ -91,33 +91,31 @@ const buildTopSpecialties = (doctors) => {
     .slice(0, 5);
 };
 
-const StatCard = ({ title, value, subtitle, icon: Icon, accent }) => (
-  <Card className="border-slate-200/90 bg-white/95 shadow-md">
-    <CardContent className="p-6">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <p className="text-sm font-medium text-slate-500">{title}</p>
-          <p className="mt-3 text-4xl font-semibold text-slate-900">{value}</p>
-          <p className="mt-2 text-sm text-slate-500">{subtitle}</p>
-        </div>
-        <div className={`rounded-2xl p-3 text-white shadow-lg ${accent}`}>
-          <Icon size={24} />
-        </div>
+const StatCard = ({ title, value, subtitle, icon: Icon, iconBg }) => (
+  <div className="bg-card rounded-card border border-border shadow-card p-5">
+    <div className="flex items-start justify-between gap-4">
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">{title}</p>
+        <p className="mt-2.5 text-3xl font-semibold text-text-primary">{value}</p>
+        <p className="mt-1.5 text-xs text-text-secondary">{subtitle}</p>
       </div>
-    </CardContent>
-  </Card>
+      <div className={`rounded-lg p-2.5 flex-shrink-0 ${iconBg}`}>
+        <Icon size={19} />
+      </div>
+    </div>
+  </div>
 );
 
 const InsightCard = ({ title, value, helper, icon: Icon, tone }) => (
-  <div className="rounded-3xl border border-slate-200 bg-white/95 p-5 shadow-sm">
+  <div className="bg-card rounded-card border border-border shadow-card p-5">
     <div className="flex items-start gap-4">
-      <div className={`rounded-2xl p-3 ${tone}`}>
-        <Icon size={20} />
+      <div className={`rounded-lg p-2.5 flex-shrink-0 ${tone}`}>
+        <Icon size={18} />
       </div>
       <div>
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">{title}</p>
-        <p className="mt-2 text-xl font-semibold text-slate-900">{value}</p>
-        <p className="mt-1 text-sm text-slate-500">{helper}</p>
+        <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-text-secondary">{title}</p>
+        <p className="mt-1.5 text-lg font-semibold text-text-primary">{value}</p>
+        <p className="mt-0.5 text-xs text-text-secondary leading-snug">{helper}</p>
       </div>
     </div>
   </div>
@@ -126,7 +124,7 @@ const InsightCard = ({ title, value, helper, icon: Icon, tone }) => (
 const DistributionDonut = ({ items, total }) => {
   if (!total) {
     return (
-      <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-10 text-center text-sm text-slate-500">
+      <div className="rounded-card border border-dashed border-border bg-gray-50 px-4 py-10 text-center text-sm text-text-secondary">
         Aucune donnee disponible pour la repartition.
       </div>
     );
@@ -144,27 +142,29 @@ const DistributionDonut = ({ items, total }) => {
   return (
     <div className="flex flex-col items-center gap-6 lg:flex-row lg:items-center lg:justify-between">
       <div
-        className="relative flex h-52 w-52 items-center justify-center rounded-full shadow-inner"
+        className="relative flex h-48 w-48 items-center justify-center rounded-full shadow-inner flex-shrink-0"
         style={{ background: `conic-gradient(${slices})` }}
       >
-        <div className="flex h-32 w-32 flex-col items-center justify-center rounded-full bg-white shadow-sm">
-          <span className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-400">Total</span>
-          <span className="mt-1 text-4xl font-bold text-slate-900">{total}</span>
-          <span className="mt-1 text-sm text-slate-500">partenaires</span>
+        <div className="flex h-28 w-28 flex-col items-center justify-center rounded-full bg-card shadow-sm">
+          <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-text-muted">Total</span>
+          <span className="mt-0.5 text-3xl font-bold text-text-primary">{total}</span>
+          <span className="mt-0.5 text-xs text-text-secondary">partenaires</span>
         </div>
       </div>
 
-      <div className="w-full space-y-3 lg:max-w-xs">
+      <div className="w-full space-y-2.5 lg:max-w-xs">
         {items.map((item) => (
-          <div key={item.label} className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+          <div key={item.label} className="rounded-card border border-border bg-gray-50 px-4 py-3">
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-3">
-                <span className="h-3 w-3 rounded-full" style={{ backgroundColor: item.color }} />
-                <span className="text-sm font-semibold text-slate-800">{item.label}</span>
+                <span className="h-2.5 w-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }} />
+                <span className="text-sm font-medium text-text-primary">{item.label}</span>
               </div>
-              <span className="text-sm font-semibold text-slate-900">{item.count}</span>
+              <span className="text-sm font-semibold text-text-primary">{item.count}</span>
             </div>
-            <p className="mt-1 text-xs text-slate-500">{toPercent(item.count, total)}% du portefeuille admin</p>
+            <p className="mt-0.5 text-xs text-text-secondary pl-5.5">
+              {toPercent(item.count, total)}% du portefeuille admin
+            </p>
           </div>
         ))}
       </div>
@@ -203,25 +203,25 @@ const EvolutionChart = ({ data }) => {
 
   return (
     <div>
-      <div className="rounded-[28px] border border-slate-200 bg-slate-50/80 p-4">
-        <svg viewBox={`0 0 ${width} ${height}`} className="h-64 w-full">
+      <div className="rounded-card border border-border bg-gray-50 p-4">
+        <svg viewBox={`0 0 ${width} ${height}`} className="h-56 w-full">
           {axisLabels.map((tick) => (
             <g key={`${tick.value}-${tick.y}`}>
-              <line x1={paddingX} x2={width - paddingX} y1={tick.y} y2={tick.y} stroke="#dbeafe" strokeDasharray="5 5" />
-              <text x={6} y={tick.y + 4} fontSize="11" fill="#64748b">
+              <line x1={paddingX} x2={width - paddingX} y1={tick.y} y2={tick.y} stroke="#dde3ec" strokeDasharray="5 5" />
+              <text x={6} y={tick.y + 4} fontSize="11" fill="#5a6a7e">
                 {tick.value}
               </text>
             </g>
           ))}
 
-          {areaPoints ? <polygon points={areaPoints} fill="rgba(8, 145, 178, 0.10)" /> : null}
+          {areaPoints ? <polygon points={areaPoints} fill="rgba(30, 111, 217, 0.08)" /> : null}
 
           {polylinePoints ? (
             <polyline
               points={polylinePoints}
               fill="none"
-              stroke="#0891b2"
-              strokeWidth="4"
+              stroke="#1e6fd9"
+              strokeWidth="3"
               strokeLinecap="round"
               strokeLinejoin="round"
             />
@@ -229,19 +229,19 @@ const EvolutionChart = ({ data }) => {
 
           {points.map((point) => (
             <g key={point.label}>
-              <circle cx={point.x} cy={point.y} r="5" fill="#0f172a" stroke="#ffffff" strokeWidth="3" />
+              <circle cx={point.x} cy={point.y} r="4" fill="#0f2d4a" stroke="#ffffff" strokeWidth="2.5" />
             </g>
           ))}
         </svg>
       </div>
 
-      <div className="mt-4 grid gap-3 sm:grid-cols-3 xl:grid-cols-6">
+      <div className="mt-4 grid gap-2.5 sm:grid-cols-3 xl:grid-cols-6">
         {data.map((item) => (
-          <div key={item.key} className="rounded-2xl border border-slate-200 bg-white px-3 py-3 text-center shadow-sm">
-            <p className="text-xs uppercase tracking-wide text-slate-500">{item.label}</p>
-            <p className="mt-1 text-2xl font-semibold text-slate-900">{item.total}</p>
-            <p className="mt-1 text-xs text-slate-500">
-              {item.doctors} med. | {item.pharmacies} pharm. | {item.suppliers} fourn.
+          <div key={item.key} className="bg-card rounded-card border border-border shadow-card px-3 py-3 text-center">
+            <p className="text-[10px] uppercase tracking-wide text-text-secondary">{item.label}</p>
+            <p className="mt-1 text-xl font-semibold text-text-primary">{item.total}</p>
+            <p className="mt-0.5 text-[10px] text-text-muted">
+              {item.doctors}m · {item.pharmacies}p · {item.suppliers}f
             </p>
           </div>
         ))}
@@ -253,7 +253,7 @@ const EvolutionChart = ({ data }) => {
 const RankingBars = ({ items, emptyLabel }) => {
   if (items.length === 0) {
     return (
-      <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-10 text-center text-sm text-slate-500">
+      <div className="rounded-card border border-dashed border-border bg-gray-50 px-4 py-10 text-center text-sm text-text-secondary">
         {emptyLabel}
       </div>
     );
@@ -262,22 +262,24 @@ const RankingBars = ({ items, emptyLabel }) => {
   const maxValue = Math.max(...items.map((item) => item.count), 1);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {items.map((item, index) => (
-        <div key={item.label} className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+        <div key={item.label} className="bg-gray-50 rounded-lg border border-border px-4 py-3">
           <div className="flex items-center justify-between gap-3">
             <div className="min-w-0">
-              <p className="text-sm font-semibold text-slate-900">
+              <p className="text-sm font-medium text-text-primary">
                 {index + 1}. {item.label}
               </p>
-              <p className="mt-1 text-xs text-slate-500">{toPercent(item.count, maxValue)}% du niveau du leader</p>
+              <p className="mt-0.5 text-xs text-text-secondary">{toPercent(item.count, maxValue)}% du leader</p>
             </div>
-            <span className="rounded-full bg-white px-3 py-1 text-sm font-semibold text-slate-900 shadow-sm">{item.count}</span>
+            <span className="rounded-full bg-accent-light px-2.5 py-0.5 text-xs font-medium text-accent flex-shrink-0">
+              {item.count}
+            </span>
           </div>
 
-          <div className="mt-3 h-2.5 rounded-full bg-slate-200">
+          <div className="mt-2.5 h-2 rounded-full bg-border">
             <div
-              className="h-2.5 rounded-full bg-gradient-to-r from-cyan-600 to-teal-500"
+              className="h-2 rounded-full bg-accent"
               style={{ width: `${(item.count / maxValue) * 100}%` }}
             />
           </div>
@@ -288,26 +290,26 @@ const RankingBars = ({ items, emptyLabel }) => {
 };
 
 const StatusRows = ({ items }) => (
-  <div className="space-y-4">
+  <div className="space-y-3">
     {items.map((item) => (
-      <div key={item.label} className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+      <div key={item.label} className="bg-gray-50 rounded-lg border border-border px-4 py-3">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="rounded-2xl p-2 text-white shadow-sm" style={{ background: item.color }}>
-              <item.icon size={16} />
+            <div className="rounded-lg p-2 text-white flex-shrink-0" style={{ background: item.color }}>
+              <item.icon size={14} />
             </div>
             <div>
-              <p className="text-sm font-semibold text-slate-900">{item.label}</p>
-              <p className="text-xs text-slate-500">
+              <p className="text-sm font-medium text-text-primary">{item.label}</p>
+              <p className="text-xs text-text-secondary">
                 {item.active} actifs sur {item.count}
               </p>
             </div>
           </div>
-          <span className="text-sm font-semibold text-slate-900">{toPercent(item.active, item.count)}%</span>
+          <span className="text-sm font-semibold text-text-primary">{toPercent(item.active, item.count)}%</span>
         </div>
 
-        <div className="mt-3 h-2.5 rounded-full bg-slate-200">
-          <div className="h-2.5 rounded-full" style={{ width: `${toPercent(item.active, item.count)}%`, background: item.color }} />
+        <div className="mt-2.5 h-2 rounded-full bg-border">
+          <div className="h-2 rounded-full" style={{ width: `${toPercent(item.active, item.count)}%`, background: item.color }} />
         </div>
       </div>
     ))}
@@ -366,27 +368,9 @@ export default function DashboardAdminPage() {
   const globalInactive = globalTotal - globalActive;
 
   const portfolioMix = [
-    {
-      label: "Medecins",
-      count: totals.doctors,
-      active: activeTotals.doctors,
-      icon: Stethoscope,
-      color: "#0891b2",
-    },
-    {
-      label: "Pharmacies",
-      count: totals.pharmacies,
-      active: activeTotals.pharmacies,
-      icon: Building2,
-      color: "#10b981",
-    },
-    {
-      label: "Fournisseurs",
-      count: totals.suppliers,
-      active: activeTotals.suppliers,
-      icon: Truck,
-      color: "#f59e0b",
-    },
+    { label: "Medecins",     count: totals.doctors,    active: activeTotals.doctors,    icon: Stethoscope, color: "#1e6fd9" },
+    { label: "Pharmacies",   count: totals.pharmacies, active: activeTotals.pharmacies, icon: Building2,   color: "#0d6e4f" },
+    { label: "Fournisseurs", count: totals.suppliers,  active: activeTotals.suppliers,  icon: Truck,       color: "#b45309" },
   ];
 
   const allPartnerEntries = [
@@ -410,7 +394,7 @@ export default function DashboardAdminPage() {
       created_at: record.created_at,
       target: "/admin/doctors",
       type: "Medecin",
-      accent: "bg-cyan-100 text-cyan-700",
+      accent: "bg-accent-light text-accent",
     })),
     ...pharmacies.map((record) => ({
       id: `pharmacy-${record.id_pharmacie}`,
@@ -419,7 +403,7 @@ export default function DashboardAdminPage() {
       created_at: record.created_at,
       target: "/admin/pharmacies",
       type: "Pharmacie",
-      accent: "bg-emerald-100 text-emerald-700",
+      accent: "bg-medical-success-bg text-medical-success",
     })),
     ...suppliers.map((record) => ({
       id: `supplier-${record.id}`,
@@ -428,75 +412,51 @@ export default function DashboardAdminPage() {
       created_at: record.created_at,
       target: "/admin/suppliers",
       type: "Fournisseur",
-      accent: "bg-amber-100 text-amber-700",
+      accent: "bg-medical-warning-bg text-medical-warning",
     })),
   ]
     .sort((left, right) => new Date(right.created_at || 0) - new Date(left.created_at || 0))
     .slice(0, 6);
 
   return (
-    <div className="space-y-8">
-      <section className="rounded-3xl bg-gradient-to-r from-cyan-700 via-cyan-600 to-teal-600 p-6 text-white shadow-xl">
-        <p className="text-xs uppercase tracking-wider text-cyan-100">Module administrateur</p>
-        <h1 className="mt-1 text-3xl font-bold">Tableau de bord administration</h1>
-        <p className="mt-1 text-sm text-cyan-100">
-          Vue de pilotage professionnelle pour suivre le volume, l'etat et les tendances des partenaires de l'application.
-        </p>
-      </section>
+    <div className="space-y-6">
 
-      {error ? <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div> : null}
+      {/* Error */}
+      {error ? (
+        <div className="rounded-card border-l-4 border-medical-danger bg-medical-danger-bg px-4 py-3 text-sm text-medical-danger">
+          {error}
+        </div>
+      ) : null}
 
-      <section className="flex justify-end">
-        <Button type="button" variant="outline" leftIcon={<RefreshCw size={16} />} onClick={loadDashboard} isLoading={loading}>
+      <div className="flex justify-end">
+        <Button type="button" variant="outline" leftIcon={<RefreshCw size={15} />} onClick={loadDashboard} isLoading={loading}>
           Actualiser
         </Button>
+      </div>
+
+      {/* Stat cards */}
+      <section className="grid gap-4 xl:grid-cols-4">
+        <StatCard title="Medecins"         value={totals.doctors}    subtitle={`${activeTotals.doctors} actifs`}    icon={Stethoscope} iconBg="bg-accent-light text-accent" />
+        <StatCard title="Pharmacies"       value={totals.pharmacies} subtitle={`${activeTotals.pharmacies} actives`} icon={Building2}   iconBg="bg-medical-success-bg text-medical-success" />
+        <StatCard title="Fournisseurs"     value={totals.suppliers}  subtitle={`${activeTotals.suppliers} actifs`}  icon={Truck}       iconBg="bg-medical-warning-bg text-medical-warning" />
+        <StatCard title="Couverture admin" value={globalTotal}       subtitle={`${globalActive} actifs, ${globalInactive} inactifs`} icon={Users} iconBg="bg-gray-100 text-gray-600" />
       </section>
 
-      <section className="grid gap-5 xl:grid-cols-4">
-        <StatCard
-          title="Medecins"
-          value={totals.doctors}
-          subtitle={`${activeTotals.doctors} actifs`}
-          icon={Stethoscope}
-          accent="bg-gradient-to-br from-cyan-600 to-sky-600"
-        />
-        <StatCard
-          title="Pharmacies"
-          value={totals.pharmacies}
-          subtitle={`${activeTotals.pharmacies} actives`}
-          icon={Building2}
-          accent="bg-gradient-to-br from-emerald-500 to-teal-600"
-        />
-        <StatCard
-          title="Fournisseurs"
-          value={totals.suppliers}
-          subtitle={`${activeTotals.suppliers} actifs`}
-          icon={Truck}
-          accent="bg-gradient-to-br from-amber-500 to-orange-600"
-        />
-        <StatCard
-          title="Couverture admin"
-          value={globalTotal}
-          subtitle={`${globalActive} actifs, ${globalInactive} inactifs`}
-          icon={Users}
-          accent="bg-gradient-to-br from-slate-700 to-slate-900"
-        />
-      </section>
-
+      {/* Insight cards */}
       <section className="grid gap-4 xl:grid-cols-3">
         <InsightCard
           title="Categorie majoritaire"
           value={leadingPortfolio ? leadingPortfolio.label : "Aucune donnee"}
-          helper={leadingPortfolio ? `${leadingPortfolio.count} comptes suivis actuellement.` : "Le portefeuille admin est vide."}
+          helper={leadingPortfolio ? `${leadingPortfolio.count} comptes suivis.` : "Le portefeuille admin est vide."}
           icon={BarChart3}
-          tone="bg-cyan-100 text-cyan-700"
+          tone="bg-accent-light text-accent"
         />
         <InsightCard
           title="Specialite dominante"
           value={leadingSpecialty ? leadingSpecialty.label : "Aucune specialite"}
-          helper={leadingSpecialty ? `${leadingSpecialty.count} medecin(s) sur la meme specialite.` : "Ajoutez des medecins pour alimenter l'analyse."}
+          helper={leadingSpecialty ? `${leadingSpecialty.count} medecin(s) sur cette specialite.` : "Ajoutez des medecins pour alimenter l'analyse."}
           icon={Stethoscope}
-          tone="bg-emerald-100 text-emerald-700"
+          tone="bg-medical-success-bg text-medical-success"
         />
         <InsightCard
           title="Taux d'activation"
@@ -504,167 +464,118 @@ export default function DashboardAdminPage() {
           helper={
             mostRecentMonth
               ? `${mostRecentMonth.total} nouveau(x) partenaire(s) sur ${mostRecentMonth.label}.`
-              : "Aucune evolution recente disponible."
+              : "Aucune evolution recente."
           }
           icon={Activity}
-          tone="bg-amber-100 text-amber-700"
+          tone="bg-medical-warning-bg text-medical-warning"
         />
       </section>
 
-      <section className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
-        <Card className="border-slate-200/90 bg-white/95 shadow-md">
-          <CardContent className="p-6">
-            <div>
-              <h2 className="text-2xl font-semibold text-slate-900">Courbe d'evolution des partenaires</h2>
-              <p className="mt-1 text-sm text-slate-500">
-                Suivi des comptes medecins, pharmacies et fournisseurs ajoutes sur les six derniers mois.
-              </p>
-            </div>
+      {/* Charts row */}
+      <section className="grid gap-5 xl:grid-cols-[1.2fr_0.8fr]">
+        <div className="bg-card rounded-card border border-border shadow-card p-5">
+          <h2 className="text-sm font-semibold text-text-primary tracking-wide">Courbe d'evolution des partenaires</h2>
+          <p className="mt-0.5 text-xs text-text-secondary">Suivi des comptes sur les six derniers mois.</p>
+          <div className="mt-5">
+            <EvolutionChart data={monthlySeries} />
+          </div>
+        </div>
 
-            <div className="mt-6">
-              <EvolutionChart data={monthlySeries} />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-slate-200/90 bg-white/95 shadow-md">
-          <CardContent className="p-6">
-            <div>
-              <h2 className="text-2xl font-semibold text-slate-900">Repartition du portefeuille</h2>
-              <p className="mt-1 text-sm text-slate-500">
-                Vue immediate sur la categorie de partenaires la plus representee dans l'application.
-              </p>
-            </div>
-
-            <div className="mt-6">
-              <DistributionDonut items={portfolioMix} total={globalTotal} />
-            </div>
-          </CardContent>
-        </Card>
+        <div className="bg-card rounded-card border border-border shadow-card p-5">
+          <h2 className="text-sm font-semibold text-text-primary tracking-wide">Repartition du portefeuille</h2>
+          <p className="mt-0.5 text-xs text-text-secondary">Vue immediate sur la categorie la plus representee.</p>
+          <div className="mt-5">
+            <DistributionDonut items={portfolioMix} total={globalTotal} />
+          </div>
+        </div>
       </section>
 
-      <section className="grid gap-6 xl:grid-cols-2">
-        <Card className="border-slate-200/90 bg-white/95 shadow-md">
-          <CardContent className="p-6">
-            <div>
-              <h2 className="text-2xl font-semibold text-slate-900">Specialites medecins les plus presentes</h2>
-              <p className="mt-1 text-sm text-slate-500">
-                Ideal pour voir rapidement les poles medicaux les plus forts de votre ecosysteme.
-              </p>
-            </div>
+      {/* Ranking + Status */}
+      <section className="grid gap-5 xl:grid-cols-2">
+        <div className="bg-card rounded-card border border-border shadow-card p-5">
+          <h2 className="text-sm font-semibold text-text-primary tracking-wide">Specialites medecins les plus presentes</h2>
+          <p className="mt-0.5 text-xs text-text-secondary mb-4">Poles medicaux les plus forts de votre ecosysteme.</p>
+          <RankingBars items={topSpecialties} emptyLabel="Aucune specialite disponible pour le moment." />
+        </div>
 
-            <div className="mt-6">
-              <RankingBars items={topSpecialties} emptyLabel="Aucune specialite disponible pour le moment." />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-slate-200/90 bg-white/95 shadow-md">
-          <CardContent className="p-6">
-            <div>
-              <h2 className="text-2xl font-semibold text-slate-900">Etat operationnel par module</h2>
-              <p className="mt-1 text-sm text-slate-500">
-                Mesurez le taux d'activation reel pour prioriser les relances ou la moderation admin.
-              </p>
-            </div>
-
-            <div className="mt-6">
-              <StatusRows items={portfolioMix} />
-            </div>
-          </CardContent>
-        </Card>
+        <div className="bg-card rounded-card border border-border shadow-card p-5">
+          <h2 className="text-sm font-semibold text-text-primary tracking-wide">Etat operationnel par module</h2>
+          <p className="mt-0.5 text-xs text-text-secondary mb-4">Taux d'activation reel par categorie de partenaire.</p>
+          <StatusRows items={portfolioMix} />
+        </div>
       </section>
 
-      <section className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
-        <Card className="border-slate-200/90 bg-white/95 shadow-md">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <h2 className="text-2xl font-semibold text-slate-900">Activite recente</h2>
-                <p className="mt-1 text-sm text-slate-500">Les derniers comptes crees ou visibles dans l'administration.</p>
-              </div>
-              <div className="hidden rounded-full bg-cyan-50 px-3 py-1 text-xs font-semibold text-cyan-700 sm:inline-flex">
-                Supervision en direct
-              </div>
+      {/* Activity + Quick access */}
+      <section className="grid gap-5 xl:grid-cols-[1.2fr_0.8fr]">
+        <div className="bg-card rounded-card border border-border shadow-card p-5">
+          <div className="flex items-center justify-between gap-4 mb-5">
+            <div>
+              <h2 className="text-sm font-semibold text-text-primary tracking-wide">Activite recente</h2>
+              <p className="mt-0.5 text-xs text-text-secondary">Les derniers comptes crees dans l'administration.</p>
             </div>
+            <span className="hidden bg-medical-success-bg text-medical-success text-xs font-medium px-3 py-1 rounded-full sm:inline-flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-medical-success animate-pulse" />
+              En direct
+            </span>
+          </div>
 
-            <div className="mt-6 space-y-3">
-              {recentActivity.length === 0 ? (
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-10 text-center text-sm text-slate-500">
-                  Aucune activite a afficher pour le moment.
-                </div>
-              ) : (
-                recentActivity.map((entry) => (
-                  <button
-                    key={entry.id}
-                    type="button"
-                    onClick={() => navigate(entry.target)}
-                    className="flex w-full items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-4 text-left transition hover:border-cyan-300 hover:bg-cyan-50/40"
-                  >
-                    <div>
-                      <div className="flex items-center gap-3">
-                        <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${entry.accent}`}>{entry.type}</span>
-                        <p className="text-sm font-semibold text-slate-900">{entry.label}</p>
-                      </div>
-                      <p className="mt-2 text-sm text-slate-500">{entry.description}</p>
-                    </div>
-                    <div className="text-right text-xs text-slate-400">
-                      <p>{formatDate(entry.created_at)}</p>
-                    </div>
-                  </button>
-                ))
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-slate-200/90 bg-white/95 shadow-md">
-          <CardContent className="p-6">
-            <h2 className="text-2xl font-semibold text-slate-900">Acces rapides</h2>
-            <p className="mt-1 text-sm text-slate-500">Passez directement au module que vous voulez administrer.</p>
-
-            <div className="mt-6 space-y-3">
-              {[
-                {
-                  label: "Gerer les medecins",
-                  helper: "Ajout, activation, recherche et suppression",
-                  icon: Stethoscope,
-                  target: "/admin/doctors",
-                },
-                {
-                  label: "Gerer les pharmacies",
-                  helper: "Suivi des comptes pharmaciens et officines",
-                  icon: Building2,
-                  target: "/admin/pharmacies",
-                },
-                {
-                  label: "Gerer les fournisseurs",
-                  helper: "Module admin complet pour les fournisseurs",
-                  icon: Truck,
-                  target: "/admin/suppliers",
-                },
-              ].map((item) => (
+          <div className="space-y-2.5">
+            {recentActivity.length === 0 ? (
+              <div className="rounded-card border border-dashed border-border bg-gray-50 px-4 py-10 text-center text-sm text-text-secondary">
+                Aucune activite a afficher pour le moment.
+              </div>
+            ) : (
+              recentActivity.map((entry) => (
                 <button
-                  key={item.label}
+                  key={entry.id}
                   type="button"
-                  onClick={() => navigate(item.target)}
-                  className="flex w-full items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-left transition hover:border-cyan-300 hover:bg-cyan-50"
+                  onClick={() => navigate(entry.target)}
+                  className="flex w-full items-center justify-between rounded-card border border-border bg-gray-50/60 px-4 py-3.5 text-left transition-all hover:border-accent/30 hover:shadow-card"
                 >
-                  <div className="flex items-start gap-3">
-                    <div className="rounded-2xl bg-cyan-100 p-3 text-cyan-700">
-                      <item.icon size={18} />
+                  <div>
+                    <div className="flex items-center gap-2.5">
+                      <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${entry.accent}`}>{entry.type}</span>
+                      <p className="text-sm font-medium text-text-primary">{entry.label}</p>
                     </div>
-                    <div>
-                      <p className="text-sm font-semibold text-slate-900">{item.label}</p>
-                      <p className="mt-1 text-sm text-slate-500">{item.helper}</p>
-                    </div>
+                    <p className="mt-1 text-xs text-text-secondary">{entry.description}</p>
                   </div>
-                  <ArrowRight size={16} className="text-slate-400" />
+                  <p className="text-xs text-text-muted flex-shrink-0 ml-3">{formatDate(entry.created_at)}</p>
                 </button>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+              ))
+            )}
+          </div>
+        </div>
+
+        <div className="bg-card rounded-card border border-border shadow-card p-5">
+          <h2 className="text-sm font-semibold text-text-primary tracking-wide mb-1">Acces rapides</h2>
+          <p className="text-xs text-text-secondary mb-5">Passez directement au module a administrer.</p>
+
+          <div className="space-y-2.5">
+            {[
+              { label: "Gerer les medecins",    helper: "Ajout, activation, recherche",       icon: Stethoscope, target: "/admin/doctors" },
+              { label: "Gerer les pharmacies",  helper: "Comptes pharmaciens et officines",    icon: Building2,   target: "/admin/pharmacies" },
+              { label: "Gerer les fournisseurs",helper: "Module admin complet fournisseurs",   icon: Truck,       target: "/admin/suppliers" },
+            ].map((item) => (
+              <button
+                key={item.label}
+                type="button"
+                onClick={() => navigate(item.target)}
+                className="flex w-full items-center justify-between rounded-card border border-border bg-gray-50 px-4 py-3.5 text-left transition-all hover:border-accent/30 hover:shadow-card"
+              >
+                <div className="flex items-start gap-3">
+                  <div className="rounded-lg bg-accent-light p-2.5 text-accent flex-shrink-0">
+                    <item.icon size={16} />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-text-primary">{item.label}</p>
+                    <p className="mt-0.5 text-xs text-text-secondary">{item.helper}</p>
+                  </div>
+                </div>
+                <ArrowRight size={15} className="text-text-muted flex-shrink-0" />
+              </button>
+            ))}
+          </div>
+        </div>
       </section>
     </div>
   );

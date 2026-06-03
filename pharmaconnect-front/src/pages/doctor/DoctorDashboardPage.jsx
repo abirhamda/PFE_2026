@@ -31,14 +31,14 @@ const toHumanDateTime = (value) => {
 };
 
 const StatCard = ({ icon, label, value, hint }) => (
-  <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+  <div className="bg-card rounded-card border border-border shadow-card p-5">
     <div className="flex items-start justify-between gap-3">
       <div>
-        <p className="text-xs uppercase tracking-wide text-slate-500">{label}</p>
-        <p className="mt-1 text-3xl font-bold text-slate-900">{value}</p>
-        {hint ? <p className="mt-1 text-xs text-slate-500">{hint}</p> : null}
+        <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">{label}</p>
+        <p className="mt-2.5 text-3xl font-semibold text-text-primary">{value}</p>
+        {hint ? <p className="mt-1.5 text-xs text-text-secondary leading-snug">{hint}</p> : null}
       </div>
-      <div className="rounded-xl bg-cyan-50 p-2 text-cyan-700">{icon}</div>
+      <div className="rounded-lg bg-accent-light p-2.5 text-accent flex-shrink-0">{icon}</div>
     </div>
   </div>
 );
@@ -114,72 +114,54 @@ const DoctorDashboardPage = () => {
   );
 
   return (
-    <div className="space-y-6">
-      <section className="rounded-3xl bg-gradient-to-r from-cyan-700 via-cyan-600 to-teal-600 p-6 text-white shadow-xl">
-        <p className="text-xs uppercase tracking-wider text-cyan-100">Module medecin</p>
-        <h1 className="mt-1 text-3xl font-bold">Tableau de bord clinique</h1>
-        <p className="mt-1 text-sm text-cyan-100">
-          Suivi des rendez-vous, patients, fiches et ordonnances dans un seul espace.
-        </p>
-      </section>
+    <div className="space-y-5">
+      {error && (
+        <div className="rounded-card border-l-4 border-medical-danger bg-medical-danger-bg px-4 py-3 text-sm text-medical-danger">
+          {error}
+        </div>
+      )}
 
-      {error && <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-rose-700">{error}</div>}
-
+      {/* Stats */}
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <StatCard
-          icon={<CalendarDays size={18} />}
-          label="Rendez-vous aujourd'hui"
-          value={loading ? "..." : todayAppointments.length}
-          hint={`${loading ? "..." : createdBySecretariesCount} emis par les secretaires`}
-        />
-        <StatCard
-          icon={<Users size={18} />}
-          label="Patients suivis"
-          value={loading ? "..." : patientsCount}
-          hint="Dossier medical unifie"
-        />
-        <StatCard
-          icon={<Clock3 size={18} />}
-          label="Salle d'attente (lecture)"
-          value={loading ? "..." : waitingCount}
-          hint="Mis a jour par la secretaire"
-        />
-        <StatCard
-          icon={<FileText size={18} />}
-          label="Ordonnances emises"
-          value={loading ? "..." : ordonnancesCount}
-          hint="Creation et impression incluses"
-        />
+        <StatCard icon={<CalendarDays size={18} />} label="Rendez-vous aujourd'hui" value={loading ? "..." : todayAppointments.length} hint={`${loading ? "..." : createdBySecretariesCount} emis par les secretaires`} />
+        <StatCard icon={<Users size={18} />} label="Patients suivis" value={loading ? "..." : patientsCount} hint="Dossier medical unifie" />
+        <StatCard icon={<Clock3 size={18} />} label="Salle d'attente" value={loading ? "..." : waitingCount} hint="Mis a jour par la secretaire" />
+        <StatCard icon={<FileText size={18} />} label="Ordonnances emises" value={loading ? "..." : ordonnancesCount} hint="Creation et impression incluses" />
       </section>
 
-      <section className="grid gap-6 xl:grid-cols-[2fr,1fr]">
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      {/* Planning + actions */}
+      <section className="grid gap-5 xl:grid-cols-[2fr,1fr]">
+        <div className="bg-card rounded-card border border-border shadow-card p-5">
           <div className="mb-4 flex items-center gap-2">
-            <Stethoscope size={18} className="text-cyan-700" />
-            <h2 className="text-lg font-semibold text-slate-900">Planning du jour</h2>
+            <Stethoscope size={17} className="text-accent" />
+            <h2 className="text-sm font-semibold text-text-primary tracking-wide">Planning du jour</h2>
           </div>
 
           {loading ? (
-            <div className="rounded-xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500">
+            <div className="rounded-card border border-dashed border-border bg-gray-50 p-6 text-center text-sm text-text-secondary">
               Chargement...
             </div>
           ) : upcomingTodayAppointments.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500">
+            <div className="rounded-card border border-dashed border-border bg-gray-50 p-6 text-center text-sm text-text-secondary">
               Aucun rendez-vous prevu aujourd'hui.
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-2.5">
               {upcomingTodayAppointments.map((appointment) => (
-                <div key={appointment.id} className="rounded-xl border border-slate-200 p-4">
+                <div key={appointment.id} className="rounded-card border border-border bg-gray-50 px-4 py-3.5">
                   <div className="flex items-center justify-between gap-3">
                     <div>
-                      <p className="font-semibold text-slate-900">
+                      <p className="text-sm font-medium text-text-primary">
                         {appointment.patient_prenom} {appointment.patient_nom}
                       </p>
-                      <p className="text-xs text-slate-500">{toHumanDateTime(appointment.appointment_at)}</p>
+                      <p className="text-xs text-text-secondary mt-0.5">{toHumanDateTime(appointment.appointment_at)}</p>
                     </div>
-                    <span className="rounded-full bg-cyan-50 px-2.5 py-1 text-xs font-semibold text-cyan-700">
-                      {appointment.created_by_role === "secretaire" ? "Ajoute par secretaire" : "Ajoute par medecin"}
+                    <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                      appointment.created_by_role === "secretaire"
+                        ? "bg-accent-light text-accent"
+                        : "bg-gray-100 text-gray-600"
+                    }`}>
+                      {appointment.created_by_role === "secretaire" ? "Par secretaire" : "Direct"}
                     </span>
                   </div>
                 </div>
@@ -188,36 +170,25 @@ const DoctorDashboardPage = () => {
           )}
         </div>
 
-        <div className="space-y-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <h2 className="text-lg font-semibold text-slate-900">Actions rapides</h2>
-          <Link
-            to="/docteur/rendezvous"
-            className="flex items-center justify-between rounded-xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50"
-          >
-            Gerer les rendez-vous
-            <ChevronRight size={16} />
-          </Link>
-          <Link
-            to="/docteur/patients"
-            className="flex items-center justify-between rounded-xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50"
-          >
-            Ouvrir les patients et fiches
-            <ChevronRight size={16} />
-          </Link>
-          <Link
-            to="/docteur/ordonnances"
-            className="flex items-center justify-between rounded-xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50"
-          >
-            Creer / imprimer une ordonnance
-            <ChevronRight size={16} />
-          </Link>
-          <Link
-            to="/docteur/secretaires"
-            className="flex items-center justify-between rounded-xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50"
-          >
-            Gerer les secretaires
-            <ChevronRight size={16} />
-          </Link>
+        <div className="bg-card rounded-card border border-border shadow-card p-5">
+          <h2 className="text-sm font-semibold text-text-primary tracking-wide mb-4">Actions rapides</h2>
+          <div className="space-y-2">
+            {[
+              { to: "/docteur/rendezvous", label: "Gerer les rendez-vous" },
+              { to: "/docteur/patients",   label: "Ouvrir les patients et fiches" },
+              { to: "/docteur/ordonnances",label: "Creer / imprimer une ordonnance" },
+              { to: "/docteur/secretaires",label: "Gerer les secretaires" },
+            ].map((link) => (
+              <Link
+                key={link.to}
+                to={link.to}
+                className="flex items-center justify-between rounded-lg border border-border px-4 py-3 text-sm font-medium text-text-primary hover:bg-gray-50 hover:border-accent/30 transition-colors"
+              >
+                {link.label}
+                <ChevronRight size={15} className="text-text-muted" />
+              </Link>
+            ))}
+          </div>
         </div>
       </section>
     </div>

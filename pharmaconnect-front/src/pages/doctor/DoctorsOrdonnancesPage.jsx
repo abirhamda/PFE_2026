@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   CalendarClock,
   FileText,
@@ -21,6 +21,9 @@ const initialCreateForm = {
   cin: "",
   ordonnance: "",
 };
+
+const inputCls =
+  "w-full border border-border rounded-lg px-3 py-2.5 text-sm text-text-primary bg-card placeholder-text-muted outline-none transition focus:ring-2 focus:ring-accent/30 focus:border-accent";
 
 const toHumanDateTime = (value) => {
   if (!value) return "--";
@@ -59,10 +62,10 @@ const normalizeOrdonnanceItem = (raw) => {
 
 const getStatusBadgeClass = (status) => {
   const normalized = String(status || "").toLowerCase();
-  if (normalized === "effectuÃ©e" || normalized === "effectuee") {
-    return "bg-emerald-100 text-emerald-700";
+  if (normalized === "effectuée" || normalized === "effectuee") {
+    return "bg-medical-success-bg text-medical-success";
   }
-  return "bg-amber-100 text-amber-700";
+  return "bg-medical-warning-bg text-medical-warning";
 };
 
 const buildPrintableHtml = ({ ordonnance, doctorName }) => {
@@ -80,98 +83,61 @@ const buildPrintableHtml = ({ ordonnance, doctorName }) => {
       margin: 0;
       padding: 28px;
       font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
-      color: #0f172a;
-      background: #f8fafc;
+      color: #0f1e2e;
+      background: #f0f4f8;
     }
     .sheet {
       max-width: 840px;
       margin: 0 auto;
       background: #fff;
-      border: 1px solid #e2e8f0;
-      border-radius: 18px;
+      border: 1px solid #dde3ec;
+      border-radius: 10px;
       overflow: hidden;
-      box-shadow: 0 20px 50px rgba(15, 23, 42, 0.12);
+      box-shadow: 0 4px 12px rgba(15,29,74,0.10);
     }
     .top {
       padding: 20px 24px;
-      background: linear-gradient(120deg, #0e7490, #0f766e);
+      background: #0f2d4a;
       color: #fff;
       display: flex;
       justify-content: space-between;
       gap: 18px;
       align-items: center;
     }
-    .title {
-      margin: 0;
-      font-size: 28px;
-      letter-spacing: 0.4px;
-      font-weight: 700;
-    }
-    .subtitle {
-      margin-top: 4px;
-      opacity: 0.9;
-      font-size: 14px;
-    }
+    .title { margin: 0; font-size: 24px; font-weight: 600; }
+    .subtitle { margin-top: 4px; opacity: 0.65; font-size: 13px; }
     .id-pill {
-      background: rgba(255,255,255,0.2);
-      border: 1px solid rgba(255,255,255,0.35);
+      background: rgba(255,255,255,0.15);
+      border: 1px solid rgba(255,255,255,0.25);
       border-radius: 999px;
-      padding: 8px 12px;
+      padding: 6px 12px;
       font-size: 13px;
-      font-weight: 600;
+      font-weight: 500;
       white-space: nowrap;
     }
-    .body {
-      padding: 22px 24px;
-      display: grid;
-      gap: 14px;
-    }
-    .block {
-      border: 1px solid #e2e8f0;
-      border-radius: 12px;
-      padding: 14px 16px;
-    }
+    .body { padding: 22px 24px; display: grid; gap: 14px; }
+    .block { border: 1px solid #dde3ec; border-radius: 8px; padding: 14px 16px; }
     .block-title {
       margin: 0 0 8px 0;
-      color: #0f766e;
-      font-size: 13px;
+      color: #1e6fd9;
+      font-size: 11px;
       letter-spacing: 0.4px;
       text-transform: uppercase;
-      font-weight: 700;
+      font-weight: 600;
     }
     .line { margin: 4px 0; font-size: 14px; }
-    .label { color: #475569; font-weight: 600; }
-    .rx {
-      font-size: 34px;
-      color: #0f766e;
-      font-weight: 700;
-      margin-bottom: 10px;
-      font-family: Georgia, "Times New Roman", serif;
-    }
+    .label { color: #5a6a7e; font-weight: 600; }
+    .rx { font-size: 32px; color: #0f2d4a; font-weight: 700; margin-bottom: 10px; font-family: Georgia, serif; }
     .prescription {
       min-height: 180px;
-      border: 1px dashed #cbd5e1;
-      border-radius: 10px;
+      border: 1px dashed #dde3ec;
+      border-radius: 8px;
       padding: 14px;
       line-height: 1.65;
       font-size: 15px;
-      white-space: normal;
     }
-    .footer {
-      display: flex;
-      justify-content: space-between;
-      gap: 12px;
-      align-items: flex-end;
-      margin-top: 18px;
-    }
-    .signature {
-      width: 260px;
-      text-align: center;
-      border-top: 1px solid #cbd5e1;
-      padding-top: 8px;
-      font-size: 12px;
-      color: #475569;
-    }
+    .footer { display: flex; justify-content: space-between; gap: 12px; align-items: flex-end; margin-top: 18px; }
+    .signature { width: 240px; text-align: center; border-top: 1px solid #dde3ec; padding-top: 8px; font-size: 12px; color: #5a6a7e; }
     @media print {
       body { background: #fff; padding: 0; }
       .sheet { box-shadow: none; border-radius: 0; border: none; max-width: 100%; }
@@ -182,7 +148,7 @@ const buildPrintableHtml = ({ ordonnance, doctorName }) => {
   <div class="sheet">
     <div class="top">
       <div>
-        <h1 class="title">Ordonnance MÃ©dicale</h1>
+        <h1 class="title">Ordonnance Médicale</h1>
         <div class="subtitle">Document de prescription professionnelle</div>
       </div>
       <div class="id-pill">Ordonnance #${ordonnance.id}</div>
@@ -191,11 +157,11 @@ const buildPrintableHtml = ({ ordonnance, doctorName }) => {
     <div class="body">
       <div class="block">
         <h2 class="block-title">Informations</h2>
-        <div class="line"><span class="label">MÃ©decin:</span> ${escapeHtml(doctorName)}</div>
+        <div class="line"><span class="label">Médecin:</span> ${escapeHtml(doctorName)}</div>
         <div class="line"><span class="label">Patient:</span> ${escapeHtml(ordonnance.prenom)} ${escapeHtml(ordonnance.nom)}</div>
         <div class="line"><span class="label">Matricule:</span> ${escapeHtml(ordonnance.patient_matricule || "-")}</div>
         <div class="line"><span class="label">CIN:</span> ${escapeHtml(ordonnance.cin || "-")}</div>
-        <div class="line"><span class="label">Date d'Ã©mission:</span> ${toHumanDateTime(ordonnance.created_at)}</div>
+        <div class="line"><span class="label">Date d'émission:</span> ${toHumanDateTime(ordonnance.created_at)}</div>
         <div class="line"><span class="label">Date d'impression:</span> ${generatedAt}</div>
       </div>
 
@@ -205,7 +171,7 @@ const buildPrintableHtml = ({ ordonnance, doctorName }) => {
       </div>
 
       <div class="footer">
-        <div class="line"><span class="label">Cachet / signature mÃ©decin</span></div>
+        <div class="line"><span class="label">Cachet / signature médecin</span></div>
         <div class="signature">${escapeHtml(doctorName)}</div>
       </div>
     </div>
@@ -240,47 +206,29 @@ const EditOrdonnanceModal = ({ ordonnance, onClose, onSave }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-sm">
-      <form onSubmit={submit} className="w-full max-w-3xl space-y-4 rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <form onSubmit={submit} className="w-full max-w-3xl space-y-4 bg-card rounded-card border border-border shadow-card-hover p-6">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-xl font-semibold text-slate-900">Modifier l&apos;ordonnance #{ordonnance.id}</h3>
-            <p className="text-xs text-slate-500">{toHumanDateTime(ordonnance.created_at)}</p>
+            <h3 className="text-base font-semibold text-text-primary">Modifier l'ordonnance #{ordonnance.id}</h3>
+            <p className="text-xs text-text-secondary mt-0.5">{toHumanDateTime(ordonnance.created_at)}</p>
           </div>
-          <button type="button" onClick={onClose} className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-50">
+          <button type="button" onClick={onClose} className="rounded-lg border border-border px-3 py-1.5 text-sm text-text-secondary hover:bg-gray-50 transition-colors">
             Fermer
           </button>
         </div>
 
-        {error && <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</div>}
+        {error && (
+          <div className="rounded-card border-l-4 border-medical-danger bg-medical-danger-bg px-4 py-3 text-sm text-medical-danger">
+            {error}
+          </div>
+        )}
 
         <div className="grid gap-3 md:grid-cols-4">
-          <input
-            value={form.nom}
-            onChange={(event) => setForm((prev) => ({ ...prev, nom: event.target.value }))}
-            required
-            placeholder="Nom"
-            className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm"
-          />
-          <input
-            value={form.prenom}
-            onChange={(event) => setForm((prev) => ({ ...prev, prenom: event.target.value }))}
-            required
-            placeholder="Prenom"
-            className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm"
-          />
-          <input
-            value={ordonnance.patient_matricule || ""}
-            disabled
-            placeholder="Matricule"
-            className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-500"
-          />
-          <input
-            value={form.cin}
-            onChange={(event) => setForm((prev) => ({ ...prev, cin: event.target.value }))}
-            placeholder="CIN (optionnel, 8 chiffres)"
-            className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm"
-          />
+          <input value={form.nom} onChange={(event) => setForm((prev) => ({ ...prev, nom: event.target.value }))} required placeholder="Nom" className={inputCls} />
+          <input value={form.prenom} onChange={(event) => setForm((prev) => ({ ...prev, prenom: event.target.value }))} required placeholder="Prenom" className={inputCls} />
+          <input value={ordonnance.patient_matricule || ""} disabled placeholder="Matricule" className={`${inputCls} bg-gray-50 text-text-muted cursor-not-allowed`} />
+          <input value={form.cin} onChange={(event) => setForm((prev) => ({ ...prev, cin: event.target.value }))} placeholder="CIN (optionnel)" className={inputCls} />
         </div>
 
         <textarea
@@ -289,15 +237,15 @@ const EditOrdonnanceModal = ({ ordonnance, onClose, onSave }) => {
           required
           rows={10}
           placeholder="Prescription"
-          className="w-full rounded-2xl border border-slate-200 px-3 py-2.5 text-sm leading-relaxed"
+          className={`${inputCls} min-h-[200px] resize-y`}
         />
 
-        <div className="flex justify-end gap-2">
-          <button type="button" onClick={onClose} className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50">
+        <div className="flex justify-end gap-2.5">
+          <button type="button" onClick={onClose} className="rounded-lg border border-border px-4 py-2 text-sm text-text-primary hover:bg-gray-50 transition-colors">
             Annuler
           </button>
-          <button type="submit" disabled={saving} className="inline-flex items-center gap-2 rounded-xl bg-cyan-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-cyan-700 disabled:opacity-60">
-            <Save size={15} /> {saving ? "Mise a jour..." : "Enregistrer"}
+          <button type="submit" disabled={saving} className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-hover disabled:opacity-60 transition-colors">
+            <Save size={14} /> {saving ? "Mise a jour..." : "Enregistrer"}
           </button>
         </div>
       </form>
@@ -380,7 +328,7 @@ const DoctorsOrdonnancesPage = () => {
 
   const counts = useMemo(() => {
     const pending = safeOrdonnances.filter(
-      (item) => !["effectuee", "effectuÃ©e"].includes(String(item.status || "").toLowerCase()),
+      (item) => !["effectuee", "effectuée"].includes(String(item.status || "").toLowerCase()),
     ).length;
     const completed = safeOrdonnances.length - pending;
     const monthStart = new Date();
@@ -394,8 +342,8 @@ const DoctorsOrdonnancesPage = () => {
     const needle = search.trim().toLowerCase();
     return safeOrdonnances.filter((item) => {
       const normalizedStatus = String(item.status || "").toLowerCase();
-      if (statusFilter === "pending" && ["effectuee", "effectuÃ©e"].includes(normalizedStatus)) return false;
-      if (statusFilter === "done" && !["effectuee", "effectuÃ©e"].includes(normalizedStatus)) return false;
+      if (statusFilter === "pending" && ["effectuee", "effectuée"].includes(normalizedStatus)) return false;
+      if (statusFilter === "done" && !["effectuee", "effectuée"].includes(normalizedStatus)) return false;
 
       if (!needle) return true;
       const haystack = `${item.id || ""} ${item.nom || ""} ${item.prenom || ""} ${item.cin || ""} ${item.patient_matricule || ""} ${item.ordonnance || ""}`.toLowerCase();
@@ -495,253 +443,210 @@ const DoctorsOrdonnancesPage = () => {
 
   if (isLoading) {
     return (
-      <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-slate-500">
+      <div className="bg-card rounded-card border border-border shadow-card p-8 text-center text-text-secondary text-sm">
         Chargement des ordonnances...
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <section className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-cyan-700 via-cyan-600 to-teal-600 p-6 text-white shadow-xl">
-        <div className="pointer-events-none absolute -right-24 -top-24 h-56 w-56 rounded-full bg-white/10 blur-2xl" />
-        <div className="relative">
-          <h1 className="text-3xl font-bold">{isDoctor ? "Ordonnances du cabinet" : "Ordonnances des patients"}</h1>
-          <p className="mt-1 text-sm text-cyan-100">
-            {isDoctor
-              ? "CrÃ©ation, Ã©dition et impression avec un rendu professionnel."
-              : "Consultation et impression des ordonnances du cabinet."}
-          </p>
+    <div className="space-y-5">
+      {/* Stats header */}
+      <div className="bg-primary rounded-card border border-primary/20 shadow-card p-5">
+        <h1 className="text-lg font-semibold text-white">{isDoctor ? "Ordonnances du cabinet" : "Ordonnances des patients"}</h1>
+        <p className="mt-1 text-sm text-white/65">
+          {isDoctor ? "Creation, edition et impression avec un rendu professionnel." : "Consultation et impression des ordonnances du cabinet."}
+        </p>
 
-          <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="rounded-xl border border-white/25 bg-white/10 px-3 py-2">
-              <p className="text-xs uppercase tracking-wide text-cyan-100">Total</p>
-              <p className="text-xl font-semibold">{counts.total}</p>
+        <div className="mt-4 grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
+          {[
+            { label: "Total",      value: counts.total },
+            { label: "En attente", value: counts.pending },
+            { label: "Effectuees", value: counts.completed },
+            { label: "Ce mois",    value: counts.currentMonth },
+          ].map((stat) => (
+            <div key={stat.label} className="rounded-lg border border-white/20 bg-white/10 px-3 py-2.5">
+              <p className="text-xs text-white/60 uppercase tracking-wide">{stat.label}</p>
+              <p className="mt-0.5 text-xl font-semibold text-white">{stat.value}</p>
             </div>
-            <div className="rounded-xl border border-white/25 bg-white/10 px-3 py-2">
-              <p className="text-xs uppercase tracking-wide text-cyan-100">En attente</p>
-              <p className="text-xl font-semibold">{counts.pending}</p>
-            </div>
-            <div className="rounded-xl border border-white/25 bg-white/10 px-3 py-2">
-              <p className="text-xs uppercase tracking-wide text-cyan-100">EffectuÃ©es</p>
-              <p className="text-xl font-semibold">{counts.completed}</p>
-            </div>
-            <div className="rounded-xl border border-white/25 bg-white/10 px-3 py-2">
-              <p className="text-xs uppercase tracking-wide text-cyan-100">Ce mois</p>
-              <p className="text-xl font-semibold">{counts.currentMonth}</p>
-            </div>
-          </div>
+          ))}
         </div>
-      </section>
+      </div>
 
-      {message && <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-emerald-700">{message}</div>}
-      {error && <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-rose-700">{error}</div>}
-
-      {isDoctor && (
-        <section>
-          <form onSubmit={createOrdonnance} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <div className="mb-4 flex items-center gap-2">
-              <div className="rounded-lg bg-cyan-50 p-2 text-cyan-700">
-                <Stethoscope size={16} />
-              </div>
-              <h2 className="text-lg font-semibold text-slate-900">CrÃ©er une ordonnance</h2>
-            </div>
-
-            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-              <div className="xl:col-span-2">
-                <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Patient</label>
-                <select
-                  value={createForm.patient_id}
-                  onChange={(event) => selectPatient(event.target.value)}
-                  className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm"
-                >
-                  <option value="">SÃ©lectionner un patient (optionnel)</option>
-                  {patients.map((patient) => (
-                    <option key={patient.id} value={patient.id}>
-                      {patient.prenom} {patient.nom} - {patient.matricule}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Nom</label>
-                <input
-                  value={createForm.nom}
-                  onChange={(event) => setCreateForm((prev) => ({ ...prev, nom: event.target.value }))}
-                  required
-                  className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm"
-                />
-              </div>
-
-              <div>
-                <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">PrÃ©nom</label>
-                <input
-                  value={createForm.prenom}
-                  onChange={(event) => setCreateForm((prev) => ({ ...prev, prenom: event.target.value }))}
-                  required
-                  className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm"
-                />
-              </div>
-
-              <div>
-                <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">CIN</label>
-                <input
-                  value={createForm.cin}
-                  onChange={(event) => setCreateForm((prev) => ({ ...prev, cin: event.target.value }))}
-                  placeholder="Optionnel - 8 chiffres"
-                  className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm"
-                />
-              </div>
-
-              <div className="md:col-span-2 xl:col-span-3">
-                <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Prescription</label>
-                <textarea
-                  value={createForm.ordonnance}
-                  onChange={(event) => setCreateForm((prev) => ({ ...prev, ordonnance: event.target.value }))}
-                  required
-                  rows={7}
-                  placeholder="DÃ©taillez le traitement, la posologie, la durÃ©e, et les recommandations..."
-                  className="w-full rounded-2xl border border-slate-200 px-3 py-2.5 text-sm leading-relaxed"
-                />
-                <p className="mt-1 text-right text-xs text-slate-500">
-                  {String(createForm.ordonnance || "").length} caractÃ¨res
-                </p>
-              </div>
-            </div>
-
-            <div className="mt-3 flex items-center justify-between gap-3">
-              <p className="text-xs text-slate-500">
-                {selectedPatient
-                  ? `Patient sÃ©lectionnÃ©: ${selectedPatient.prenom} ${selectedPatient.nom} (${selectedPatient.matricule})`
-                  : "Vous pouvez aussi saisir manuellement les informations patient."}
-              </p>
-              <button
-                type="submit"
-                disabled={saving}
-                className="inline-flex items-center gap-2 rounded-xl bg-cyan-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-cyan-700 disabled:opacity-60"
-              >
-                <Save size={15} /> {saving ? "CrÃ©ation..." : "CrÃ©er l'ordonnance"}
-              </button>
-            </div>
-          </form>
-        </section>
+      {message && (
+        <div className="rounded-card border-l-4 border-medical-success bg-medical-success-bg px-4 py-3 text-sm text-medical-success">
+          {message}
+        </div>
+      )}
+      {error && (
+        <div className="rounded-card border-l-4 border-medical-danger bg-medical-danger-bg px-4 py-3 text-sm text-medical-danger">
+          {error}
+        </div>
       )}
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      {/* Create form */}
+      {isDoctor && (
+        <form onSubmit={createOrdonnance} className="bg-card rounded-card border border-border shadow-card p-5">
+          <div className="mb-4 flex items-center gap-2.5">
+            <div className="rounded-lg bg-accent-light p-2 text-accent">
+              <Stethoscope size={15} />
+            </div>
+            <h2 className="text-sm font-semibold text-text-primary">Créer une ordonnance</h2>
+          </div>
+
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            <div className="xl:col-span-2">
+              <label className="mb-1.5 block text-xs font-medium text-text-secondary uppercase tracking-wide">Patient</label>
+              <select value={createForm.patient_id} onChange={(event) => selectPatient(event.target.value)} className={inputCls}>
+                <option value="">Sélectionner un patient (optionnel)</option>
+                {patients.map((patient) => (
+                  <option key={patient.id} value={patient.id}>
+                    {patient.prenom} {patient.nom} - {patient.matricule}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="mb-1.5 block text-xs font-medium text-text-secondary uppercase tracking-wide">Nom</label>
+              <input value={createForm.nom} onChange={(event) => setCreateForm((prev) => ({ ...prev, nom: event.target.value }))} required className={inputCls} />
+            </div>
+
+            <div>
+              <label className="mb-1.5 block text-xs font-medium text-text-secondary uppercase tracking-wide">Prénom</label>
+              <input value={createForm.prenom} onChange={(event) => setCreateForm((prev) => ({ ...prev, prenom: event.target.value }))} required className={inputCls} />
+            </div>
+
+            <div>
+              <label className="mb-1.5 block text-xs font-medium text-text-secondary uppercase tracking-wide">CIN</label>
+              <input value={createForm.cin} onChange={(event) => setCreateForm((prev) => ({ ...prev, cin: event.target.value }))} placeholder="Optionnel - 8 chiffres" className={inputCls} />
+            </div>
+
+            <div className="md:col-span-2 xl:col-span-3">
+              <label className="mb-1.5 block text-xs font-medium text-text-secondary uppercase tracking-wide">Prescription</label>
+              <textarea
+                value={createForm.ordonnance}
+                onChange={(event) => setCreateForm((prev) => ({ ...prev, ordonnance: event.target.value }))}
+                required
+                rows={7}
+                placeholder="Détaillez le traitement, la posologie, la durée et les recommandations..."
+                className={`${inputCls} resize-y`}
+              />
+              <p className="mt-1 text-right text-xs text-text-muted">
+                {String(createForm.ordonnance || "").length} caractères
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-3 flex items-center justify-between gap-3">
+            <p className="text-xs text-text-secondary">
+              {selectedPatient
+                ? `Patient sélectionné: ${selectedPatient.prenom} ${selectedPatient.nom} (${selectedPatient.matricule})`
+                : "Vous pouvez aussi saisir manuellement les informations patient."}
+            </p>
+            <button type="submit" disabled={saving} className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-hover disabled:opacity-60 transition-colors flex-shrink-0">
+              <Save size={14} /> {saving ? "Création..." : "Créer l'ordonnance"}
+            </button>
+          </div>
+        </form>
+      )}
+
+      {/* History */}
+      <div className="bg-card rounded-card border border-border shadow-card p-5">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-lg font-semibold text-slate-900">Historique ({filteredOrdonnances.length})</h2>
+          <h2 className="text-sm font-semibold text-text-primary">Historique ({filteredOrdonnances.length})</h2>
 
           <div className="flex w-full flex-wrap items-center gap-2 lg:w-auto">
-            <div className="relative min-w-[260px] flex-1 lg:flex-none">
-              <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <div className="relative min-w-[240px] flex-1 lg:flex-none">
+              <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
               <input
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
-                placeholder="Rechercher nom, matricule, CIN, texte ou NÂ°"
-                className="w-full rounded-xl border border-slate-200 py-2.5 pl-9 pr-3 text-sm"
+                placeholder="Rechercher nom, matricule, CIN..."
+                className={`${inputCls} pl-9`}
               />
             </div>
 
-            <div className="flex items-center rounded-xl border border-slate-200 bg-slate-50 p-1">
-              <button
-                type="button"
-                onClick={() => setStatusFilter("all")}
-                className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${statusFilter === "all" ? "bg-white text-slate-800 shadow-sm" : "text-slate-500"}`}
-              >
-                Tous
-              </button>
-              <button
-                type="button"
-                onClick={() => setStatusFilter("pending")}
-                className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${statusFilter === "pending" ? "bg-white text-slate-800 shadow-sm" : "text-slate-500"}`}
-              >
-                En attente
-              </button>
-              <button
-                type="button"
-                onClick={() => setStatusFilter("done")}
-                className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${statusFilter === "done" ? "bg-white text-slate-800 shadow-sm" : "text-slate-500"}`}
-              >
-                EffectuÃ©es
-              </button>
+            <div className="inline-flex rounded-lg border border-border bg-gray-50 p-1">
+              {[
+                { key: "all",     label: "Tous" },
+                { key: "pending", label: "En attente" },
+                { key: "done",    label: "Effectuees" },
+              ].map((f) => (
+                <button
+                  key={f.key}
+                  type="button"
+                  onClick={() => setStatusFilter(f.key)}
+                  className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+                    statusFilter === f.key ? "bg-primary text-white" : "text-text-secondary hover:text-text-primary"
+                  }`}
+                >
+                  {f.label}
+                </button>
+              ))}
             </div>
 
-            <button
-              type="button"
-              onClick={loadData}
-              className="inline-flex items-center gap-1 rounded-xl border border-slate-200 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50"
-            >
-              <RefreshCcw size={14} /> Actualiser
+            <button type="button" onClick={loadData} className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-sm text-text-primary hover:bg-gray-50 transition-colors">
+              <RefreshCcw size={13} /> Actualiser
             </button>
           </div>
         </div>
 
         {loading ? (
-          <div className="rounded-xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500">Chargement...</div>
+          <div className="rounded-card border border-dashed border-border bg-gray-50 p-8 text-center text-sm text-text-secondary">
+            Chargement...
+          </div>
         ) : filteredOrdonnances.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-slate-300 p-8 text-center text-slate-500">
-            <UserRoundSearch className="mx-auto mb-2" size={22} />
-            Aucune ordonnance trouvÃ©e.
+          <div className="rounded-card border border-dashed border-border bg-gray-50 p-8 text-center text-text-secondary">
+            <UserRoundSearch className="mx-auto mb-2 text-text-muted" size={22} />
+            <p className="text-sm">Aucune ordonnance trouvée.</p>
           </div>
         ) : (
-          <div className="grid gap-4">
+          <div className="space-y-3">
             {filteredOrdonnances.map((ordonnance) => (
-              <article key={ordonnance.id} className="rounded-2xl border border-slate-200 p-4 transition hover:border-cyan-200 hover:shadow-sm">
+              <article key={ordonnance.id} className="rounded-card border border-border bg-gray-50/60 p-4 hover:border-accent/30 hover:shadow-card transition-all">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <div className="flex items-center gap-2">
-                      <p className="text-lg font-semibold text-slate-900">Ordonnance #{ordonnance.id}</p>
-                      <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${getStatusBadgeClass(ordonnance.status)}`}>
+                      <p className="text-sm font-semibold text-text-primary">Ordonnance #{ordonnance.id}</p>
+                      <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${getStatusBadgeClass(ordonnance.status)}`}>
                         {ordonnance.status || "En attente"}
                       </span>
                     </div>
-                    <p className="mt-1 text-sm text-slate-600">
+                    <p className="mt-0.5 text-sm text-text-secondary">
                       {ordonnance.prenom} {ordonnance.nom}
                     </p>
-                    <p className="text-xs text-slate-500">
-                      Matricule: <span className="font-medium text-slate-700">{ordonnance.patient_matricule || "-"}</span>
-                      {" Â· "}
-                      CIN: <span className="font-medium text-slate-700">{ordonnance.cin || "-"}</span>
+                    <p className="text-xs text-text-muted">
+                      Matricule: <span className="font-medium text-text-secondary">{ordonnance.patient_matricule || "-"}</span>
+                      {" · "}
+                      CIN: <span className="font-medium text-text-secondary">{ordonnance.cin || "-"}</span>
                     </p>
                   </div>
 
-                  <div className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
-                    <CalendarClock size={13} />
+                  <div className="inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-text-secondary">
+                    <CalendarClock size={12} />
                     {toHumanDateTime(ordonnance.created_at)}
                   </div>
                 </div>
 
-                <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
-                  <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">Prescription</p>
-                  <pre className="max-h-36 overflow-auto whitespace-pre-wrap text-sm leading-relaxed text-slate-700">
+                <div className="mt-3 rounded-lg border border-border bg-gray-50 p-3">
+                  <p className="mb-1 text-xs font-medium uppercase tracking-wide text-text-muted">Prescription</p>
+                  <pre className="max-h-36 overflow-auto whitespace-pre-wrap text-sm leading-relaxed text-text-primary">
                     {ordonnance.ordonnance}
                   </pre>
                 </div>
 
                 <div className="mt-3 flex flex-wrap justify-end gap-2">
-                  <button
-                    type="button"
-                    onClick={() => printOrdonnance(ordonnance)}
-                    className="inline-flex items-center gap-1 rounded-lg border border-cyan-200 bg-cyan-50 px-3 py-2 text-sm text-cyan-700 hover:bg-cyan-100"
-                  >
-                    <Printer size={15} /> Imprimer
+                  <button type="button" onClick={() => printOrdonnance(ordonnance)} className="inline-flex items-center gap-1.5 rounded-lg border border-accent-light bg-accent-light px-3 py-2 text-sm text-accent hover:bg-accent/10 transition-colors">
+                    <Printer size={14} /> Imprimer
                   </button>
                   {isDoctor && (
                     <>
-                      <button
-                        type="button"
-                        onClick={() => setEditingOrdonnance(ordonnance)}
-                        className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
-                      >
-                        <Pencil size={15} /> Modifier
+                      <button type="button" onClick={() => setEditingOrdonnance(ordonnance)} className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-sm text-text-primary hover:bg-gray-100 transition-colors">
+                        <Pencil size={14} /> Modifier
                       </button>
-                      <button
-                        type="button"
-                        onClick={() => deleteOrdonnance(ordonnance.id)}
-                        className="inline-flex items-center gap-1 rounded-lg border border-rose-200 px-3 py-2 text-sm text-rose-700 hover:bg-rose-50"
-                      >
-                        <Trash2 size={15} /> Supprimer
+                      <button type="button" onClick={() => deleteOrdonnance(ordonnance.id)} className="inline-flex items-center gap-1.5 rounded-lg border border-medical-danger/30 bg-medical-danger-bg px-3 py-2 text-sm text-medical-danger hover:bg-red-100 transition-colors">
+                        <Trash2 size={14} /> Supprimer
                       </button>
                     </>
                   )}
@@ -750,7 +655,7 @@ const DoctorsOrdonnancesPage = () => {
             ))}
           </div>
         )}
-      </section>
+      </div>
 
       {isDoctor && editingOrdonnance && (
         <EditOrdonnanceModal
@@ -759,11 +664,8 @@ const DoctorsOrdonnancesPage = () => {
           onSave={saveEditedOrdonnance}
         />
       )}
-
     </div>
   );
 };
 
 export default DoctorsOrdonnancesPage;
-
-

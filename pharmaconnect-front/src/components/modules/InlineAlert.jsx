@@ -3,15 +3,15 @@ import { AlertCircle, CheckCircle2, Info } from "lucide-react";
 
 const toneMap = {
   success: {
-    wrapper: "border-emerald-200 bg-emerald-50 text-emerald-700",
+    wrapper: "border-l-4 border-medical-success bg-medical-success-bg text-medical-success",
     Icon: CheckCircle2,
   },
   error: {
-    wrapper: "border-rose-200 bg-rose-50 text-rose-700",
+    wrapper: "border-l-4 border-medical-danger bg-medical-danger-bg text-medical-danger",
     Icon: AlertCircle,
   },
   info: {
-    wrapper: "border-cyan-200 bg-cyan-50 text-cyan-700",
+    wrapper: "border-l-4 border-accent bg-accent-light text-accent",
     Icon: Info,
   },
 };
@@ -23,9 +23,9 @@ export default function InlineAlert({ message, type = "info" }) {
   const Icon = tone.Icon;
 
   return (
-    <div className={`rounded-2xl border px-4 py-3 text-sm shadow-sm ${tone.wrapper}`}>
+    <div className={`rounded-card px-4 py-3 text-sm ${tone.wrapper}`}>
       <div className="flex items-start gap-3">
-        <Icon size={18} className="mt-0.5 shrink-0" />
+        <Icon size={17} className="mt-0.5 shrink-0" />
         <span>{message}</span>
       </div>
     </div>

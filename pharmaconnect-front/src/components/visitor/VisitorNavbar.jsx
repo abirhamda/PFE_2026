@@ -15,55 +15,58 @@ const VisitorNavbar = () => {
   };
 
   return (
-    <header className="sticky top-0 z-40 border-b border-white/60 bg-white/80 backdrop-blur-xl">
-      <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
+    <header className="sticky top-0 z-40 border-b border-border bg-card shadow-card">
+      <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3.5 sm:px-6 lg:px-8">
+        {/* Logo */}
         <Link to="/" className="flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-700 to-teal-600 text-white shadow-lg shadow-cyan-200/70">
-            <Stethoscope size={22} />
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-white shadow-sm flex-shrink-0">
+            <Stethoscope size={20} />
           </div>
           <div>
-            <p className="text-lg font-semibold text-slate-950">MediCare</p>
-            <p className="text-xs uppercase tracking-[0.26em] text-slate-500">Annuaire sante</p>
+            <p className="text-base font-semibold text-text-primary leading-tight">MediCare</p>
+            <p className="text-[10px] font-medium uppercase tracking-[0.24em] text-text-muted leading-tight">Annuaire santé</p>
           </div>
         </Link>
 
+        {/* Mobile toggle */}
         <button
           type="button"
           onClick={() => setIsOpen((prev) => !prev)}
-          className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 text-slate-700 lg:hidden"
+          className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border text-text-secondary hover:bg-gray-50 transition-colors lg:hidden"
           aria-label="Ouvrir le menu visiteur"
         >
-          {isOpen ? <X size={20} /> : <Menu size={20} />}
+          {isOpen ? <X size={18} /> : <Menu size={18} />}
         </button>
 
+        {/* Desktop nav */}
         <div className="hidden items-center gap-2 lg:flex">
           {isAuthenticated ? (
             <>
               <Link
                 to="/redirect"
-                className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-800"
+                className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-text-primary hover:bg-gray-50 hover:border-accent/40 transition-colors"
               >
                 Mon espace
               </Link>
               <button
                 type="button"
                 onClick={handleLogout}
-                className="rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
+                className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-hover transition-colors"
               >
-                Deconnexion
+                Déconnexion
               </button>
             </>
           ) : (
             <>
               <Link
                 to="/login"
-                className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-800"
+                className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-text-primary hover:bg-gray-50 hover:border-accent/40 transition-colors"
               >
                 Connexion
               </Link>
               <Link
                 to="/login?mode=register"
-                className="rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
+                className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-hover transition-colors"
               >
                 Inscription
               </Link>
@@ -72,24 +75,25 @@ const VisitorNavbar = () => {
         </div>
       </div>
 
-      {isOpen ? (
-        <div className="border-t border-slate-200 bg-white/95 px-4 py-4 shadow-lg lg:hidden">
+      {/* Mobile menu */}
+      {isOpen && (
+        <div className="border-t border-border bg-card px-4 py-3 shadow-card lg:hidden">
           <div className="mx-auto flex max-w-7xl flex-col gap-2">
             {isAuthenticated ? (
               <>
                 <Link
                   to="/redirect"
                   onClick={() => setIsOpen(false)}
-                  className="rounded-2xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700"
+                  className="rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-text-primary hover:bg-gray-50 transition-colors"
                 >
                   Mon espace
                 </Link>
                 <button
                   type="button"
                   onClick={handleLogout}
-                  className="rounded-2xl bg-slate-950 px-4 py-3 text-left text-sm font-semibold text-white"
+                  className="rounded-lg bg-primary px-4 py-2.5 text-left text-sm font-medium text-white hover:bg-primary-hover transition-colors"
                 >
-                  Deconnexion
+                  Déconnexion
                 </button>
               </>
             ) : (
@@ -97,14 +101,14 @@ const VisitorNavbar = () => {
                 <Link
                   to="/login"
                   onClick={() => setIsOpen(false)}
-                  className="rounded-2xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700"
+                  className="rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-text-primary hover:bg-gray-50 transition-colors"
                 >
                   Connexion
                 </Link>
                 <Link
                   to="/login?mode=register"
                   onClick={() => setIsOpen(false)}
-                  className="rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white"
+                  className="rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-white hover:bg-primary-hover transition-colors"
                 >
                   Inscription
                 </Link>
@@ -112,7 +116,7 @@ const VisitorNavbar = () => {
             )}
           </div>
         </div>
-      ) : null}
+      )}
     </header>
   );
 };

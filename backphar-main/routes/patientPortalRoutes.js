@@ -45,6 +45,12 @@ router.post(
   authorizeRoles("pation"),
   patientPortalController.bookAppointmentOnline,
 );
+router.delete(
+  "/appointments/:appointmentId",
+  authenticateToken,
+  authorizeRoles("pation"),
+  patientPortalController.cancelMyBookedAppointment,
+);
 router.get(
   "/ordonnances",
   authenticateToken,

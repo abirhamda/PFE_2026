@@ -8,6 +8,7 @@ import {
   Flame,
   ImagePlus,
   Loader2,
+  Lock,
   RefreshCw,
   ShieldCheck,
   Stethoscope,
@@ -47,27 +48,12 @@ const toPercent = (value) => Math.round(normalizeProbability(value) * 100);
 const getProbabilityTone = (probability) => {
   const percent = toPercent(probability);
   if (percent < 30) {
-    return {
-      text: "text-[#2e7d5e]",
-      bar: "bg-[#2e7d5e]",
-      bg: "bg-emerald-50",
-      border: "border-emerald-200",
-    };
+    return { text: "text-medical-success", bar: "bg-emerald-500" };
   }
   if (percent <= 60) {
-    return {
-      text: "text-amber-700",
-      bar: "bg-amber-500",
-      bg: "bg-amber-50",
-      border: "border-amber-200",
-    };
+    return { text: "text-medical-warning", bar: "bg-amber-400" };
   }
-  return {
-    text: "text-rose-700",
-    bar: "bg-rose-600",
-    bg: "bg-rose-50",
-    border: "border-rose-200",
-  };
+  return { text: "text-medical-danger", bar: "bg-red-500" };
 };
 
 const normalizeDetections = (payload) => {
@@ -139,108 +125,109 @@ const formatFileSize = (size) => {
   return `${Math.max(1, Math.round(size / 1024))} Ko`;
 };
 
-const HeaderBand = () => (
-  <section className="rounded-lg bg-[#1a3a5c] px-5 py-4 text-white shadow-sm">
-    <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-wide text-blue-100">Module IA medical</p>
-        <h1 className="mt-1 text-2xl font-semibold tracking-normal">Analyse de radio thoracique</h1>
-      </div>
-      <div className="flex w-fit items-center gap-2 rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-sm">
-        <ShieldCheck size={17} />
-        <span>Acces medecin autorise</span>
-      </div>
-    </div>
-  </section>
-);
-
 const AccessDenied = ({ checking }) => (
-  <div className="space-y-5">
-    <HeaderBand />
-    <section className="rounded-lg border border-amber-200 bg-amber-50 p-6 text-amber-900">
-      <div className="flex items-start gap-3">
-        {checking ? <Loader2 className="mt-0.5 animate-spin" size={22} /> : <AlertTriangle className="mt-0.5" size={22} />}
-        <div>
-          <h2 className="text-lg font-semibold tracking-normal">
-            {checking ? "Verification de l'acces" : "Acces au module IA bloque"}
-          </h2>
-          <p className="mt-1 text-sm">
-            {checking
-              ? "Controle du statut medecin en cours."
-              : "Votre compte medecin doit etre autorise par un administrateur pour utiliser cette analyse."}
-          </p>
-        </div>
-      </div>
-    </section>
+  <div className="flex flex-col items-center justify-center min-h-[400px] gap-4 text-center">
+    <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center">
+      {checking
+        ? <Loader2 size={28} className="text-text-muted animate-spin" />
+        : <Lock size={28} className="text-text-muted" />
+      }
+    </div>
+    <div>
+      <h2 className="text-lg font-semibold text-text-primary">
+        {checking ? "Vérification de l'accès" : "Accès au module IA bloqué"}
+      </h2>
+      <p className="text-sm text-text-secondary mt-1 max-w-sm">
+        {checking
+          ? "Contrôle du statut médecin en cours."
+          : "Votre compte médecin doit être autorisé par un administrateur pour utiliser cette analyse."}
+      </p>
+    </div>
+    {!checking && (
+      <a
+        href="mailto:admin@medicare.fr"
+        className="text-sm text-accent hover:underline"
+      >
+        Contacter l'administrateur
+      </a>
+    )}
   </div>
 );
 
 const DetectionTable = ({ detections }) => (
-  <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
-    <div className="overflow-x-auto">
-      <table className="min-w-full divide-y divide-slate-200 text-sm">
-        <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
-          <tr>
-            <th className="px-4 py-3">Pathologie</th>
-            <th className="px-4 py-3">Probabilite</th>
-            <th className="px-4 py-3">Statut</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-slate-100">
-          {detections.map((detection) => {
-            const percent = toPercent(detection.probability);
-            const tone = getProbabilityTone(detection.probability);
-            const detected = percent > 50;
+  <div className="overflow-hidden rounded-card border border-border bg-card shadow-card">
+    <table className="w-full text-sm">
+      <thead className="bg-gray-50 border-b border-border">
+        <tr>
+          <th className="px-4 py-3 text-left text-xs font-semibold text-text-secondary uppercase tracking-wider">
+            Pathologie
+          </th>
+          <th className="px-4 py-3 text-left text-xs font-semibold text-text-secondary uppercase tracking-wider">
+            Probabilité
+          </th>
+          <th className="px-4 py-3 text-left text-xs font-semibold text-text-secondary uppercase tracking-wider">
+            Statut
+          </th>
+        </tr>
+      </thead>
+      <tbody className="divide-y divide-border">
+        {detections.map((detection) => {
+          const percent = toPercent(detection.probability);
+          const tone = getProbabilityTone(detection.probability);
+          const detected = percent > 50;
 
-            return (
-              <tr key={detection.name} className={detected ? "bg-rose-50/50" : "bg-white"}>
-                <td className="px-4 py-3 font-medium text-slate-900">{detection.name}</td>
-                <td className="px-4 py-3">
-                  <div className="flex min-w-[220px] items-center gap-3">
-                    <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-slate-100">
-                      <div className={`h-full rounded-full ${tone.bar}`} style={{ width: `${percent}%` }} />
-                    </div>
-                    <span className={`w-11 text-right font-semibold ${tone.text}`}>{percent}%</span>
+          return (
+            <tr key={detection.name} className="hover:bg-gray-50/50 transition-colors">
+              <td className="px-4 py-3.5 font-medium text-text-primary">{detection.name}</td>
+              <td className="px-4 py-3.5">
+                <div className="flex items-center gap-3">
+                  <div className="flex-1 bg-gray-100 rounded-full h-2 overflow-hidden">
+                    <div className={`h-full rounded-full ${tone.bar}`} style={{ width: `${percent}%` }} />
                   </div>
-                </td>
-                <td className="px-4 py-3">
-                  {detected ? (
-                    <span className="inline-flex items-center rounded-full bg-rose-100 px-2.5 py-1 text-xs font-semibold text-rose-700">
-                      Detecte
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
-                      Non detecte
-                    </span>
-                  )}
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
+                  <span className={`w-10 text-right text-sm font-semibold ${tone.text}`}>{percent}%</span>
+                </div>
+              </td>
+              <td className="px-4 py-3.5">
+                {detected ? (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-medical-danger-bg text-medical-danger">
+                    Détecté
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                    Non détecté
+                  </span>
+                )}
+              </td>
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
   </div>
 );
 
 const HeatmapPanel = ({ gradcamImage }) => (
   <div className="space-y-4">
-    <div className="overflow-hidden rounded-lg border border-slate-200 bg-slate-950">
+    <div className="overflow-hidden rounded-card border border-border bg-gray-950">
       {gradcamImage ? (
-        <img src={gradcamImage} alt="Carte thermique GradCAM" className="mx-auto max-h-[560px] w-full object-contain" />
+        <img
+          src={gradcamImage}
+          alt="Carte thermique GradCAM"
+          className="mx-auto max-h-[500px] w-full object-contain"
+        />
       ) : (
-        <div className="flex min-h-[360px] items-center justify-center text-sm text-slate-300">
-          Carte thermique non retournee par le service IA.
+        <div className="flex min-h-[320px] items-center justify-center text-sm text-gray-400">
+          Carte thermique non retournée par le service IA.
         </div>
       )}
     </div>
-    <div className="grid gap-3 text-sm md:grid-cols-2">
-      <div className="flex items-center gap-3 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-rose-800">
-        <span className="h-3 w-3 rounded-full bg-rose-600" />
-        Rouge = zone tres suspecte
+    <div className="grid grid-cols-2 gap-3 text-sm">
+      <div className="flex items-center gap-3 rounded-card border border-medical-danger-bg bg-medical-danger-bg px-4 py-3 text-medical-danger">
+        <span className="h-3 w-3 rounded-full bg-red-500 flex-shrink-0" />
+        Rouge = zone très suspecte
       </div>
-      <div className="flex items-center gap-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-blue-800">
-        <span className="h-3 w-3 rounded-full bg-blue-600" />
+      <div className="flex items-center gap-3 rounded-card border border-accent-light bg-accent-light px-4 py-3 text-accent">
+        <span className="h-3 w-3 rounded-full bg-accent flex-shrink-0" />
         Bleu = zone normale
       </div>
     </div>
@@ -259,18 +246,18 @@ const ReportPanel = ({ report, detections, onCopy, copied }) => {
       .sort((left, right) => right.probability - left.probability);
 
     doc.setFont("helvetica", "bold");
-    doc.setTextColor(26, 58, 92);
+    doc.setTextColor(15, 45, 74);
     doc.setFontSize(16);
-    doc.text("Rapport medical IA - Radio thoracique", margin, 18);
+    doc.text("Rapport médical IA - Radio thoracique", margin, 18);
 
     doc.setFont("helvetica", "normal");
     doc.setTextColor(40, 40, 40);
     doc.setFontSize(10);
-    doc.text(`Genere le ${new Date().toLocaleString("fr-FR")}`, margin, 26);
+    doc.text(`Généré le ${new Date().toLocaleString("fr-FR")}`, margin, 26);
 
     doc.setFont("helvetica", "bold");
     doc.setFontSize(12);
-    doc.text("Detections principales", margin, 38);
+    doc.text("Détections principales", margin, 38);
 
     doc.setFont("helvetica", "normal");
     doc.setFontSize(10);
@@ -292,30 +279,30 @@ const ReportPanel = ({ report, detections, onCopy, copied }) => {
 
   return (
     <div className="space-y-4">
-      <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-        <div className="mb-4 flex items-center gap-2 text-[#1a3a5c]">
-          <FileText size={18} />
-          <h3 className="text-base font-semibold tracking-normal">Rapport medical</h3>
+      <div className="rounded-card border border-border bg-card p-5">
+        <div className="mb-4 flex items-center gap-2 text-text-primary">
+          <FileText size={17} />
+          <h3 className="text-sm font-semibold">Rapport médical</h3>
         </div>
-        <p className="whitespace-pre-wrap text-sm leading-7 text-slate-700">{report}</p>
+        <p className="whitespace-pre-wrap text-sm leading-7 text-text-secondary">{report}</p>
       </div>
 
       <div className="flex flex-col gap-3 sm:flex-row">
         <button
           type="button"
           onClick={onCopy}
-          className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+          className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-border bg-card px-4 text-sm font-medium text-text-primary transition-colors hover:bg-gray-50"
         >
-          <Clipboard size={16} />
-          {copied ? "Rapport copie" : "Copier le rapport"}
+          <Clipboard size={15} />
+          {copied ? "Rapport copié" : "Copier le rapport"}
         </button>
         <button
           type="button"
           onClick={downloadPdf}
-          className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-[#1a3a5c] px-4 text-sm font-semibold text-white transition hover:bg-[#14304c]"
+          className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-white transition-colors hover:bg-primary-hover"
         >
-          <Download size={16} />
-          Telecharger PDF
+          <Download size={15} />
+          Télécharger PDF
         </button>
       </div>
     </div>
@@ -400,7 +387,7 @@ export default function MedicalAiAnalysisPage() {
     if (!file) return;
     if (!["image/jpeg", "image/jpg"].includes(file.type)) {
       setSelectedFile(null);
-      setError("Veuillez selectionner une image JPG.");
+      setError("Veuillez sélectionner une image JPG.");
       return;
     }
 
@@ -447,7 +434,10 @@ export default function MedicalAiAnalysisPage() {
       setError(
         requestError.response?.data?.error ||
           requestError.response?.data?.message ||
-          "Analyse impossible. Verifiez que le service IA est demarre et que l'endpoint est configure.",
+          requestError.response?.data?.detail ||
+          (requestError.code === "ERR_NETWORK"
+            ? "Service IA indisponible. Demarrez ai-service sur http://127.0.0.1:8000 puis reessayez."
+            : "Analyse impossible. Verifiez que le service IA est demarre et que l'endpoint est configure."),
       );
     } finally {
       setIsAnalyzing(false);
@@ -462,45 +452,80 @@ export default function MedicalAiAnalysisPage() {
   };
 
   if (!isAuthorized) {
-    return <AccessDenied checking={accessChecking} />;
+    return (
+      <div className="bg-card rounded-card border border-border shadow-card p-6">
+        <AccessDenied checking={accessChecking} />
+      </div>
+    );
   }
 
   return (
     <div className="space-y-5">
-      <HeaderBand />
+      {/* Page header */}
+      <div className="bg-card rounded-card border border-border shadow-card p-5">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-accent-light flex items-center justify-center flex-shrink-0">
+              <BrainCircuit size={20} className="text-accent" />
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-text-secondary uppercase tracking-wide">
+                Module IA médical
+              </p>
+              <h1 className="text-lg font-semibold text-text-primary">
+                Analyse de radio thoracique
+              </h1>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 rounded-lg border border-medical-success-bg bg-medical-success-bg px-3 py-2 text-sm text-medical-success font-medium w-fit">
+            <ShieldCheck size={16} />
+            Accès médecin autorisé
+          </div>
+        </div>
+      </div>
 
-      {error ? (
-        <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>
-      ) : null}
+      {/* Error */}
+      {error && (
+        <div className="rounded-card border-l-4 border-medical-danger bg-medical-danger-bg p-4 text-sm text-medical-danger">
+          {error}
+        </div>
+      )}
 
-      <section className="grid gap-5 xl:grid-cols-[minmax(320px,0.85fr),minmax(540px,1.35fr)]">
-        <div className="space-y-5">
-          <div
-            onDragOver={(event) => {
-              event.preventDefault();
-              setIsDragging(true);
-            }}
-            onDragLeave={() => setIsDragging(false)}
-            onDrop={handleDrop}
-            className={`rounded-lg border-2 border-dashed bg-white p-5 shadow-sm transition ${
-              isDragging ? "border-[#2e7d5e] bg-emerald-50" : "border-slate-300"
-            }`}
-          >
-            <div className="flex flex-col items-center justify-center gap-4 py-8 text-center">
-              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#1a3a5c] text-white">
-                <UploadCloud size={26} />
-              </div>
-              <div>
-                <h2 className="text-lg font-semibold tracking-normal text-slate-900">Importer une radio thoracique</h2>
-                <p className="mt-1 text-sm text-slate-500">Image JPG uniquement</p>
-              </div>
+      {/* Main grid */}
+      <div className="grid gap-5 xl:grid-cols-[minmax(320px,0.85fr),minmax(540px,1.35fr)]">
+
+        {/* Left column */}
+        <div className="space-y-4">
+
+          {/* Upload zone */}
+          <div className="bg-card rounded-card border border-border shadow-card p-5">
+            <div className="mb-4">
+              <h3 className="text-sm font-semibold text-text-primary tracking-wide">Radiographie</h3>
+              <p className="text-xs text-text-secondary mt-0.5">JPG uniquement · max 20 MB</p>
+            </div>
+            <div
+              onDragOver={(event) => { event.preventDefault(); setIsDragging(true); }}
+              onDragLeave={() => setIsDragging(false)}
+              onDrop={handleDrop}
+              className={`border-2 border-dashed rounded-lg p-8 flex flex-col items-center text-center cursor-pointer transition-all ${
+                isDragging
+                  ? "border-accent bg-accent-light/30"
+                  : "border-border hover:border-accent hover:bg-accent-light/20"
+              }`}
+              onClick={() => inputRef.current?.click()}
+            >
+              <UploadCloud size={32} className="text-text-muted mb-3" />
+              <p className="text-sm font-medium text-text-primary">
+                Glissez une image ici
+              </p>
+              <p className="text-xs text-text-secondary mt-1 mb-4">ou cliquez pour parcourir</p>
               <button
                 type="button"
-                onClick={() => inputRef.current?.click()}
-                className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                onClick={(e) => { e.stopPropagation(); inputRef.current?.click(); }}
+                className="inline-flex items-center gap-2 border border-border bg-card text-text-primary text-sm font-medium px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors"
               >
-                <ImagePlus size={16} />
-                Choisir une image
+                <ImagePlus size={15} />
+                Parcourir
               </button>
               <input
                 ref={inputRef}
@@ -512,83 +537,95 @@ export default function MedicalAiAnalysisPage() {
             </div>
           </div>
 
-          <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-            <div className="mb-3 flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2 text-[#1a3a5c]">
-                <Stethoscope size={17} />
-                <h2 className="text-base font-semibold tracking-normal">Radio selectionnee</h2>
+          {/* Preview */}
+          <div className="bg-card rounded-card border border-border shadow-card p-5">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2 text-text-primary">
+                <Stethoscope size={16} />
+                <h3 className="text-sm font-semibold tracking-wide">Radio sélectionnée</h3>
               </div>
-              {selectedFile ? (
+              {selectedFile && (
                 <button
                   type="button"
                   onClick={resetAnalysis}
-                  className="rounded-lg p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-800"
+                  className="rounded-lg p-1.5 text-text-muted hover:bg-gray-100 hover:text-text-primary transition-colors"
                   aria-label="Retirer l'image"
                 >
-                  <X size={17} />
+                  <X size={16} />
                 </button>
-              ) : null}
+              )}
             </div>
 
             {previewUrl ? (
               <div className="space-y-3">
-                <div className="overflow-hidden rounded-lg border border-slate-200 bg-black">
+                <div className="overflow-hidden rounded-card border border-border bg-gray-950">
                   <img
                     src={previewUrl}
-                    alt="Previsualisation de la radio"
-                    className="max-h-[420px] w-full object-contain grayscale"
+                    alt="Prévisualisation de la radio"
+                    className="max-h-[380px] w-full object-contain grayscale"
                   />
                 </div>
-                <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
-                  <span className="break-all font-medium text-slate-700">{selectedFile.name}</span>
+                <div className="flex items-center justify-between text-xs text-text-secondary">
+                  <span className="break-all font-medium text-text-primary">{selectedFile.name}</span>
                   <span>{formatFileSize(selectedFile.size)}</span>
                 </div>
               </div>
             ) : (
-              <div className="flex min-h-[260px] items-center justify-center rounded-lg border border-dashed border-slate-300 bg-slate-50 text-sm text-slate-500">
-                Aucune image selectionnee
+              <div className="flex min-h-[200px] items-center justify-center rounded-card border border-dashed border-border bg-gray-50 text-sm text-text-muted">
+                Aucune image sélectionnée
               </div>
             )}
           </div>
 
+          {/* Analyze button */}
           <button
             type="button"
             onClick={runAnalysis}
             disabled={!selectedFile || isAnalyzing}
-            className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-[#2e7d5e] px-4 text-sm font-semibold text-white transition hover:bg-[#25664d] disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-white transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {isAnalyzing ? <Loader2 className="animate-spin" size={18} /> : <BrainCircuit size={18} />}
-            {isAnalyzing ? "Analyse en cours..." : "Analyser"}
+            {isAnalyzing
+              ? <><Loader2 className="animate-spin" size={17} /> Analyse en cours...</>
+              : <><BrainCircuit size={17} /> Lancer l'analyse</>
+            }
           </button>
         </div>
 
-        <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+        {/* Right column — results */}
+        <div className="bg-card rounded-card border border-border shadow-card p-5">
           {isAnalyzing ? (
-            <div className="flex min-h-[520px] flex-col items-center justify-center gap-4 text-[#1a3a5c]">
+            <div className="flex min-h-[480px] flex-col items-center justify-center gap-4 text-primary">
               <Loader2 className="animate-spin" size={34} />
-              <p className="text-sm font-semibold">Analyse en cours...</p>
+              <p className="text-sm font-medium text-text-secondary">Analyse en cours...</p>
             </div>
           ) : result ? (
             <div className="space-y-4">
-              <div className="flex flex-col gap-3 border-b border-slate-200 pb-4 lg:flex-row lg:items-center lg:justify-between">
+              {/* Results header */}
+              <div className="flex flex-col gap-3 pb-4 lg:flex-row lg:items-center lg:justify-between">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Resultats IA</p>
-                  <h2 className="mt-1 text-xl font-semibold tracking-normal text-slate-900">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">
+                    Résultats IA
+                  </p>
+                  <h2 className="mt-0.5 text-lg font-semibold text-text-primary">
                     {detectedCount} pathologie{detectedCount > 1 ? "s" : ""} au-dessus du seuil
                   </h2>
                 </div>
-                <div className="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-1">
+
+                {/* Tabs */}
+                <div className="flex gap-0 border-b border-border -mb-4 -mx-5 px-5">
                   {[
-                    { key: "detections", label: "Detections", icon: <BrainCircuit size={15} /> },
-                    { key: "heatmap", label: "Carte thermique", icon: <Flame size={15} /> },
-                    { key: "report", label: "Rapport", icon: <FileText size={15} /> },
+                    { key: "detections", label: "Détections",      icon: <BrainCircuit size={14} /> },
+                    { key: "heatmap",    label: "Carte thermique", icon: <Flame size={14} /> },
+                    { key: "report",     label: "Rapport",         icon: <FileText size={14} /> },
                   ].map((tab) => (
                     <button
                       key={tab.key}
                       type="button"
                       onClick={() => setActiveTab(tab.key)}
-                      className={`inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-semibold transition ${
-                        activeTab === tab.key ? "bg-[#1a3a5c] text-white" : "text-slate-600 hover:bg-white"
+                      className={`inline-flex items-center gap-1.5 px-4 py-2.5 text-sm border-b-2 cursor-pointer transition-colors ${
+                        activeTab === tab.key
+                          ? "font-medium text-primary border-primary"
+                          : "text-text-secondary border-transparent hover:text-text-primary"
                       }`}
                     >
                       {tab.icon}
@@ -598,31 +635,38 @@ export default function MedicalAiAnalysisPage() {
                 </div>
               </div>
 
-              {activeTab === "detections" ? <DetectionTable detections={result.detections} /> : null}
-              {activeTab === "heatmap" ? <HeatmapPanel gradcamImage={result.gradcamImage} /> : null}
-              {activeTab === "report" ? (
-                <ReportPanel report={result.report} detections={result.detections} onCopy={copyReport} copied={copied} />
-              ) : null}
+              <div className="pt-2">
+                {activeTab === "detections" && <DetectionTable detections={result.detections} />}
+                {activeTab === "heatmap" && <HeatmapPanel gradcamImage={result.gradcamImage} />}
+                {activeTab === "report" && (
+                  <ReportPanel
+                    report={result.report}
+                    detections={result.detections}
+                    onCopy={copyReport}
+                    copied={copied}
+                  />
+                )}
+              </div>
 
-              <div className="border-t border-slate-200 pt-4">
+              <div className="border-t border-border pt-4">
                 <button
                   type="button"
                   onClick={resetAnalysis}
-                  className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                  className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-border bg-card px-4 text-sm font-medium text-text-primary transition-colors hover:bg-gray-50"
                 >
-                  <RefreshCw size={16} />
+                  <RefreshCw size={15} />
                   Nouvelle analyse
                 </button>
               </div>
             </div>
           ) : (
-            <div className="flex min-h-[520px] flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-slate-300 bg-slate-50 text-center text-slate-500">
-              <BrainCircuit size={36} className="text-slate-400" />
-              <p className="text-sm font-medium">Les resultats apparaitront ici apres analyse.</p>
+            <div className="flex min-h-[480px] flex-col items-center justify-center gap-3 rounded-card border border-dashed border-border bg-gray-50 text-center text-text-secondary">
+              <BrainCircuit size={36} className="text-text-muted" />
+              <p className="text-sm font-medium">Les résultats apparaîtront ici après l'analyse.</p>
             </div>
           )}
         </div>
-      </section>
+      </div>
     </div>
   );
 }

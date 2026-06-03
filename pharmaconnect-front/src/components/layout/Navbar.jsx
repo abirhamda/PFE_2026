@@ -1,15 +1,59 @@
 import React from "react";
-import { Bell, LogOut, Menu, Settings, User } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { ChevronDown, LogOut, Menu, Settings, User } from "lucide-react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
 
 const ROLE_LABELS = {
-  admin: "Admin",
+  admin:      "Administrateur",
   pharmacist: "Pharmacien",
-  doctor: "Docteur",
-  secretaire: "Secretaire",
-  supplier: "Fournisseur",
-  pation: "Patient",
+  doctor:     "Médecin",
+  secretaire: "Secrétaire",
+  supplier:   "Fournisseur",
+  pation:     "Patient",
+};
+
+const PAGE_TITLES = {
+  "/admin/dashboard":        { title: "Tableau de bord",      subtitle: "Vue générale de la plateforme" },
+  "/admin/pharmacies":       { title: "Pharmacies",           subtitle: "Gestion des pharmacies partenaires" },
+  "/admin/medecins":         { title: "Accès médecins",       subtitle: "Autorisation et contrôle des accès" },
+  "/admin/suppliers":        { title: "Fournisseurs",         subtitle: "Gestion des fournisseurs" },
+  "/admin/settings":         { title: "Paramètres",           subtitle: "Configuration du système" },
+  "/docteur":                { title: "Tableau de bord",      subtitle: "Vue générale de votre activité" },
+  "/docteur/rendezvous":     { title: "Rendez-vous",          subtitle: "Gestion du calendrier" },
+  "/docteur/patients":       { title: "Patients",             subtitle: "Dossiers et fiches médicales" },
+  "/docteur/ordonnances":    { title: "Ordonnances",          subtitle: "Prescriptions médicales" },
+  "/medecin/analyse":        { title: "Analyse IA",           subtitle: "Module d'analyse radiologique IA" },
+  "/docteur/analyse":        { title: "Analyse IA",           subtitle: "Module d'analyse radiologique IA" },
+  "/docteur/secretaires":    { title: "Secrétaires",          subtitle: "Gestion de l'équipe administrative" },
+  "/docteur/profile":        { title: "Profil",               subtitle: "Informations personnelles" },
+  "/docteur/settings":       { title: "Paramètres",           subtitle: "Préférences" },
+  "/pharmacy/dashboard":     { title: "Tableau de bord",      subtitle: "Vue générale de la pharmacie" },
+  "/pharmacy/ordonnances":   { title: "Ordonnances",          subtitle: "Prescriptions reçues" },
+  "/pharmacy/stock":         { title: "Stock",                subtitle: "Inventaire des médicaments" },
+  "/pharmacy/demandes":      { title: "Demandes",             subtitle: "Commandes auprès des fournisseurs" },
+  "/pharmacy/fournisseurs":  { title: "Fournisseurs",         subtitle: "Partenaires de livraison" },
+  "/pharmacy/profile":       { title: "Profil",               subtitle: "Informations personnelles" },
+  "/pharmacy/settings":      { title: "Paramètres",           subtitle: "Préférences" },
+  "/supplier/dashboard":     { title: "Tableau de bord",      subtitle: "Activité fournisseur" },
+  "/supplier/demandes":      { title: "Demandes",             subtitle: "Demandes des pharmacies" },
+  "/supplier/pharmacies":    { title: "Pharmacies",           subtitle: "Réseau de distribution" },
+  "/supplier/produits":      { title: "Produits",             subtitle: "Catalogue médicaments" },
+  "/supplier/profile":       { title: "Profil",               subtitle: "Informations personnelles" },
+  "/supplier/settings":      { title: "Paramètres",           subtitle: "Préférences" },
+  "/secretaire/rendezvous":  { title: "Rendez-vous",          subtitle: "Calendrier du cabinet" },
+  "/secretaire/patients":    { title: "Patients",             subtitle: "Registre des patients" },
+  "/secretaire/ordonnances": { title: "Ordonnances",          subtitle: "Prescriptions" },
+  "/secretaire/profile":     { title: "Profil",               subtitle: "Informations personnelles" },
+  "/secretaire/settings":    { title: "Paramètres",           subtitle: "Préférences" },
+  "/patient":                { title: "Mon espace santé",     subtitle: "Tableau de bord patient" },
+  "/patient/discover":       { title: "Recherche",            subtitle: "Trouver un médecin" },
+  "/patient/appointments":   { title: "Rendez-vous",          subtitle: "Mes consultations" },
+  "/patient/ordonnances":    { title: "Ordonnances",          subtitle: "Mes prescriptions" },
+  "/patient/documents":      { title: "Documents",            subtitle: "Mes fichiers médicaux" },
+  "/patient/profile":        { title: "Profil",               subtitle: "Informations personnelles" },
+  "/patient/settings":       { title: "Paramètres",           subtitle: "Préférences" },
+  "/profile":                { title: "Profil",               subtitle: "Informations personnelles" },
+  "/settings":               { title: "Paramètres",           subtitle: "Préférences" },
 };
 
 const getDisplayName = (user) => {
@@ -19,39 +63,43 @@ const getDisplayName = (user) => {
   return fullName || user.email || "Utilisateur";
 };
 
+const getInitials = (name) =>
+  name
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
+
 const Navbar = ({ onToggleSidebar }) => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [showProfileMenu, setShowProfileMenu] = React.useState(false);
 
   const role = String(user?.role || "").toLowerCase();
   const displayName = getDisplayName(user);
+  const initials = getInitials(displayName);
+
+  const currentPage = PAGE_TITLES[location.pathname] || {
+    title: "MediCare",
+    subtitle: "Plateforme médicale",
+  };
+
   const profilePath =
-    role === "pharmacist"
-      ? "/pharmacy/profile"
-      : role === "supplier"
-        ? "/supplier/profile"
-        : role === "secretaire"
-      ? "/secretaire/profile"
-      : role === "doctor"
-        ? "/docteur/profile"
-        : role === "pation"
-          ? "/patient/profile"
-          : "/profile";
+    role === "pharmacist" ? "/pharmacy/profile" :
+    role === "supplier"   ? "/supplier/profile" :
+    role === "secretaire" ? "/secretaire/profile" :
+    role === "doctor"     ? "/docteur/profile" :
+    role === "pation"     ? "/patient/profile" : "/profile";
+
   const settingsPath =
-    role === "admin"
-      ? "/admin/settings"
-      : role === "pharmacist"
-        ? "/pharmacy/settings"
-        : role === "supplier"
-          ? "/supplier/settings"
-      : role === "secretaire"
-      ? "/secretaire/settings"
-      : role === "doctor"
-        ? "/docteur/settings"
-        : role === "pation"
-          ? "/patient/settings"
-          : "/settings";
+    role === "admin"      ? "/admin/settings" :
+    role === "pharmacist" ? "/pharmacy/settings" :
+    role === "supplier"   ? "/supplier/settings" :
+    role === "secretaire" ? "/secretaire/settings" :
+    role === "doctor"     ? "/docteur/settings" :
+    role === "pation"     ? "/patient/settings" : "/settings";
 
   const handleLogout = () => {
     logout();
@@ -59,83 +107,88 @@ const Navbar = ({ onToggleSidebar }) => {
   };
 
   return (
-    <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-white/85 backdrop-blur-xl">
-      <div className="px-4 sm:px-6 lg:px-8">
-        <div className="flex h-16 items-center justify-between">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={onToggleSidebar}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition hover:border-cyan-500 hover:text-cyan-700 lg:hidden"
-              aria-label="Toggle sidebar"
-            >
-              <Menu size={18} />
-            </button>
+    <header className="bg-card border-b border-border h-16 flex items-center justify-between px-6 flex-shrink-0 z-20">
+      {/* Left — page title */}
+      <div className="flex items-center gap-3">
+        <button
+          onClick={onToggleSidebar}
+          className="lg:hidden inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border text-text-secondary hover:bg-gray-50 transition-colors"
+          aria-label="Menu"
+        >
+          <Menu size={18} />
+        </button>
+        <div>
+          <h1 className="text-lg font-semibold text-text-primary leading-tight">
+            {currentPage.title}
+          </h1>
+          <p className="text-sm text-text-secondary leading-tight">{currentPage.subtitle}</p>
+        </div>
+      </div>
 
-            <div>
-              <p className="text-sm font-semibold tracking-wide text-slate-900">MediCare</p>
-              <p className="text-xs text-slate-500">Gestion medicale</p>
+      {/* Right — status + user */}
+      <div className="flex items-center gap-4">
+        {/* AI model status badge */}
+        <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-medical-success-bg text-medical-success text-xs font-medium">
+          <span className="w-1.5 h-1.5 rounded-full bg-medical-success animate-pulse" />
+          Modèle IA actif
+        </div>
+
+        <div className="w-px h-5 bg-border" />
+
+        {/* User profile */}
+        <div className="relative">
+          <button
+            onClick={() => setShowProfileMenu((prev) => !prev)}
+            className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 hover:bg-gray-50 transition-colors"
+            aria-expanded={showProfileMenu}
+          >
+            <div className="w-8 h-8 rounded-full bg-accent-light text-accent text-sm font-semibold flex items-center justify-center flex-shrink-0">
+              {initials}
             </div>
-          </div>
+            <div className="hidden md:block text-left">
+              <p className="text-sm font-medium text-text-primary leading-tight">{displayName}</p>
+              <p className="text-xs text-text-secondary leading-tight">
+                {ROLE_LABELS[role] || "Utilisateur"}
+              </p>
+            </div>
+            <ChevronDown size={14} className="text-text-muted" />
+          </button>
 
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              className="relative inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition hover:border-cyan-500 hover:text-cyan-700"
-              aria-label="Notifications"
-            >
-              <Bell size={17} />
-              <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-emerald-500" />
-            </button>
-
-            <div className="relative">
+          {showProfileMenu && (
+            <div className="absolute right-0 top-full mt-2 w-52 bg-card rounded-card border border-border shadow-card-hover z-50 overflow-hidden">
+              <div className="px-4 py-3 border-b border-border">
+                <p className="text-sm font-medium text-text-primary">{displayName}</p>
+                <p className="text-xs text-text-secondary">{ROLE_LABELS[role] || "Utilisateur"}</p>
+              </div>
               <button
-                onClick={() => setShowProfileMenu((prev) => !prev)}
-                className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-2 py-1.5 transition hover:border-cyan-500"
-                aria-expanded={showProfileMenu}
-                aria-haspopup="true"
+                className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-text-primary hover:bg-gray-50 transition-colors"
+                onClick={() => {
+                  setShowProfileMenu(false);
+                  navigate(profilePath);
+                }}
               >
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-600 to-teal-500 text-white">
-                  <User size={16} />
-                </div>
-                <div className="hidden text-left md:block">
-                  <p className="text-sm font-semibold text-slate-900 leading-tight">{displayName}</p>
-                  <p className="text-xs text-slate-500">{ROLE_LABELS[role] || "Role"}</p>
-                </div>
+                <User size={15} />
+                Profil
               </button>
-
-              {showProfileMenu && (
-                <div className="absolute right-0 mt-2 w-52 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
-                  <button
-                    className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-slate-700 transition hover:bg-slate-50"
-                    onClick={() => {
-                      setShowProfileMenu(false);
-                      navigate(profilePath);
-                    }}
-                  >
-                    <User size={15} />
-                    Profil
-                  </button>
-                  <button
-                    className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-slate-700 transition hover:bg-slate-50"
-                    onClick={() => {
-                      setShowProfileMenu(false);
-                      navigate(settingsPath);
-                    }}
-                  >
-                    <Settings size={15} />
-                    Parametres
-                  </button>
-                  <button
-                    className="flex w-full items-center gap-2 border-t border-slate-100 px-4 py-2.5 text-sm text-rose-600 transition hover:bg-rose-50"
-                    onClick={handleLogout}
-                  >
-                    <LogOut size={15} />
-                    Deconnexion
-                  </button>
-                </div>
-              )}
+              <button
+                className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-text-primary hover:bg-gray-50 transition-colors"
+                onClick={() => {
+                  setShowProfileMenu(false);
+                  navigate(settingsPath);
+                }}
+              >
+                <Settings size={15} />
+                Paramètres
+              </button>
+              <button
+                className="flex w-full items-center gap-2 border-t border-border px-4 py-2.5 text-sm text-medical-danger hover:bg-medical-danger-bg transition-colors"
+                onClick={handleLogout}
+              >
+                <LogOut size={15} />
+                Déconnexion
+              </button>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </header>

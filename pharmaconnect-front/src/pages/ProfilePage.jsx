@@ -39,9 +39,13 @@ const PAGE_COPY = {
 
 const InputWithIcon = ({ icon: Icon, ...props }) => (
   <div className="relative">
-    <Icon className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+    <Icon className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" size={15} />
     <input {...props} className={`${inputClassName} pl-9 ${props.className || ""}`} />
   </div>
+);
+
+const LabelText = ({ children }) => (
+  <span className="block text-xs font-medium text-text-secondary uppercase tracking-wide mb-1.5">{children}</span>
 );
 
 const ProfilePage = () => {
@@ -222,64 +226,75 @@ const ProfilePage = () => {
   const copy = PAGE_COPY[role] || PAGE_COPY.default;
 
   return (
-    <div className="mx-auto max-w-4xl space-y-5">
-      <section className="rounded-3xl bg-gradient-to-r from-cyan-700 to-teal-600 p-6 text-white shadow-xl">
-        <h1 className="text-2xl font-bold">{copy.title}</h1>
-        <p className="mt-1 text-sm text-cyan-100">{copy.description}</p>
-      </section>
+    <div className="mx-auto max-w-2xl space-y-5">
+      {/* Header card */}
+      <div className="bg-primary rounded-card border border-primary/20 shadow-card px-5 py-4">
+        <h1 className="text-lg font-semibold text-white">{copy.title}</h1>
+        <p className="mt-0.5 text-sm text-white/65">{copy.description}</p>
+      </div>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        {message ? <div className="mb-4 rounded-xl bg-emerald-50 px-3 py-2 text-sm text-emerald-700">{message}</div> : null}
-        {error ? <div className="mb-4 rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</div> : null}
+      <div className="bg-card rounded-card border border-border shadow-card p-5">
+        {message ? (
+          <div className="mb-4 rounded-card border-l-4 border-medical-success bg-medical-success-bg px-4 py-3 text-sm text-medical-success">
+            {message}
+          </div>
+        ) : null}
+        {error ? (
+          <div className="mb-4 rounded-card border-l-4 border-medical-danger bg-medical-danger-bg px-4 py-3 text-sm text-medical-danger">
+            {error}
+          </div>
+        ) : null}
         {loading ? (
-          <div className="mb-4 rounded-xl border border-dashed border-slate-300 px-3 py-3 text-sm text-slate-500">Chargement du profil...</div>
+          <div className="mb-4 rounded-card border border-dashed border-border bg-gray-50 px-4 py-3 text-sm text-text-secondary">
+            Chargement du profil...
+          </div>
         ) : null}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {isPharmacist ? (
             <>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <label className="space-y-2 sm:col-span-2">
-                  <span className="text-sm font-medium text-slate-700">Nom de la pharmacie</span>
+                <label className="space-y-1.5 sm:col-span-2">
+                  <LabelText>Nom de la pharmacie</LabelText>
                   <InputWithIcon icon={Building2} name="nom_pharmacie" value={formData.nom_pharmacie} onChange={handleChange} placeholder="Nom commercial de la pharmacie" />
                 </label>
 
-                <label className="space-y-2">
-                  <span className="text-sm font-medium text-slate-700">Pharmacien responsable</span>
+                <label className="space-y-1.5">
+                  <LabelText>Pharmacien responsable</LabelText>
                   <InputWithIcon icon={UserRound} name="president_pharmacie" value={formData.president_pharmacie} onChange={handleChange} placeholder="Nom du responsable" />
                 </label>
 
-                <label className="space-y-2">
-                  <span className="text-sm font-medium text-slate-700">Telephone</span>
+                <label className="space-y-1.5">
+                  <LabelText>Telephone</LabelText>
                   <InputWithIcon icon={Phone} name="phone" value={formData.phone} onChange={handleChange} placeholder="Numero principal" />
                 </label>
               </div>
 
-              <label className="space-y-2">
-                <span className="text-sm font-medium text-slate-700">Email professionnel</span>
+              <label className="space-y-1.5">
+                <LabelText>Email professionnel</LabelText>
                 <InputWithIcon icon={Mail} name="email" type="email" value={formData.email} onChange={handleChange} placeholder="contact@pharmacie.tn" />
               </label>
             </>
           ) : isSupplier ? (
             <>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <label className="space-y-2">
-                  <span className="text-sm font-medium text-slate-700">Prenom</span>
+                <label className="space-y-1.5">
+                  <LabelText>Prenom</LabelText>
                   <InputWithIcon icon={UserRound} name="prenom" value={formData.prenom} onChange={handleChange} />
                 </label>
-                <label className="space-y-2">
-                  <span className="text-sm font-medium text-slate-700">Nom</span>
+                <label className="space-y-1.5">
+                  <LabelText>Nom</LabelText>
                   <InputWithIcon icon={UserRound} name="nom" value={formData.nom} onChange={handleChange} />
                 </label>
               </div>
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <label className="space-y-2">
-                  <span className="text-sm font-medium text-slate-700">Email professionnel</span>
+                <label className="space-y-1.5">
+                  <LabelText>Email professionnel</LabelText>
                   <InputWithIcon icon={Mail} name="email" type="email" value={formData.email} onChange={handleChange} />
                 </label>
-                <label className="space-y-2">
-                  <span className="text-sm font-medium text-slate-700">Telephone</span>
+                <label className="space-y-1.5">
+                  <LabelText>Telephone</LabelText>
                   <InputWithIcon icon={Phone} name="phone" value={formData.phone} onChange={handleChange} />
                 </label>
               </div>
@@ -287,62 +302,62 @@ const ProfilePage = () => {
           ) : isPatient ? (
             <>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <label className="space-y-2">
-                  <span className="text-sm font-medium text-slate-700">Prenom</span>
+                <label className="space-y-1.5">
+                  <LabelText>Prenom</LabelText>
                   <input name="prenom" value={formData.prenom} onChange={handleChange} className={inputClassName} />
                 </label>
-                <label className="space-y-2">
-                  <span className="text-sm font-medium text-slate-700">Nom</span>
+                <label className="space-y-1.5">
+                  <LabelText>Nom</LabelText>
                   <input name="nom" value={formData.nom} onChange={handleChange} className={inputClassName} />
                 </label>
-                <label className="space-y-2">
-                  <span className="text-sm font-medium text-slate-700">Email</span>
-                  <InputWithIcon icon={Mail} name="email" type="email" value={formData.email} readOnly className="cursor-not-allowed bg-slate-50 text-slate-500" />
+                <label className="space-y-1.5">
+                  <LabelText>Email</LabelText>
+                  <InputWithIcon icon={Mail} name="email" type="email" value={formData.email} readOnly className="cursor-not-allowed bg-gray-50 text-text-muted" />
                 </label>
-                <label className="space-y-2">
-                  <span className="text-sm font-medium text-slate-700">Telephone</span>
+                <label className="space-y-1.5">
+                  <LabelText>Telephone</LabelText>
                   <InputWithIcon icon={Phone} name="phone" value={formData.phone} onChange={handleChange} />
                 </label>
-                <label className="space-y-2">
-                  <span className="text-sm font-medium text-slate-700">CIN</span>
+                <label className="space-y-1.5">
+                  <LabelText>CIN</LabelText>
                   <input name="cin" value={formData.cin} onChange={handleChange} className={inputClassName} />
                 </label>
-                <label className="space-y-2">
-                  <span className="text-sm font-medium text-slate-700">Date de naissance</span>
+                <label className="space-y-1.5">
+                  <LabelText>Date de naissance</LabelText>
                   <input type="date" name="date_naissance" value={formData.date_naissance} onChange={handleChange} className={inputClassName} />
                 </label>
               </div>
 
-              <label className="space-y-2">
-                <span className="text-sm font-medium text-slate-700">Ville</span>
+              <label className="space-y-1.5">
+                <LabelText>Ville</LabelText>
                 <InputWithIcon icon={MapPin} name="city" value={formData.city} onChange={handleChange} />
               </label>
             </>
           ) : (
             <>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <label className="space-y-2">
-                  <span className="text-sm font-medium text-slate-700">Prenom</span>
+                <label className="space-y-1.5">
+                  <LabelText>Prenom</LabelText>
                   <input name="prenom" value={formData.prenom} onChange={handleChange} className={inputClassName} />
                 </label>
-                <label className="space-y-2">
-                  <span className="text-sm font-medium text-slate-700">Nom</span>
+                <label className="space-y-1.5">
+                  <LabelText>Nom</LabelText>
                   <input name="nom" value={formData.nom} onChange={handleChange} className={inputClassName} />
                 </label>
               </div>
 
-              <label className="space-y-2">
-                <span className="text-sm font-medium text-slate-700">Nom affiche</span>
+              <label className="space-y-1.5">
+                <LabelText>Nom affiche</LabelText>
                 <InputWithIcon icon={UserRound} name="name" value={formData.name} onChange={handleChange} />
               </label>
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <label className="space-y-2">
-                  <span className="text-sm font-medium text-slate-700">Email</span>
+                <label className="space-y-1.5">
+                  <LabelText>Email</LabelText>
                   <InputWithIcon icon={Mail} name="email" type="email" value={formData.email} onChange={handleChange} />
                 </label>
-                <label className="space-y-2">
-                  <span className="text-sm font-medium text-slate-700">Telephone</span>
+                <label className="space-y-1.5">
+                  <LabelText>Telephone</LabelText>
                   <InputWithIcon icon={Phone} name="phone" value={formData.phone} onChange={handleChange} />
                 </label>
               </div>
@@ -352,13 +367,13 @@ const ProfilePage = () => {
           <button
             type="submit"
             disabled={isSaving || loading}
-            className="inline-flex items-center gap-2 rounded-xl bg-cyan-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-cyan-800 disabled:opacity-60"
+            className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-hover disabled:opacity-60 transition-colors"
           >
-            <Save size={16} />
+            <Save size={15} />
             {isSaving ? "Enregistrement..." : "Enregistrer"}
           </button>
         </form>
-      </section>
+      </div>
     </div>
   );
 };

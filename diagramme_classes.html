@@ -1,0 +1,661 @@
+﻿<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Diagramme de Classes â€” MediCare</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: #f0f4f8;
+      color: #0f1e2e;
+    }
+
+    /* â”€â”€ Top bar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    header {
+      background: #0f2d4a;
+      color: #fff;
+      padding: 18px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      box-shadow: 0 2px 8px rgba(15,29,74,0.18);
+    }
+    header .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    header .logo svg { flex-shrink: 0; }
+    header .logo-text h1 { font-size: 18px; font-weight: 600; }
+    header .logo-text p  { font-size: 11px; opacity: 0.55; letter-spacing: 0.18em; text-transform: uppercase; }
+    header .badge {
+      background: rgba(255,255,255,0.12);
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 20px;
+      padding: 6px 14px;
+      font-size: 12px;
+      font-weight: 500;
+      letter-spacing: 0.04em;
+    }
+    .btn-export {
+      background: #1e6fd9;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 9px 18px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      transition: background .2s;
+    }
+    .btn-export:hover { background: #1558b0; }
+
+    /* â”€â”€ Stats bar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    .stats {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      padding: 16px 32px;
+      background: #fff;
+      border-bottom: 1px solid #dde3ec;
+    }
+    .stat-pill {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: #f0f4f8;
+      border: 1px solid #dde3ec;
+      border-radius: 20px;
+      padding: 5px 14px;
+      font-size: 12px;
+      font-weight: 500;
+      color: #0f1e2e;
+    }
+    .stat-pill .dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+    }
+
+    /* â”€â”€ Diagram container â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    .diagram-wrapper {
+      padding: 32px;
+      overflow: auto;
+    }
+    .diagram-card {
+      background: #fff;
+      border-radius: 12px;
+      border: 1px solid #dde3ec;
+      box-shadow: 0 1px 3px rgba(15,29,74,0.06), 0 1px 2px rgba(15,29,74,0.04);
+      padding: 32px;
+      min-width: 1200px;
+    }
+    .diagram-card h2 {
+      font-size: 15px;
+      font-weight: 600;
+      color: #0f1e2e;
+      margin-bottom: 24px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid #dde3ec;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .mermaid svg {
+      max-width: 100%;
+      height: auto;
+    }
+
+    .mermaid text,
+    .mermaid .nodeLabel,
+    .mermaid .classTitle,
+    .mermaid .label {
+      fill: #0f1e2e !important;
+      color: #0f1e2e !important;
+    }
+
+    /* â”€â”€ Legend â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    .legend {
+      margin: 24px 32px;
+      background: #fff;
+      border-radius: 12px;
+      border: 1px solid #dde3ec;
+      padding: 20px 24px;
+    }
+    .legend h3 {
+      font-size: 13px;
+      font-weight: 600;
+      color: #0f1e2e;
+      margin-bottom: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .legend-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 10px;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 12px;
+      color: #5a6a7e;
+    }
+    .legend-line {
+      width: 40px;
+      height: 2px;
+      flex-shrink: 0;
+    }
+
+    @media print {
+      header, .stats, .legend, .btn-export { display: none !important; }
+      .diagram-wrapper { padding: 0; }
+      .diagram-card { border: none; box-shadow: none; border-radius: 0; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- â”€â”€ Header â”€â”€ -->
+  <header>
+    <div class="logo">
+      <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+        <rect width="36" height="36" rx="8" fill="rgba(255,255,255,0.12)"/>
+        <path d="M18 8C12.477 8 8 12.477 8 18s4.477 10 10 10 10-4.477 10-10S23.523 8 18 8z" stroke="white" stroke-width="1.5" fill="none"/>
+        <path d="M18 13v10M13 18h10" stroke="white" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+      <div class="logo-text">
+        <h1>MediCare</h1>
+        <p>Plateforme mÃ©dicale</p>
+      </div>
+    </div>
+    <div class="badge">Diagramme de Classes â€” Base de donnÃ©es</div>
+    <button class="btn-export" onclick="window.print()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+        <rect x="6" y="14" width="12" height="8"/>
+      </svg>
+      Imprimer / Exporter
+    </button>
+  </header>
+
+  <!-- â”€â”€ Stats bar â”€â”€ -->
+  <div class="stats">
+    <div class="stat-pill"><span class="dot" style="background:#0f2d4a"></span>23 EntitÃ©s</div>
+    <div class="stat-pill"><span class="dot" style="background:#1e6fd9"></span>18 Relations directes</div>
+    <div class="stat-pill"><span class="dot" style="background:#0d6e4f"></span>1 Association M:N</div>
+    <div class="stat-pill"><span class="dot" style="background:#b45309"></span>3 Vues SQL</div>
+    <div class="stat-pill"><span class="dot" style="background:#b91c1c"></span>6 RÃ´les utilisateurs</div>
+  </div>
+
+  <!-- â”€â”€ Diagram â”€â”€ -->
+  <div class="diagram-wrapper">
+    <div class="diagram-card">
+      <h2>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0f2d4a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+        </svg>
+        Diagramme de Classes complet â€” application_medicale
+      </h2>
+
+      <pre class="mermaid">
+%%{init: {
+  'theme': 'base',
+  'themeVariables': {
+    'primaryColor': '#e8f0fe',
+    'primaryTextColor': '#0f1e2e',
+    'primaryBorderColor': '#0f2d4a',
+    'lineColor': '#1e6fd9',
+    'secondaryColor': '#e8f0fe',
+    'tertiaryColor': '#f0f4f8',
+    'background': '#ffffff',
+    'mainBkg': '#ffffff',
+    'nodeBorder': '#0f2d4a',
+    'clusterBkg': '#f0f4f8',
+    'titleColor': '#0f1e2e',
+    'edgeLabelBackground': '#ffffff',
+    'fontFamily': 'Segoe UI, Arial, sans-serif',
+    'fontSize': '13px'
+  }
+}}%%
+classDiagram
+  direction TB
+
+  %% â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  %% AUTHENTIFICATION
+  %% â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  class Users {
+    +INT id PK
+    +VARCHAR_191 email
+    +VARCHAR_30 cin
+    +VARCHAR_255 password
+    +ENUM role
+    +TIMESTAMP created_at
+  }
+
+  class PasswordResetCode {
+    +INT id PK
+    +INT user_id FK
+    +VARCHAR_255 code_hash
+    +DATETIME expires_at
+    +INT attempts
+    +DATETIME used_at
+    +VARCHAR_45 request_ip
+    +VARCHAR_255 user_agent
+    +TIMESTAMP created_at
+  }
+
+  class PatientPortalProfile {
+    +INT id PK
+    +INT user_id FK
+    +VARCHAR_120 nom
+    +VARCHAR_120 prenom
+    +VARCHAR_191 email
+    +VARCHAR_30 telephone
+    +VARCHAR_30 cin
+    +DATE date_naissance
+    +VARCHAR_120 city
+    +DECIMAL_10_7 latitude
+    +DECIMAL_10_7 longitude
+    +TINYINT_1 is_active
+    +TIMESTAMP created_at
+    +TIMESTAMP updated_at
+  }
+
+  class Admin {
+    +INT id PK
+    +VARCHAR_120 full_name
+    +VARCHAR_191 email
+    +VARCHAR_255 mot_de_passe
+    +VARCHAR_30 phone
+    +VARCHAR_255 address
+    +TIMESTAMP created_at
+  }
+
+  %% â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  %% MÃ‰DECIN
+  %% â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  class Doctor {
+    +INT id PK
+    +VARCHAR_120 nom
+    +VARCHAR_120 prenom
+    +VARCHAR_191 email
+    +VARCHAR_255 password
+    +VARCHAR_30 cin
+    +VARCHAR_120 specialty
+    +TINYINT_1 is_active
+    +TIMESTAMP created_at
+  }
+
+  class DoctorPublicProfile {
+    +INT doctor_id PK FK
+    +VARCHAR_160 display_name
+    +VARCHAR_30 public_phone
+    +VARCHAR_255 address_line
+    +VARCHAR_120 city
+    +DECIMAL_10_7 latitude
+    +DECIMAL_10_7 longitude
+    +DECIMAL_10_2 consultation_fee
+    +INT consultation_duration_min
+    +TEXT working_hours_json
+    +TEXT bio
+    +TINYINT_1 online_visibility
+    +TINYINT_1 online_booking_enabled
+    +TIMESTAMP updated_at
+  }
+
+  class Secretary {
+    +INT id PK
+    +INT doctor_id FK
+    +VARCHAR_120 nom
+    +VARCHAR_120 prenom
+    +VARCHAR_191 email
+    +VARCHAR_255 password
+    +VARCHAR_30 telephone
+    +TINYINT_1 is_active
+    +TIMESTAMP created_at
+  }
+
+  class WaitingRoomCounter {
+    +INT id PK
+    +INT doctor_id FK
+    +DATE counter_date
+    +INT waiting_count
+    +TIMESTAMP updated_at
+  }
+
+  %% â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  %% PATIENT
+  %% â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  class Patient {
+    +INT id PK
+    +VARCHAR_120 nom
+    +VARCHAR_120 prenom
+    +VARCHAR_30 cin
+    +VARCHAR_30 telephone
+    +DATE date_naissance
+    +TIMESTAMP created_at
+    +TIMESTAMP updated_at
+  }
+
+  class DoctorPatient {
+    +INT id PK
+    +INT doctor_id FK
+    +INT patient_global_id FK
+    +VARCHAR_30 matricule
+    +VARCHAR_120 nom
+    +VARCHAR_120 prenom
+    +VARCHAR_30 cin
+    +VARCHAR_30 telephone
+    +DATE date_naissance
+    +TIMESTAMP created_at
+    +TIMESTAMP updated_at
+  }
+
+  class PatientFicheNote {
+    +INT id PK
+    +INT doctor_id FK
+    +INT patient_id FK
+    +DATETIME entry_at
+    +TEXT doctor_notes
+    +DECIMAL_10_2 payment_amount
+    +TEXT payment_doctor_comment
+    +TIMESTAMP created_at
+    +TIMESTAMP updated_at
+  }
+
+  class PatientDocument {
+    +INT id PK
+    +INT patient_user_id FK
+    +INT doctor_id FK
+    +VARCHAR_160 title
+    +TEXT description
+    +VARCHAR_512 file_url
+    +TIMESTAMP created_at
+  }
+
+  %% â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  %% RENDEZ-VOUS & ORDONNANCES
+  %% â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  class Appointment {
+    +INT id PK
+    +INT doctor_id FK
+    +INT secretary_id FK
+    +INT patient_id FK
+    +INT booked_by_patient_user_id FK
+    +VARCHAR_30 patient_matricule
+    +VARCHAR_120 patient_nom
+    +VARCHAR_120 patient_prenom
+    +VARCHAR_30 patient_cin
+    +VARCHAR_30 patient_phone
+    +DATE patient_date_naissance
+    +DATETIME appointment_at
+    +DECIMAL_10_2 payment_amount
+    +TEXT payment_doctor_comment
+    +TEXT doctor_notes
+    +ENUM created_by_role
+    +TIMESTAMP created_at
+    +TIMESTAMP updated_at
+  }
+
+  class Ordonnance {
+    +INT id PK
+    +INT doctor_id FK
+    +INT pation_id
+    +VARCHAR_30 cin
+    +VARCHAR_120 nom
+    +VARCHAR_120 prenom
+    +TEXT ordonnance
+    +VARCHAR_50 status
+    +TIMESTAMP created_at
+  }
+
+  class PharmacyOrdonnanceView {
+    +INT id PK
+    +INT pharmacie_id FK
+    +INT ordonnance_id FK
+    +INT view_count
+    +TIMESTAMP first_viewed_at
+    +TIMESTAMP last_viewed_at
+  }
+
+  %% â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  %% PHARMACIE
+  %% â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  class Pharmacie {
+    +INT id_pharmacie PK
+    +VARCHAR_120 nom_pharmacie
+    +VARCHAR_191 email
+    +VARCHAR_30 telephone
+    +VARCHAR_255 mot_de_passe
+    +VARCHAR_120 president_pharmacie
+    +VARCHAR_255 address_line
+    +VARCHAR_120 city
+    +TINYINT_1 is_active
+    +TIMESTAMP created_at
+  }
+
+  class MedicamentStock {
+    +INT id PK
+    +INT id_pharmacie FK
+    +VARCHAR_140 nom
+    +INT quantite
+    +DECIMAL_10_2 prix
+    +INT seuil_alerte
+    +TIMESTAMP created_at
+    +TIMESTAMP updated_at
+  }
+
+  %% â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  %% FOURNISSEUR
+  %% â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  class Supplier {
+    +INT id PK
+    +VARCHAR_120 nom
+    +VARCHAR_120 prenom
+    +VARCHAR_191 email
+    +VARCHAR_255 password
+    +VARCHAR_30 telephone
+    +TINYINT_1 is_active
+    +TIMESTAMP created_at
+  }
+
+  class SupplierProduct {
+    +INT id PK
+    +INT supplier_id FK
+    +VARCHAR_140 nom
+    +TEXT description
+    +DECIMAL_10_2 prix
+    +INT quantite_disponible
+    +VARCHAR_40 unite
+    +TINYINT_1 is_active
+    +TIMESTAMP created_at
+    +TIMESTAMP updated_at
+  }
+
+  class SupplierPharmacie {
+    +INT supplier_id PK FK
+    +INT pharmacie_id PK FK
+    +TIMESTAMP created_at
+  }
+
+  class SupplierPartnershipRequest {
+    +INT id PK
+    +INT pharmacie_id FK
+    +INT supplier_id FK
+    +TEXT message
+    +ENUM status
+    +TEXT response_note
+    +TIMESTAMP created_at
+    +TIMESTAMP updated_at
+    +DATETIME responded_at
+  }
+
+  class Demande {
+    +INT id PK
+    +INT pharmacie_id FK
+    +INT supplier_id FK
+    +VARCHAR_140 nom_medicament
+    +INT quantite
+    +ENUM status
+    +TEXT response_note
+    +DATETIME date_acceptation
+    +TIMESTAMP created_at
+    +TIMESTAMP updated_at
+  }
+
+  class Notification {
+    +INT id PK
+    +VARCHAR_140 nom_medicament
+    +INT quantite
+    +INT pharmacien_id FK
+    +INT fournisseur_id FK
+    +TEXT message
+    +ENUM status
+    +INT demande_id FK
+    +TIMESTAMP created_at
+  }
+
+  %% â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  %% RELATIONS â€” AUTHENTIFICATION
+  %% â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  Users "1" --> "0..*" PasswordResetCode : gÃ©nÃ¨re
+  Users "1" --> "0..1" PatientPortalProfile : possÃ¨de
+  Users "1" --> "0..*" PatientDocument : tÃ©lÃ©verse
+  Users "1" --> "0..*" Appointment : rÃ©serve (patient)
+
+  %% â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  %% RELATIONS â€” MÃ‰DECIN
+  %% â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  Doctor "1" *-- "1" DoctorPublicProfile : profil public
+  Doctor "1" *-- "0..*" Secretary : emploie
+  Doctor "1" *-- "0..*" Ordonnance : rÃ©dige
+  Doctor "1" *-- "0..*" DoctorPatient : suit
+  Doctor "1" *-- "0..*" Appointment : planifie
+  Doctor "1" *-- "0..*" PatientFicheNote : renseigne
+  Doctor "1" --> "0..*" PatientDocument : associe
+  Doctor "1" *-- "0..*" WaitingRoomCounter : gÃ¨re
+
+  %% â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  %% RELATIONS â€” SECRÃ‰TAIRE
+  %% â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  Secretary "1" --> "0..*" Appointment : crÃ©e
+
+  %% â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  %% RELATIONS â€” PATIENT
+  %% â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  Patient "1" --> "0..*" DoctorPatient : rÃ©fÃ©rencÃ©_dans
+  DoctorPatient "1" --> "0..*" Appointment : concerne
+  DoctorPatient "1" *-- "0..*" PatientFicheNote : contient
+
+  %% â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  %% RELATIONS â€” ORDONNANCE
+  %% â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  Ordonnance "1" --> "0..*" PharmacyOrdonnanceView : consultÃ©e_par
+
+  %% â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  %% RELATIONS â€” PHARMACIE
+  %% â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  Pharmacie "1" *-- "0..*" MedicamentStock : stocke
+  Pharmacie "1" --> "0..*" PharmacyOrdonnanceView : consulte
+  Pharmacie "1" --> "0..*" SupplierPartnershipRequest : soumet
+  Pharmacie "1" --> "0..*" Demande : commande
+  Pharmacie "1" --> "0..*" Notification : reÃ§oit
+  Pharmacie "1" --> "0..*" SupplierPharmacie : liste dans
+
+  %% â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  %% RELATIONS â€” FOURNISSEUR
+  %% â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  Supplier "1" *-- "0..*" SupplierProduct : propose
+  Supplier "1" --> "0..*" SupplierPartnershipRequest : reÃ§oit
+  Supplier "1" --> "0..*" Demande : traite
+  Supplier "1" --> "0..*" Notification : gÃ©nÃ¨re
+  Supplier "1" --> "0..*" SupplierPharmacie : liste dans
+
+  %% Relation M:N via table d'association
+  SupplierPharmacie --> Pharmacie : pharmacie_id
+  SupplierPharmacie --> Supplier : supplier_id
+
+  %% â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  %% RELATIONS â€” DEMANDE
+  %% â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  Demande "1" --> "0..*" Notification : dÃ©clenche
+      </pre>
+    </div>
+  </div>
+
+  <!-- â”€â”€ Legend â”€â”€ -->
+  <div class="legend">
+    <h3>LÃ©gende des relations</h3>
+    <div class="legend-grid">
+      <div class="legend-item">
+        <div class="legend-line" style="background:#0f2d4a; border-top: 2px solid #0f2d4a;"></div>
+        <span><strong>*--</strong> Composition (CASCADE DELETE) â€” entitÃ© dÃ©pendante</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-line" style="border-top: 2px solid #1e6fd9;"></div>
+        <span><strong>--&gt;</strong> Association (SET NULL) â€” lien optionnel</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-line" style="border-top: 2px dashed #b45309;"></div>
+        <span><strong>PK</strong> ClÃ© primaire</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-line" style="border-top: 2px dashed #0d6e4f;"></div>
+        <span><strong>FK</strong> ClÃ© Ã©trangÃ¨re</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-line" style="border-top: 2px solid #b91c1c;"></div>
+        <span><strong>1 â†’ 0..*</strong> Un Ã  plusieurs (One-to-Many)</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-line" style="border-top: 2px solid #7c3aed;"></div>
+        <span><strong>* â€” *</strong> Plusieurs Ã  plusieurs via SupplierPharmacie</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- â”€â”€ Footer note â”€â”€ -->
+  <div style="text-align:center; padding: 16px; font-size: 12px; color: #8fa0b3; border-top: 1px solid #dde3ec; background: #fff; margin-top: 8px;">
+    MediCare â€” application_medicale (MySQL 8+) Â· 23 entitÃ©s Â· 3 vues SQL (rendez_vous, medecins_patients, medecins)
+  </div>
+
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'base',
+      themeVariables: {
+        primaryColor: '#e8f0fe',
+        primaryTextColor: '#0f1e2e',
+        primaryBorderColor: '#0f2d4a',
+        lineColor: '#1e6fd9',
+        secondaryColor: '#e8f0fe',
+        background: '#ffffff',
+        mainBkg: '#ffffff',
+        nodeBorder: '#0f2d4a',
+        titleColor: '#0f1e2e',
+        edgeLabelBackground: '#ffffff',
+        fontFamily: 'Segoe UI, Arial, sans-serif',
+        fontSize: '13px'
+      },
+      classDiagram: {
+        diagramPadding: 40
+      }
+    });
+  </script>
+</body>
+</html>
+
+

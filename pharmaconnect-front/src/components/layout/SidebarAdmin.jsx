@@ -1,17 +1,23 @@
 import React from "react";
-import { Home, LogOut, Settings, ShieldCheck, Store, Truck } from "lucide-react";
+import { Home, LogOut, Settings, ShieldCheck, Stethoscope, Store, Truck } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
 
-const SidebarItem = ({ to, icon, label, onNavigate }) => (
+const NavSection = ({ label }) => (
+  <p className="text-[10px] font-semibold text-white/30 tracking-widest uppercase px-5 pt-5 pb-2">
+    {label}
+  </p>
+);
+
+const NavItem = ({ to, icon, label, onNavigate }) => (
   <NavLink
     to={to}
     onClick={onNavigate}
     className={({ isActive }) =>
-      `flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
+      `flex items-center gap-3 px-5 py-2.5 text-sm border-l-2 transition-all ${
         isActive
-          ? "bg-cyan-50 text-cyan-700 ring-1 ring-cyan-200"
-          : "text-slate-700 hover:bg-slate-100 hover:text-slate-900"
+          ? "bg-white/10 text-white border-[#4fa3e0]"
+          : "text-white/60 hover:bg-white/5 hover:text-white border-transparent"
       }`
     }
   >
@@ -20,10 +26,14 @@ const SidebarItem = ({ to, icon, label, onNavigate }) => (
   </NavLink>
 );
 
+const getInitials = (name) =>
+  name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
+
 const SidebarAdmin = ({ isOpen, onClose }) => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const displayName = user?.name || user?.email || "Admin";
+  const initials = getInitials(displayName);
 
   const handleLogout = () => {
     logout();
@@ -32,34 +42,52 @@ const SidebarAdmin = ({ isOpen, onClose }) => {
 
   return (
     <>
-      {isOpen && <div className="fixed inset-0 z-40 bg-slate-900/30 lg:hidden" onClick={onClose} />}
+      {isOpen && (
+        <div className="fixed inset-0 z-40 bg-black/40 lg:hidden" onClick={onClose} />
+      )}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-50 w-72 border-r border-slate-200 bg-white/95 backdrop-blur-xl transition-transform duration-300 lg:translate-x-0 ${
-          isOpen ? "translate-x-0" : "-translate-x-full"
-        }`}
+        className={`fixed inset-y-0 left-0 z-50 lg:static lg:inset-auto lg:z-auto
+          w-60 flex-shrink-0 bg-[#0f2d4a] text-white flex flex-col
+          transition-transform duration-300
+          ${isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}`}
       >
-        <div className="flex h-full flex-col p-4">
-          <div className="rounded-2xl bg-gradient-to-br from-cyan-600 to-teal-600 p-4 text-white shadow-lg">
-            <p className="text-xs uppercase tracking-wider text-cyan-100">Administrateur</p>
-            <h2 className="mt-1 text-lg font-semibold">MediCare</h2>
-            <p className="mt-3 text-sm text-cyan-50">{displayName}</p>
+        {/* Logo */}
+        <div className="flex items-center gap-3 px-5 py-5 border-b border-white/10 flex-shrink-0">
+          <div className="w-9 h-9 rounded-lg bg-white/10 flex items-center justify-center flex-shrink-0">
+            <Stethoscope size={18} className="text-white" />
           </div>
+          <div>
+            <p className="text-sm font-medium text-white leading-tight">MediCare</p>
+            <p className="text-xs text-white/50 leading-tight">Plateforme médicale</p>
+          </div>
+        </div>
 
-          <nav className="mt-6 flex-1 space-y-2">
-            <SidebarItem to="/admin/dashboard" icon={<Home size={18} />} label="Tableau de bord" onNavigate={onClose} />
-            <SidebarItem to="/admin/pharmacies" icon={<Store size={18} />} label="Pharmacies" onNavigate={onClose} />
-            <SidebarItem to="/admin/medecins" icon={<ShieldCheck size={18} />} label="Acces medecins" onNavigate={onClose} />
-            <SidebarItem to="/admin/suppliers" icon={<Truck size={18} />} label="Fournisseurs" onNavigate={onClose} />
-            <SidebarItem to="/admin/settings" icon={<Settings size={18} />} label="Parametres" onNavigate={onClose} />
-          </nav>
+        {/* Navigation */}
+        <nav className="flex-1 overflow-y-auto py-2">
+          <NavSection label="Administration" />
+          <NavItem to="/admin/dashboard" icon={<Home size={16} />} label="Tableau de bord" onNavigate={onClose} />
+          <NavItem to="/admin/pharmacies" icon={<Store size={16} />} label="Pharmacies" onNavigate={onClose} />
+          <NavItem to="/admin/medecins" icon={<ShieldCheck size={16} />} label="Accès médecins" onNavigate={onClose} />
+          <NavItem to="/admin/suppliers" icon={<Truck size={16} />} label="Fournisseurs" onNavigate={onClose} />
+          <NavItem to="/admin/settings" icon={<Settings size={16} />} label="Paramètres" onNavigate={onClose} />
+        </nav>
 
+        {/* Footer */}
+        <div className="border-t border-white/10 p-4 flex items-center gap-3 flex-shrink-0">
+          <div className="w-9 h-9 rounded-full bg-white/15 text-white text-sm font-medium flex items-center justify-center flex-shrink-0">
+            {initials}
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-white truncate leading-tight">{displayName}</p>
+            <p className="text-xs text-white/50 leading-tight">Administrateur</p>
+          </div>
           <button
             onClick={handleLogout}
-            className="mt-4 flex items-center gap-3 rounded-xl border border-rose-200 px-3 py-2.5 text-sm font-medium text-rose-600 transition hover:bg-rose-50"
+            className="text-white/40 hover:text-white transition-colors flex-shrink-0"
+            aria-label="Déconnexion"
           >
             <LogOut size={17} />
-            <span>Deconnexion</span>
           </button>
         </div>
       </aside>

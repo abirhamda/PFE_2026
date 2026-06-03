@@ -10,6 +10,7 @@ import {
   Phone,
   Search,
   Sparkles,
+  X,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import api from "../../lib/api";
@@ -108,6 +109,14 @@ const DiscoverDoctorsPage = ({ publicMode = false }) => {
   const [doctors, setDoctors] = useState([]);
   const [pharmacies, setPharmacies] = useState([]);
   const [weekOffsetByDoctor, setWeekOffsetByDoctor] = useState({});
+  const [selectedDoctor, setSelectedDoctor] = useState(null);
+  const [availability, setAvailability] = useState({
+    doctorId: null,
+    loading: false,
+    error: "",
+    slots: [],
+    onlineBookingEnabled: false,
+  });
   const [pendingBooking, setPendingBooking] = useState(null);
 
   const loadResults = async (nextFilters = filters, nextScope = scope) => {
@@ -178,6 +187,58 @@ const DiscoverDoctorsPage = ({ publicMode = false }) => {
     }
   };
 
+  const loadDoctorAvailability = async (doctorId) => {
+    setAvailability({
+      doctorId,
+      loading: true,
+      error: "",
+      slots: [],
+      onlineBookingEnabled: false,
+    });
+
+    try {
+      const response = await api.get(`/patient-portal/doctors/${doctorId}/availability`, {
+        params: { days: 28, limit: 84 },
+      });
+      setAvailability({
+        doctorId,
+        loading: false,
+        error: "",
+        slots: Array.isArray(response.data?.available_slots) ? response.data.available_slots : [],
+        onlineBookingEnabled: Boolean(response.data?.online_booking_enabled),
+      });
+    } catch (requestError) {
+      setAvailability({
+        doctorId,
+        loading: false,
+        error: requestError.response?.data?.error || "Impossible de charger les disponibilites",
+        slots: [],
+        onlineBookingEnabled: false,
+      });
+    }
+  };
+
+  const openDoctorDetails = (doctor) => {
+    setSelectedDoctor(doctor);
+    setPendingBooking(null);
+    setError("");
+    setMessage("");
+    setWeekOffsetByDoctor((prev) => ({ ...prev, [doctor.doctor_id]: prev[doctor.doctor_id] || 0 }));
+    loadDoctorAvailability(doctor.doctor_id);
+  };
+
+  const closeDoctorDetails = () => {
+    setSelectedDoctor(null);
+    setPendingBooking(null);
+    setAvailability({
+      doctorId: null,
+      loading: false,
+      error: "",
+      slots: [],
+      onlineBookingEnabled: false,
+    });
+  };
+
   const requestBooking = (doctor, slotAt) => {
     setError("");
     setMessage("");
@@ -209,7 +270,7 @@ const DiscoverDoctorsPage = ({ publicMode = false }) => {
       });
       setPendingBooking(null);
       setMessage("Rendez-vous reserve avec succes.");
-      await loadResults();
+      await loadDoctorAvailability(pendingBooking.doctorId);
     } catch (requestError) {
       setError(requestError.response?.data?.error || "Reservation impossible");
     } finally {
@@ -217,7 +278,7 @@ const DiscoverDoctorsPage = ({ publicMode = false }) => {
     }
   };
 
-  const renderWeeklySlots = (doctor) => {
+  const renderWeeklySlots = (doctor, slots = [], onlineBookingEnabled = false) => {
     const weekOffset = weekOffsetByDoctor[doctor.doctor_id] || 0;
     const weekDays = buildWeekDays(weekOffset);
 
@@ -226,7 +287,7 @@ const DiscoverDoctorsPage = ({ publicMode = false }) => {
       return acc;
     }, {});
 
-    for (const slot of doctor.available_slots || []) {
+    for (const slot of slots) {
       const slotDate = new Date(String(slot).replace(" ", "T"));
       if (Number.isNaN(slotDate.getTime())) continue;
       const key = toDateOnlyKey(slotDate);
@@ -289,7 +350,7 @@ const DiscoverDoctorsPage = ({ publicMode = false }) => {
                               key={slot}
                               type="button"
                               onClick={() => requestBooking(doctor, slot)}
-                              disabled={isBooking || !doctor.online_booking_enabled}
+                              disabled={isBooking || !onlineBookingEnabled}
                               className="w-full rounded-md border border-cyan-200 bg-cyan-50 px-2 py-1 text-left text-[11px] font-semibold text-cyan-700 hover:bg-cyan-100 disabled:opacity-60"
                             >
                               {isBooking
@@ -318,6 +379,10 @@ const DiscoverDoctorsPage = ({ publicMode = false }) => {
   const showDoctors = scope !== "pharmacy";
   const showPharmacies = scope !== "doctor";
   const totalResults = doctors.length + pharmacies.length;
+  const selectedAvailability =
+    selectedDoctor && availability.doctorId === selectedDoctor.doctor_id
+      ? availability
+      : { loading: false, error: "", slots: [], onlineBookingEnabled: false };
 
   return (
     <div className="space-y-6">
@@ -457,32 +522,23 @@ const DiscoverDoctorsPage = ({ publicMode = false }) => {
                       </div>
                     </div>
 
-                    <div className="mt-4">
-                      <p className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-800">
-                        <CalendarDays size={15} />
-                        Disponibilites en ligne
-                      </p>
-
-                      {doctor.online_booking_enabled && (doctor.available_slots || []).length > 0 ? (
-                        <>{renderWeeklySlots(doctor)}</>
-                      ) : (
-                        <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
-                          Aucune disponibilite en ligne (acces non active ou creneaux complets).
+                    <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                      <div>
+                        <p className="text-sm font-semibold text-slate-800">Fiche medecin</p>
+                        <p className="mt-1 text-xs text-slate-500">
+                          {doctor.online_booking_enabled
+                            ? "Reservation disponible apres consultation de la fiche."
+                            : "Reservation en ligne non activee pour ce medecin."}
                         </p>
-                      )}
-
-                      {!canBook && (
-                        <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
-                          Reservation en ligne reservee aux patients connectes.
-                          <button
-                            type="button"
-                            onClick={() => navigate("/login")}
-                            className="ml-1 font-semibold text-cyan-700 hover:text-cyan-800"
-                          >
-                            Se connecter
-                          </button>
-                        </div>
-                      )}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => openDoctorDetails(doctor)}
+                        className="inline-flex items-center justify-center gap-2 rounded-xl bg-cyan-600 px-4 py-2 text-sm font-semibold text-white hover:bg-cyan-700"
+                      >
+                        <CalendarDays size={15} />
+                        Consulter
+                      </button>
                     </div>
                   </article>
                 ))}
@@ -535,6 +591,119 @@ const DiscoverDoctorsPage = ({ publicMode = false }) => {
         </section>
       )}
 
+      {selectedDoctor && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-900/35 p-4 backdrop-blur-sm">
+          <div className="max-h-[90vh] w-full max-w-4xl overflow-hidden rounded-2xl bg-white shadow-2xl">
+            <div className="flex items-start justify-between gap-4 bg-cyan-700 px-5 py-4 text-white">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-100">Fiche medecin</p>
+                <h3 className="mt-1 text-xl font-bold">Dr. {selectedDoctor.display_name}</h3>
+                <p className="text-sm text-cyan-100">{selectedDoctor.specialty || "Specialite non renseignee"}</p>
+              </div>
+              <button
+                type="button"
+                onClick={closeDoctorDetails}
+                className="rounded-lg border border-white/20 bg-white/10 p-2 text-white hover:bg-white/20"
+                aria-label="Fermer"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="max-h-[calc(90vh-84px)] overflow-y-auto p-5">
+              <div className="grid gap-4 lg:grid-cols-[0.95fr_1.35fr]">
+                <div className="space-y-4">
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Coordonnees</p>
+                    <div className="mt-3 space-y-2 text-sm text-slate-700">
+                      <p className="flex items-start gap-2">
+                        <MapPin size={15} className="mt-0.5 shrink-0 text-slate-500" />
+                        <span>
+                          {[selectedDoctor.address_line, selectedDoctor.city].filter(Boolean).join(", ") ||
+                            "Adresse non renseignee"}
+                        </span>
+                      </p>
+                      <p className="flex items-center gap-2">
+                        <Phone size={15} className="text-slate-500" />
+                        <span>{selectedDoctor.public_phone || "Telephone non renseigne"}</span>
+                      </p>
+                      <p>Tarif: {selectedDoctor.consultation_fee !== null ? `${selectedDoctor.consultation_fee} MAD` : "-"}</p>
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Horaires</p>
+                    <div className="mt-3 grid gap-1 text-xs text-slate-600 sm:grid-cols-2 lg:grid-cols-1">
+                      {prettyWorkingHours(selectedDoctor.working_hours).map((line) => (
+                        <span key={line}>{line}</span>
+                      ))}
+                    </div>
+                  </div>
+
+                  {selectedDoctor.bio && (
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Bio</p>
+                      <p className="mt-3 text-sm leading-relaxed text-slate-600">{selectedDoctor.bio}</p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="rounded-xl border border-slate-200 bg-white p-4">
+                  <div className="mb-4 flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-cyan-700">Reservation</p>
+                      <p className="mt-1 text-sm text-slate-500">Choisissez un creneau disponible.</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => loadDoctorAvailability(selectedDoctor.doctor_id)}
+                      disabled={selectedAvailability.loading}
+                      className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-60"
+                    >
+                      Actualiser
+                    </button>
+                  </div>
+
+                  {selectedAvailability.loading ? (
+                    <div className="rounded-lg border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500">
+                      <Loader2 className="mx-auto mb-2 animate-spin" size={20} />
+                      Chargement des disponibilites...
+                    </div>
+                  ) : selectedAvailability.error ? (
+                    <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+                      {selectedAvailability.error}
+                    </div>
+                  ) : !selectedAvailability.onlineBookingEnabled ? (
+                    <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-700">
+                      Ce medecin n'accepte pas encore les reservations en ligne.
+                    </div>
+                  ) : selectedAvailability.slots.length > 0 ? (
+                    renderWeeklySlots(selectedDoctor, selectedAvailability.slots, canBook && selectedAvailability.onlineBookingEnabled)
+                  ) : (
+                    <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-700">
+                      Aucun creneau disponible actuellement.
+                    </div>
+                  )}
+
+                  {!canBook && (
+                    <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
+                      Reservation en ligne reservee aux patients connectes.
+                      <button
+                        type="button"
+                        onClick={() => navigate("/login")}
+                        className="ml-1 font-semibold text-cyan-700 hover:text-cyan-800"
+                      >
+                        Se connecter
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {pendingBooking && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/35 p-4 backdrop-blur-sm">
           <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl">
@@ -555,9 +724,10 @@ const DiscoverDoctorsPage = ({ publicMode = false }) => {
               <button
                 type="button"
                 onClick={confirmBooking}
-                className="rounded-xl bg-cyan-600 px-4 py-2 text-sm font-semibold text-white hover:bg-cyan-700"
+                disabled={Boolean(booking)}
+                className="rounded-xl bg-cyan-600 px-4 py-2 text-sm font-semibold text-white hover:bg-cyan-700 disabled:opacity-60"
               >
-                Confirmer
+                {booking ? "Reservation..." : "Confirmer"}
               </button>
             </div>
           </div>

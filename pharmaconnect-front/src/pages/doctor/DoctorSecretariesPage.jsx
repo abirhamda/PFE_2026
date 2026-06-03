@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Plus, ToggleLeft, ToggleRight, Trash2, UserRoundPlus, Pencil, Save } from "lucide-react";
+import { Plus, Save, ToggleLeft, ToggleRight, Trash2, UserRoundPlus, Pencil } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
 import api from "../../lib/api";
 
@@ -10,6 +10,9 @@ const initialForm = {
   telephone: "",
   password: "",
 };
+
+const inputCls =
+  "w-full border border-border rounded-lg px-3 py-2.5 text-sm text-text-primary bg-card placeholder-text-muted outline-none transition focus:ring-2 focus:ring-accent/30 focus:border-accent";
 
 const SecretaryEditModal = ({ secretary, onClose, onSave }) => {
   const [form, setForm] = useState({
@@ -52,70 +55,39 @@ const SecretaryEditModal = ({ secretary, onClose, onSave }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/35 p-4 backdrop-blur-sm">
-      <form onSubmit={submit} className="w-full max-w-2xl rounded-2xl bg-white p-6 shadow-2xl">
-        <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-xl font-semibold text-slate-900">Modifier la secretaire</h3>
-          <button type="button" onClick={onClose} className="text-sm text-slate-500 hover:text-slate-700">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <form onSubmit={submit} className="w-full max-w-2xl bg-card rounded-card border border-border shadow-card-hover p-6">
+        <div className="mb-5 flex items-center justify-between">
+          <h3 className="text-base font-semibold text-text-primary">Modifier la secretaire</h3>
+          <button type="button" onClick={onClose} className="text-sm text-text-secondary hover:text-text-primary transition-colors">
             Fermer
           </button>
         </div>
 
-        {error && <div className="mb-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</div>}
+        {error && (
+          <div className="mb-4 rounded-card border-l-4 border-medical-danger bg-medical-danger-bg px-4 py-3 text-sm text-medical-danger">
+            {error}
+          </div>
+        )}
 
         <div className="grid gap-3 md:grid-cols-2">
-          <input
-            name="nom"
-            value={form.nom}
-            onChange={onChange}
-            placeholder="Nom"
-            required
-            className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm"
-          />
-          <input
-            name="prenom"
-            value={form.prenom}
-            onChange={onChange}
-            placeholder="Prenom"
-            required
-            className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm"
-          />
-          <input
-            type="email"
-            name="email"
-            value={form.email}
-            onChange={onChange}
-            placeholder="Email"
-            required
-            className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm md:col-span-2"
-          />
-          <input
-            name="telephone"
-            value={form.telephone}
-            onChange={onChange}
-            placeholder="Telephone"
-            className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm"
-          />
-          <input
-            type="password"
-            name="password"
-            value={form.password}
-            onChange={onChange}
-            placeholder="Nouveau mot de passe (optionnel)"
-            className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm"
-          />
+          <input name="nom"       value={form.nom}       onChange={onChange} placeholder="Nom"       required    className={inputCls} />
+          <input name="prenom"    value={form.prenom}    onChange={onChange} placeholder="Prenom"    required    className={inputCls} />
+          <input type="email" name="email" value={form.email} onChange={onChange} placeholder="Email" required className={`${inputCls} md:col-span-2`} />
+          <input name="telephone" value={form.telephone} onChange={onChange} placeholder="Telephone"             className={inputCls} />
+          <input type="password" name="password" value={form.password} onChange={onChange} placeholder="Nouveau mot de passe (optionnel)" className={inputCls} />
         </div>
 
-        <div className="mt-4 flex justify-end gap-2">
-          <button type="button" onClick={onClose} className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50">
+        <div className="mt-5 flex justify-end gap-2.5">
+          <button type="button" onClick={onClose} className="rounded-lg border border-border px-4 py-2 text-sm text-text-primary hover:bg-gray-50 transition-colors">
             Annuler
           </button>
           <button
             type="submit"
             disabled={saving}
-            className="inline-flex items-center gap-2 rounded-xl bg-cyan-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-cyan-700 disabled:opacity-60"
+            className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-hover disabled:opacity-60 transition-colors"
           >
-            <Save size={15} /> {saving ? "Enregistrement..." : "Sauvegarder"}
+            <Save size={14} /> {saving ? "Enregistrement..." : "Sauvegarder"}
           </button>
         </div>
       </form>
@@ -212,73 +184,79 @@ const DoctorSecretariesPage = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <section className="rounded-3xl bg-gradient-to-r from-cyan-700 to-teal-600 p-6 text-white shadow-xl">
-        <h1 className="text-3xl font-bold">Mes secretaires</h1>
-      </section>
+    <div className="space-y-5">
+      {message && (
+        <div className="rounded-card border-l-4 border-medical-success bg-medical-success-bg px-4 py-3 text-sm text-medical-success">
+          {message}
+        </div>
+      )}
+      {error && (
+        <div className="rounded-card border-l-4 border-medical-danger bg-medical-danger-bg px-4 py-3 text-sm text-medical-danger">
+          {error}
+        </div>
+      )}
 
-      {message && <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-emerald-700">{message}</div>}
-      {error && <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-rose-700">{error}</div>}
-
-      <form onSubmit={createSecretary} className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="mb-4 text-lg font-semibold text-slate-900">Ajouter une secretaire</h2>
+      {/* Add form */}
+      <form onSubmit={createSecretary} className="bg-card rounded-card border border-border shadow-card p-5">
+        <div className="mb-4 flex items-center gap-2">
+          <div className="rounded-lg bg-accent-light p-2 text-accent">
+            <Plus size={16} />
+          </div>
+          <h2 className="text-sm font-semibold text-text-primary">Ajouter une secretaire</h2>
+        </div>
         <div className="grid gap-3 md:grid-cols-3">
-          <input name="nom" value={form.nom} onChange={onChange} placeholder="Nom" required className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm" />
-          <input name="prenom" value={form.prenom} onChange={onChange} placeholder="Prenom" required className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm" />
-          <input type="email" name="email" value={form.email} onChange={onChange} placeholder="Email" required className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm" />
-          <input name="telephone" value={form.telephone} onChange={onChange} placeholder="Telephone" className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm" />
-          <input type="password" name="password" value={form.password} onChange={onChange} placeholder="Mot de passe" required className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm md:col-span-2" />
+          <input name="nom"       value={form.nom}       onChange={onChange} placeholder="Nom"       required className={inputCls} />
+          <input name="prenom"    value={form.prenom}    onChange={onChange} placeholder="Prenom"    required className={inputCls} />
+          <input type="email" name="email" value={form.email} onChange={onChange} placeholder="Email" required className={inputCls} />
+          <input name="telephone" value={form.telephone} onChange={onChange} placeholder="Telephone"          className={inputCls} />
+          <input type="password" name="password" value={form.password} onChange={onChange} placeholder="Mot de passe" required className={`${inputCls} md:col-span-2`} />
         </div>
         <div className="mt-4 flex justify-end">
-          <button type="submit" disabled={loading} className="inline-flex items-center gap-2 rounded-xl bg-cyan-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-cyan-700 disabled:opacity-60">
-            <Plus size={16} /> {loading ? "Creation..." : "Ajouter"}
+          <button type="submit" disabled={loading} className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-hover disabled:opacity-60 transition-colors">
+            <Plus size={15} /> {loading ? "Creation..." : "Ajouter"}
           </button>
         </div>
       </form>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="mb-4 text-lg font-semibold text-slate-900">Liste des secretaires ({secretaries.length})</h2>
+      {/* List */}
+      <section className="bg-card rounded-card border border-border shadow-card p-5">
+        <h2 className="mb-4 text-sm font-semibold text-text-primary tracking-wide">Liste des secretaires ({secretaries.length})</h2>
 
         {loading ? (
-          <div className="rounded-xl border border-dashed border-slate-300 p-8 text-center text-slate-500">Chargement...</div>
+          <div className="rounded-card border border-dashed border-border bg-gray-50 p-8 text-center text-sm text-text-secondary">
+            Chargement...
+          </div>
         ) : secretaries.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-slate-300 p-8 text-center text-slate-500">
-            <UserRoundPlus className="mx-auto mb-2" size={24} />
-            Aucune secretaire enregistree.
+          <div className="rounded-card border border-dashed border-border bg-gray-50 p-8 text-center text-text-secondary">
+            <UserRoundPlus className="mx-auto mb-2 text-text-muted" size={22} />
+            <p className="text-sm">Aucune secretaire enregistree.</p>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-2.5">
             {secretaries.map((secretary) => (
-              <div key={secretary.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 p-4">
+              <div key={secretary.id} className="flex flex-wrap items-center justify-between gap-3 rounded-card border border-border bg-gray-50/60 px-4 py-3.5">
                 <div>
-                  <p className="font-semibold text-slate-900">
+                  <p className="text-sm font-medium text-text-primary">
                     {secretary.prenom} {secretary.nom}
                   </p>
-                  <p className="text-sm text-slate-500">
+                  <p className="text-xs text-text-secondary mt-0.5">
                     {secretary.email}
-                    {secretary.telephone ? ` - ${secretary.telephone}` : ""}
+                    {secretary.telephone ? ` · ${secretary.telephone}` : ""}
                   </p>
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setEditingSecretary(secretary)}
-                    className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
-                  >
-                    <Pencil size={15} /> Modifier
+                  <button onClick={() => setEditingSecretary(secretary)} className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-sm text-text-primary hover:bg-gray-100 transition-colors">
+                    <Pencil size={14} /> Modifier
                   </button>
-                  <button
-                    onClick={() => toggleStatus(secretary)}
-                    className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
-                  >
-                    {secretary.is_active ? <ToggleRight size={16} className="text-emerald-600" /> : <ToggleLeft size={16} className="text-slate-500" />}
+                  <button onClick={() => toggleStatus(secretary)} className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-sm text-text-primary hover:bg-gray-100 transition-colors">
+                    {secretary.is_active
+                      ? <ToggleRight size={16} className="text-medical-success" />
+                      : <ToggleLeft size={16} className="text-text-muted" />}
                     {secretary.is_active ? "Active" : "Inactive"}
                   </button>
-                  <button
-                    onClick={() => deleteSecretary(secretary.id)}
-                    className="inline-flex items-center gap-1 rounded-lg border border-rose-200 px-3 py-2 text-sm text-rose-700 hover:bg-rose-50"
-                  >
-                    <Trash2 size={15} /> Supprimer
+                  <button onClick={() => deleteSecretary(secretary.id)} className="inline-flex items-center gap-1.5 rounded-lg border border-medical-danger/30 bg-medical-danger-bg px-3 py-2 text-sm text-medical-danger hover:bg-red-100 transition-colors">
+                    <Trash2 size={14} /> Supprimer
                   </button>
                 </div>
               </div>

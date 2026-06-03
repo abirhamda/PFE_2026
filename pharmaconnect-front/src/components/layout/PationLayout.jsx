@@ -7,12 +7,11 @@ function PationLayout() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-app-surface">
+    <div className="flex h-screen overflow-hidden bg-page font-sans">
       <SidebarPation isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
-
-      <div className="flex min-h-screen flex-col lg:pl-72">
+      <div className="flex flex-col flex-1 overflow-hidden">
         <Navbar onToggleSidebar={() => setIsSidebarOpen((prev) => !prev)} />
-        <main className="flex-1 p-4 sm:p-6 lg:p-8">
+        <main className="flex-1 overflow-y-auto p-6">
           <Outlet />
         </main>
       </div>

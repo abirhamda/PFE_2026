@@ -52,6 +52,9 @@ const buildEditValues = (fields, record) =>
     return accumulator;
   }, {});
 
+const inputCls =
+  "w-full border border-border rounded-lg px-3 py-2.5 text-sm text-text-primary bg-card placeholder-text-muted outline-none transition focus:ring-2 focus:ring-accent/30 focus:border-accent";
+
 const FormField = ({ field, value, onChange }) => {
   const commonProps = {
     id: field.name,
@@ -59,13 +62,12 @@ const FormField = ({ field, value, onChange }) => {
     value: value ?? "",
     placeholder: field.placeholder,
     onChange,
-    className:
-      "w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100",
+    className: inputCls,
   };
 
   return (
     <div className={field.fullWidth ? "md:col-span-2 xl:col-span-3" : ""}>
-      <label htmlFor={field.name} className="mb-2 block text-sm font-semibold text-slate-700">
+      <label htmlFor={field.name} className="mb-1.5 block text-xs font-medium text-text-secondary uppercase tracking-wide">
         {field.label}
       </label>
 
@@ -75,7 +77,7 @@ const FormField = ({ field, value, onChange }) => {
         <input {...commonProps} type={field.type || "text"} />
       )}
 
-      {field.helperText && <p className="mt-2 text-xs text-slate-500">{field.helperText}</p>}
+      {field.helperText && <p className="mt-1.5 text-xs text-text-muted">{field.helperText}</p>}
     </div>
   );
 };
@@ -84,41 +86,41 @@ const DetailModal = ({ open, loading, record, title, onClose, detailFields }) =>
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/35 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-2xl overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-2xl">
-        <div className="flex items-start justify-between bg-gradient-to-r from-cyan-700 via-cyan-600 to-teal-600 px-6 py-5 text-white">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <div className="w-full max-w-2xl overflow-hidden rounded-card border border-border bg-card shadow-card-hover">
+        <div className="flex items-start justify-between border-b border-border bg-primary px-6 py-5 text-white">
           <div>
-            <p className="text-xs uppercase tracking-[0.3em] text-cyan-100">Consultation</p>
-            <h3 className="mt-1 text-2xl font-semibold">{title}</h3>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-white/50">Consultation</p>
+            <h3 className="mt-0.5 text-lg font-semibold">{title}</h3>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-xl border border-white/20 bg-white/10 p-2 text-white transition hover:bg-white/20"
+            className="rounded-lg border border-white/20 bg-white/10 p-2 text-white hover:bg-white/20 transition-colors"
           >
-            <X size={18} />
+            <X size={16} />
           </button>
         </div>
 
-        <div className="p-6">
+        <div className="p-5">
           {loading ? (
-            <div className="flex items-center justify-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-10 text-slate-600">
-              <RefreshCw className="animate-spin" size={18} />
-              <span>Chargement des details...</span>
+            <div className="flex items-center justify-center gap-3 rounded-card border border-dashed border-border bg-gray-50 px-4 py-10 text-text-secondary">
+              <RefreshCw className="animate-spin" size={16} />
+              <span className="text-sm">Chargement des details...</span>
             </div>
           ) : !record ? (
-            <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+            <div className="rounded-card border-l-4 border-medical-danger bg-medical-danger-bg px-4 py-3 text-sm text-medical-danger">
               Impossible de charger les details.
             </div>
           ) : (
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-3 md:grid-cols-2">
               {detailFields.map((field) => {
                 const value = field.render ? field.render(record) : record?.[field.name];
 
                 return (
-                  <div key={field.label} className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
-                    <p className="text-xs uppercase tracking-wide text-slate-500">{field.label}</p>
-                    <p className="mt-2 break-words text-sm font-medium text-slate-800">{value || "Non renseigne"}</p>
+                  <div key={field.label} className="rounded-lg border border-border bg-gray-50 px-4 py-3">
+                    <p className="text-xs uppercase tracking-wide text-text-secondary">{field.label}</p>
+                    <p className="mt-1.5 break-words text-sm font-medium text-text-primary">{value || "Non renseigne"}</p>
                   </div>
                 );
               })}
@@ -131,14 +133,14 @@ const DetailModal = ({ open, loading, record, title, onClose, detailFields }) =>
 };
 
 const SummaryCard = ({ label, value, hint, icon }) => (
-  <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+  <div className="bg-card rounded-card border border-border shadow-card p-5">
     <div className="flex items-start justify-between gap-3">
       <div>
-        <p className="text-xs uppercase tracking-wide text-slate-500">{label}</p>
-        <p className="mt-1 text-3xl font-bold text-slate-900">{value}</p>
-        {hint ? <p className="mt-1 text-xs text-slate-500">{hint}</p> : null}
+        <p className="text-xs uppercase tracking-wide text-text-secondary">{label}</p>
+        <p className="mt-2 text-3xl font-semibold text-text-primary">{value}</p>
+        {hint ? <p className="mt-1 text-xs text-text-secondary">{hint}</p> : null}
       </div>
-      <div className="rounded-xl bg-cyan-50 p-2 text-cyan-700">{icon}</div>
+      <div className="rounded-lg bg-accent-light p-2.5 text-accent flex-shrink-0">{icon}</div>
     </div>
   </div>
 );
@@ -381,95 +383,92 @@ function AdminEntityPage({
     const submitHandler = isEdit ? handleEditSubmit : handleCreateSubmit;
 
     return (
-      <Card className="overflow-hidden border-slate-200/90 bg-white/95 shadow-xl shadow-cyan-900/5">
-        <CardContent className="p-8">
-          <div className="mb-8 flex items-start gap-4">
-            <div className="rounded-2xl bg-gradient-to-br from-cyan-600 to-teal-600 p-3 text-white shadow-lg">
-              {isEdit ? <Pencil size={24} /> : <Plus size={24} />}
-            </div>
-            <div>
-              <h2 className="text-2xl font-semibold text-slate-900">
-                {isEdit ? `Modifier ${entityLabel.toLowerCase()}` : `Ajouter ${entityLabel.toLowerCase()}`}
-              </h2>
-              <p className="mt-1 text-sm text-slate-500">
-                {isEdit
-                  ? "Mettez a jour les informations principales puis sauvegardez."
-                  : "Renseignez les informations du compte pour le rendre utilisable immediatement."}
-              </p>
-            </div>
+      <div className="bg-card rounded-card border border-border shadow-card p-5">
+        <div className="mb-6 flex items-start gap-4">
+          <div className="rounded-lg bg-accent-light p-2.5 text-accent flex-shrink-0">
+            {isEdit ? <Pencil size={20} /> : <Plus size={20} />}
           </div>
+          <div>
+            <h2 className="text-base font-semibold text-text-primary">
+              {isEdit ? `Modifier ${entityLabel.toLowerCase()}` : `Ajouter ${entityLabel.toLowerCase()}`}
+            </h2>
+            <p className="mt-0.5 text-sm text-text-secondary">
+              {isEdit
+                ? "Mettez a jour les informations principales puis sauvegardez."
+                : "Renseignez les informations du compte pour le rendre utilisable immediatement."}
+            </p>
+          </div>
+        </div>
 
-          <form onSubmit={submitHandler} className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-            {relevantFields.map((field) => (
-              <FormField key={field.name} field={field} value={values[field.name]} onChange={onChange} />
-            ))}
+        <form onSubmit={submitHandler} className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {relevantFields.map((field) => (
+            <FormField key={field.name} field={field} value={values[field.name]} onChange={onChange} />
+          ))}
 
-            <div className="md:col-span-2 xl:col-span-3 flex flex-wrap justify-end gap-3 pt-2">
-              {isEdit && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                    setEditingId(null);
-                    setEditForm(editDefaults);
-                    setActiveTab("list");
-                  }}
-                >
-                  Annuler
-                </Button>
-              )}
-
-              <Button type="submit" variant="primary" isLoading={saving}>
-                {isEdit ? "Sauvegarder" : "Creer le compte"}
+          <div className="md:col-span-2 xl:col-span-3 flex flex-wrap justify-end gap-3 pt-2">
+            {isEdit && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setEditingId(null);
+                  setEditForm(editDefaults);
+                  setActiveTab("list");
+                }}
+              >
+                Annuler
               </Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
+            )}
+
+            <Button type="submit" variant="primary" isLoading={saving}>
+              {isEdit ? "Sauvegarder" : "Creer le compte"}
+            </Button>
+          </div>
+        </form>
+      </div>
     );
   };
 
   return (
-    <div className="space-y-8">
-      <section className="rounded-3xl bg-gradient-to-r from-cyan-700 via-cyan-600 to-teal-600 p-6 text-white shadow-xl">
-        <p className="text-xs uppercase tracking-wider text-cyan-100">Module administrateur</p>
-        <h1 className="mt-1 text-3xl font-bold">{title}</h1>
-        <p className="mt-1 text-sm text-cyan-100">{description}</p>
-      </section>
+    <div className="space-y-5">
 
       {message && (
-        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+        <div className="rounded-card border-l-4 border-medical-success bg-medical-success-bg px-4 py-3 text-sm text-medical-success">
           {message}
         </div>
       )}
 
       {error && (
-        <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>
+        <div className="rounded-card border-l-4 border-medical-danger bg-medical-danger-bg px-4 py-3 text-sm text-medical-danger">
+          {error}
+        </div>
       )}
 
+      {/* Summary cards */}
       <section className="grid gap-4 md:grid-cols-3">
         <SummaryCard
           label={`Total ${entityLabelPlural.toLowerCase()}`}
           value={totalCount}
           hint="Comptes enregistres"
-          icon={<Icon size={18} />}
+          icon={<Icon size={17} />}
         />
         <SummaryCard
           label="Comptes actifs"
           value={activeCount}
           hint={`${Math.max(totalCount - activeCount, 0)} inactifs`}
-          icon={<BadgeCheck size={18} />}
+          icon={<BadgeCheck size={17} />}
         />
         <SummaryCard
           label="Resultats filtres"
           value={filteredRecords.length}
           hint="Liste visible actuelle"
-          icon={<Search size={18} />}
+          icon={<Search size={17} />}
         />
       </section>
 
+      {/* Tab bar */}
       <section className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div className="inline-flex w-fit rounded-2xl border border-slate-200 bg-white/90 p-2 shadow-sm">
+        <div className="inline-flex w-fit rounded-card border border-border bg-gray-50 p-1.5 shadow-card">
           {[
             { key: "list", label: `Liste des ${entityLabelPlural.toLowerCase()}` },
             { key: "add", label: `Ajouter ${entityLabel.toLowerCase()}` },
@@ -479,10 +478,10 @@ function AdminEntityPage({
               key={tab.key}
               type="button"
               onClick={() => setActiveTab(tab.key)}
-              className={`rounded-xl px-4 py-2.5 text-sm font-semibold transition ${
+              className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
                 activeTab === tab.key
-                  ? "bg-cyan-700 text-white shadow-lg shadow-cyan-900/10"
-                  : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                  ? "bg-primary text-white"
+                  : "text-text-secondary hover:text-text-primary hover:bg-gray-100"
               }`}
             >
               {tab.label}
@@ -490,7 +489,7 @@ function AdminEntityPage({
           ))}
         </div>
 
-        <Button type="button" variant="outline" leftIcon={<RefreshCw size={16} />} onClick={loadRecords}>
+        <Button type="button" variant="outline" leftIcon={<RefreshCw size={15} />} onClick={loadRecords}>
           Actualiser
         </Button>
       </section>
@@ -500,132 +499,126 @@ function AdminEntityPage({
 
       {activeTab === "list" && (
         <>
-          <section className="grid gap-4 lg:grid-cols-[1.2fr_auto_auto]">
+          {/* Search + filter */}
+          <section className="grid gap-3 lg:grid-cols-[1fr_auto_auto]">
             <div className="relative">
-              <Search className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+              <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" size={16} />
               <input
                 type="text"
                 value={searchTerm}
                 onChange={(event) => setSearchTerm(event.target.value)}
                 placeholder={`Rechercher ${entityLabel.toLowerCase()}...`}
-                className="w-full rounded-2xl border border-slate-200 bg-white px-12 py-3 text-sm text-slate-900 shadow-sm outline-none transition focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100"
+                className={`${inputCls} pl-10`}
               />
             </div>
 
             <select
               value={statusFilter}
               onChange={(event) => setStatusFilter(event.target.value)}
-              className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm outline-none transition focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100"
+              className={inputCls}
             >
               <option value="all">Tous les statuts</option>
               <option value="active">Actifs uniquement</option>
               <option value="inactive">Inactifs uniquement</option>
             </select>
 
-            <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-500 shadow-sm">
+            <div className="rounded-lg border border-border bg-gray-50 px-4 py-2.5 text-sm text-text-secondary">
               {filteredRecords.length} visible(s)
             </div>
           </section>
 
           {loadingList ? (
-            <Card className="border-slate-200/90 bg-white/95 shadow-sm">
-              <CardContent className="flex items-center justify-center gap-3 px-6 py-16 text-slate-600">
-                <RefreshCw className="animate-spin" size={18} />
-                <span>Chargement en cours...</span>
-              </CardContent>
-            </Card>
+            <div className="flex items-center justify-center gap-3 rounded-card border border-dashed border-border bg-gray-50 px-4 py-16 text-text-secondary">
+              <RefreshCw className="animate-spin" size={16} />
+              <span className="text-sm">Chargement en cours...</span>
+            </div>
           ) : filteredRecords.length === 0 ? (
-            <Card className="border-slate-200/90 bg-white/95 shadow-sm">
-              <CardContent className="px-6 py-16 text-center">
-                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-slate-100 text-slate-400">
-                  <ShieldAlert size={28} />
-                </div>
-                <h3 className="mt-5 text-xl font-semibold text-slate-800">Aucun resultat</h3>
-                <p className="mt-2 text-sm text-slate-500">
-                  Modifiez la recherche ou ajoutez un nouveau compte {entityLabel.toLowerCase()}.
-                </p>
-              </CardContent>
-            </Card>
+            <div className="rounded-card border border-dashed border-border bg-gray-50 px-4 py-16 text-center">
+              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-gray-100 text-text-muted">
+                <ShieldAlert size={22} />
+              </div>
+              <h3 className="text-sm font-semibold text-text-primary">Aucun resultat</h3>
+              <p className="mt-1 text-sm text-text-secondary">
+                Modifiez la recherche ou ajoutez un nouveau compte {entityLabel.toLowerCase()}.
+              </p>
+            </div>
           ) : (
-            <section className="grid gap-5 xl:grid-cols-2">
+            <section className="grid gap-4 xl:grid-cols-2">
               {filteredRecords.map((record) => (
-                <Card key={getRecordId(record)} className="overflow-hidden border-slate-200/90 bg-white/95 shadow-md">
-                  <CardContent className="p-0">
-                    <div className="px-4 pt-4">
-                      <div className="rounded-2xl bg-gradient-to-r from-cyan-700 via-cyan-600 to-teal-600 px-4 py-3 text-white shadow-sm">
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="min-w-0 flex items-start gap-4">
-                          <div className="rounded-2xl bg-white/20 p-2.5 backdrop-blur-sm">
-                            <Icon size={20} />
-                          </div>
-                          <div className="min-w-0">
-                            <h3 className="break-words text-xl font-semibold leading-tight">{getRecordTitle(record)}</h3>
-                            <p className="mt-0.5 break-all text-sm text-cyan-100">{getRecordSubtitle(record)}</p>
-                          </div>
+                <div key={getRecordId(record)} className="bg-card rounded-card border border-border shadow-card overflow-hidden">
+                  {/* Card header */}
+                  <div className="bg-primary px-5 py-4">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex items-start gap-3 min-w-0">
+                        <div className="rounded-lg bg-white/15 p-2 flex-shrink-0">
+                          <Icon size={18} className="text-white" />
                         </div>
-
-                        <div
-                          className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold ${
-                            isActiveRecord(record)
-                              ? "border-emerald-200/60 bg-emerald-400/15 text-emerald-50"
-                              : "border-rose-200/60 bg-rose-400/15 text-rose-50"
-                          }`}
-                        >
-                          {isActiveRecord(record) ? <BadgeCheck size={14} /> : <UserX size={14} />}
-                          {isActiveRecord(record) ? "Actif" : "Inactif"}
+                        <div className="min-w-0">
+                          <h3 className="text-base font-semibold text-white leading-tight break-words">
+                            {getRecordTitle(record)}
+                          </h3>
+                          <p className="mt-0.5 text-xs text-white/60 break-all">{getRecordSubtitle(record)}</p>
                         </div>
                       </div>
+
+                      <span
+                        className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium flex-shrink-0 ${
+                          isActiveRecord(record)
+                            ? "border-white/20 bg-white/10 text-white"
+                            : "border-medical-danger/20 bg-medical-danger-bg text-medical-danger"
+                        }`}
+                      >
+                        {isActiveRecord(record) ? <BadgeCheck size={12} /> : <UserX size={12} />}
+                        {isActiveRecord(record) ? "Actif" : "Inactif"}
+                      </span>
                     </div>
+                  </div>
+
+                  {/* Card body */}
+                  <div className="p-5 space-y-4">
+                    <div className="grid gap-2.5 sm:grid-cols-2">
+                      {summaryFields.map((field) => (
+                        <div key={field.label} className="rounded-lg border border-border bg-gray-50 px-3 py-2.5">
+                          <p className="text-[10px] uppercase tracking-wide text-text-secondary">{field.label}</p>
+                          <p className="mt-1 break-words text-sm font-medium text-text-primary">{field.render(record)}</p>
+                        </div>
+                      ))}
                     </div>
 
-                    <div className="space-y-4 p-5">
-                      <div className="grid gap-3 sm:grid-cols-2">
-                        {summaryFields.map((field) => (
-                          <div key={field.label} className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-                            <p className="text-[11px] uppercase tracking-wide text-slate-500">{field.label}</p>
-                            <p className="mt-1 break-words text-sm font-medium text-slate-800">{field.render(record)}</p>
-                          </div>
-                        ))}
-                      </div>
-
-                      <div className="rounded-2xl border border-slate-200 bg-cyan-50/60 px-4 py-3 text-sm text-cyan-800">
-                        Cree le {formatDate(record.created_at)}
-                      </div>
-
-                      <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-                        <Button type="button" variant="outline" leftIcon={<Eye size={15} />} onClick={() => handleViewDetails(record)}>
-                          Voir
-                        </Button>
-                        <Button
-                          type="button"
-                          variant={isActiveRecord(record) ? "outline" : "success"}
-                          leftIcon={<Activity size={15} />}
-                          onClick={() => handleToggleStatus(record)}
-                        >
-                          {isActiveRecord(record) ? "Desactiver" : "Activer"}
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          leftIcon={<Pencil size={15} />}
-                          onClick={() => handleEditStart(record)}
-                          className="!border-emerald-500 !bg-white !text-emerald-600 hover:!border-emerald-600 hover:!bg-emerald-50 hover:!text-emerald-700 focus-visible:!ring-emerald-500"
-                        >
-                          Modifier
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          leftIcon={<Trash2 size={15} />}
-                          onClick={() => handleDelete(record)}
-                          className="!border-rose-500 !bg-white !text-rose-600 hover:!border-rose-600 hover:!bg-rose-50 hover:!text-rose-700 focus-visible:!ring-rose-500"
-                        >
-                          Supprimer
-                        </Button>
-                      </div>
+                    <div className="rounded-lg border border-accent-light bg-accent-light/40 px-3 py-2.5 text-xs text-accent">
+                      Cree le {formatDate(record.created_at)}
                     </div>
-                  </CardContent>
-                </Card>
+
+                    <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+                      <Button type="button" variant="outline" size="sm" leftIcon={<Eye size={14} />} onClick={() => handleViewDetails(record)}>
+                        Voir
+                      </Button>
+                      <Button
+                        type="button"
+                        variant={isActiveRecord(record) ? "outline" : "success"}
+                        size="sm"
+                        leftIcon={<Activity size={14} />}
+                        onClick={() => handleToggleStatus(record)}
+                      >
+                        {isActiveRecord(record) ? "Desactiver" : "Activer"}
+                      </Button>
+                      <button
+                        type="button"
+                        onClick={() => handleEditStart(record)}
+                        className="inline-flex items-center justify-center gap-1.5 h-8 px-3 rounded-lg border border-medical-success bg-medical-success-bg text-medical-success text-xs font-medium hover:bg-green-100 transition-colors"
+                      >
+                        <Pencil size={13} /> Modifier
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(record)}
+                        className="inline-flex items-center justify-center gap-1.5 h-8 px-3 rounded-lg border border-medical-danger bg-medical-danger-bg text-medical-danger text-xs font-medium hover:bg-red-100 transition-colors"
+                      >
+                        <Trash2 size={13} /> Supprimer
+                      </button>
+                    </div>
+                  </div>
+                </div>
               ))}
             </section>
           )}

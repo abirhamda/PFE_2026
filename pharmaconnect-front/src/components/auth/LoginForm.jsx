@@ -1,4 +1,15 @@
-import { ArrowLeft, KeyRound, Lock, Mail, ShieldCheck, UserPlus } from "lucide-react";
+import {
+  ArrowLeft,
+  CalendarDays,
+  FileText,
+  KeyRound,
+  Lock,
+  Mail,
+  ShieldCheck,
+  Stethoscope,
+  UserPlus,
+  Users,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
@@ -16,13 +27,55 @@ const initialRegisterForm = {
   city: "",
 };
 
+const inputCls =
+  "w-full rounded-lg border border-border bg-card px-3 py-2.5 text-sm text-text-primary placeholder-text-muted outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/30";
+
+/* Map role slug → features shown on left panel */
+const ROLE_FEATURES = {
+  medecin: [
+    { icon: CalendarDays, label: "Gestion des rendez-vous" },
+    { icon: Users,        label: "Dossiers patients & fiches" },
+    { icon: FileText,     label: "Création d'ordonnances" },
+    { icon: Stethoscope,  label: "Analyse IA radiologique" },
+  ],
+  secretaire: [
+    { icon: CalendarDays, label: "Planning du cabinet" },
+    { icon: Users,        label: "Registre des patients" },
+    { icon: FileText,     label: "Suivi des ordonnances" },
+  ],
+  pharmacien: [
+    { icon: FileText,     label: "Consultation d'ordonnances" },
+    { icon: ShieldCheck,  label: "Gestion du stock" },
+    { icon: Users,        label: "Réseau fournisseurs" },
+  ],
+  admin: [
+    { icon: ShieldCheck,  label: "Gestion des médecins" },
+    { icon: Users,        label: "Gestion des pharmacies" },
+    { icon: FileText,     label: "Tableau de bord admin" },
+  ],
+  patient: [
+    { icon: CalendarDays, label: "Réservation de rendez-vous" },
+    { icon: FileText,     label: "Mes ordonnances" },
+    { icon: Users,        label: "Recherche de médecins" },
+  ],
+  general: [
+    { icon: Stethoscope,  label: "Espace médecin & secrétaire" },
+    { icon: ShieldCheck,  label: "Espace pharmacien & admin" },
+    { icon: Users,        label: "Espace patient & fournisseur" },
+  ],
+};
+
 const LoginForm = ({ space, defaultMode = "login" }) => {
   const navigate = useNavigate();
   const { login } = useAuth();
 
   const canRegister = Boolean(space?.allowRegister);
   const resolvedDefaultMode =
-    defaultMode === "forgot" ? "forgot" : canRegister && defaultMode === "register" ? "register" : "login";
+    defaultMode === "forgot"
+      ? "forgot"
+      : canRegister && defaultMode === "register"
+        ? "register"
+        : "login";
 
   const [mode, setMode] = useState(resolvedDefaultMode);
   const [email, setEmail] = useState("");
@@ -47,10 +100,7 @@ const LoginForm = ({ space, defaultMode = "login" }) => {
     setMode(nextMode);
     setError("");
     setSuccess("");
-
-    if (nextMode !== "forgot") {
-      setResetStep("request");
-    }
+    if (nextMode !== "forgot") setResetStep("request");
   };
 
   const openForgotMode = () => {
@@ -67,15 +117,13 @@ const LoginForm = ({ space, defaultMode = "login" }) => {
     setError("");
     setSuccess("");
     setIsLoading(true);
-
     try {
       const response = await api.post("/login", { email, password });
       const { user, token } = response.data;
-
       login({ ...user, token });
       navigate(ROLE_HOME_PATHS[user?.role] || "/redirect", { replace: true });
     } catch (loginError) {
-      setError(loginError.response?.data?.error || "Echec de connexion");
+      setError(loginError.response?.data?.error || "Échec de connexion");
     } finally {
       setIsLoading(false);
     }
@@ -86,10 +134,9 @@ const LoginForm = ({ space, defaultMode = "login" }) => {
     setError("");
     setSuccess("");
     setIsLoading(true);
-
     try {
       await api.post("/patient-portal/register", registerForm);
-      setSuccess("Compte patient cree. Vous pouvez maintenant vous connecter.");
+      setSuccess("Compte patient créé. Vous pouvez maintenant vous connecter.");
       setRegisterForm(initialRegisterForm);
       setMode("login");
       setEmail(registerForm.email);
@@ -105,16 +152,14 @@ const LoginForm = ({ space, defaultMode = "login" }) => {
     setError("");
     setSuccess("");
     setIsLoading(true);
-
     const targetEmail = resetEmail.trim().toLowerCase();
     setResetEmail(targetEmail);
-
     try {
       const response = await api.post("/forgot-password", { email: targetEmail });
-      setSuccess(response.data?.message || "Si un compte existe avec cet email, un code a ete envoye.");
+      setSuccess(response.data?.message || "Si un compte existe avec cet email, un code a été envoyé.");
       setResetStep("reset");
     } catch (resetError) {
-      setError(resetError.response?.data?.error || "Demande de reinitialisation impossible");
+      setError(resetError.response?.data?.error || "Demande de réinitialisation impossible");
     } finally {
       setIsLoading(false);
     }
@@ -124,22 +169,18 @@ const LoginForm = ({ space, defaultMode = "login" }) => {
     event.preventDefault();
     setError("");
     setSuccess("");
-
     if (resetPassword !== resetPasswordConfirmation) {
       setError("Les mots de passe ne correspondent pas");
       return;
     }
-
     setIsLoading(true);
-
     try {
       const response = await api.post("/reset-password", {
         email: resetEmail.trim().toLowerCase(),
         code: resetCode,
         newPassword: resetPassword,
       });
-
-      setSuccess(response.data?.message || "Mot de passe reinitialise avec succes");
+      setSuccess(response.data?.message || "Mot de passe réinitialisé avec succès");
       setEmail(resetEmail.trim().toLowerCase());
       setPassword("");
       setResetCode("");
@@ -148,7 +189,7 @@ const LoginForm = ({ space, defaultMode = "login" }) => {
       setResetStep("request");
       setMode("login");
     } catch (resetError) {
-      setError(resetError.response?.data?.error || "Reinitialisation impossible");
+      setError(resetError.response?.data?.error || "Réinitialisation impossible");
     } finally {
       setIsLoading(false);
     }
@@ -167,288 +208,342 @@ const LoginForm = ({ space, defaultMode = "login" }) => {
     if (isLoading) {
       if (mode === "login") return "Connexion...";
       if (mode === "register") return "Inscription...";
-      return resetStep === "request" ? "Envoi du code..." : "Reinitialisation...";
+      return resetStep === "request" ? "Envoi du code..." : "Réinitialisation...";
     }
-
     if (mode === "login") return "Se connecter";
-    if (mode === "register") return "Creer mon compte";
-    return resetStep === "request" ? "Envoyer le code" : "Reinitialiser le mot de passe";
+    if (mode === "register") return "Créer mon compte";
+    return resetStep === "request" ? "Envoyer le code" : "Réinitialiser le mot de passe";
   })();
 
-  const headerIcon =
-    mode === "login" ? <ShieldCheck size={22} /> : mode === "forgot" ? <KeyRound size={22} /> : <UserPlus size={22} />;
+  const modeIcon =
+    mode === "login"
+      ? <ShieldCheck size={22} />
+      : mode === "forgot"
+        ? <KeyRound size={22} />
+        : <UserPlus size={22} />;
+
+  const features = ROLE_FEATURES[space?.slug] || ROLE_FEATURES.general;
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-slate-950 px-4 py-10">
-      <div className="pointer-events-none absolute inset-0">
-        <div className="absolute -top-28 left-1/2 h-72 w-72 -translate-x-1/2 rounded-full bg-cyan-500/25 blur-3xl" />
-        <div className="absolute bottom-0 left-0 h-64 w-64 rounded-full bg-teal-500/20 blur-3xl" />
-        <div className="absolute right-0 top-0 h-64 w-64 rounded-full bg-sky-500/20 blur-3xl" />
-      </div>
+    <div className="min-h-screen bg-page flex items-center justify-center px-4 py-10 font-sans">
+      <div className="w-full max-w-4xl overflow-hidden rounded-card border border-border bg-card shadow-card-hover flex flex-col lg:flex-row">
 
-      <div className="relative w-full max-w-xl overflow-hidden rounded-3xl border border-white/10 bg-white/95 shadow-2xl shadow-slate-900/40">
-        <div className={`bg-gradient-to-r ${space.accentClassName} px-8 py-8 text-white`}>
+        {/* ── LEFT PANEL — branding ─────────────────────── */}
+        <div className="bg-primary lg:w-[42%] flex-shrink-0 flex flex-col px-8 py-10 relative overflow-hidden">
+          {/* Background orbs */}
+          <div className="pointer-events-none absolute -top-16 -right-16 h-48 w-48 rounded-full bg-white/5 blur-3xl" />
+          <div className="pointer-events-none absolute -bottom-12 -left-12 h-40 w-40 rounded-full bg-accent/20 blur-3xl" />
+
+          {/* Logo */}
+          <div className="relative flex items-center gap-3 mb-10">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/15 flex-shrink-0">
+              <Stethoscope size={20} className="text-white" />
+            </div>
+            <div>
+              <p className="text-base font-semibold text-white leading-tight">MediCare</p>
+              <p className="text-[10px] font-medium uppercase tracking-[0.22em] text-white/50 leading-tight">
+                Plateforme médicale
+              </p>
+            </div>
+          </div>
+
+          {/* Title */}
+          <div className="relative flex-1">
+            <div className="mb-2 inline-flex rounded-lg bg-white/15 p-2.5">
+              {modeIcon}
+              <span className="sr-only">{space.title}</span>
+            </div>
+            <h1 className="mt-3 text-2xl font-semibold text-white leading-snug">
+              {space.title}
+            </h1>
+            <p className="mt-2 text-sm text-white/65 leading-relaxed">
+              {space.description}
+            </p>
+
+            {/* Feature list */}
+            <ul className="mt-8 space-y-3">
+              {features.map(({ icon: Icon, label }) => (
+                <li key={label} className="flex items-center gap-3">
+                  <span className="flex h-7 w-7 items-center justify-center rounded-md bg-white/10 flex-shrink-0">
+                    <Icon size={14} className="text-white/80" />
+                  </span>
+                  <span className="text-sm text-white/75">{label}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Back link */}
           <Link
             to="/"
-            className="mb-6 inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.22em] text-white/90 transition hover:bg-white/20"
+            className="relative mt-10 inline-flex items-center gap-2 text-xs font-medium text-white/50 hover:text-white/80 transition-colors"
           >
-            <ArrowLeft size={14} />
-            Retour
+            <ArrowLeft size={13} />
+            Retour à l'accueil
           </Link>
-
-          <div className="mb-3 inline-flex rounded-xl bg-white/20 p-2.5">
-            {headerIcon}
-          </div>
-          <h1 className="text-3xl font-semibold">{space.title}</h1>
-          <p className="mt-2 text-sm leading-6 text-cyan-50">{space.description}</p>
         </div>
 
-        <div className="border-b border-slate-200 px-8 py-4">
-          <div className="flex flex-wrap gap-2">
+        {/* ── RIGHT PANEL — form ────────────────────────── */}
+        <div className="flex flex-col flex-1">
+          {/* Tabs */}
+          <div className="border-b border-border px-8 py-4 bg-gray-50/60 flex flex-wrap gap-1">
             <button
               type="button"
               onClick={() => switchMode("login")}
-              className={`rounded-xl px-3 py-2 text-sm font-semibold ${
-                mode === "login" ? "bg-cyan-100 text-cyan-700" : "text-slate-600 hover:bg-slate-100"
+              className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+                mode === "login"
+                  ? "bg-primary text-white"
+                  : "text-text-secondary hover:bg-gray-100 hover:text-text-primary"
               }`}
             >
               Connexion
             </button>
 
-            {canRegister ? (
+            {canRegister && (
               <button
                 type="button"
                 onClick={() => switchMode("register")}
-                className={`rounded-xl px-3 py-2 text-sm font-semibold ${
-                  mode === "register" ? "bg-cyan-100 text-cyan-700" : "text-slate-600 hover:bg-slate-100"
+                className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+                  mode === "register"
+                    ? "bg-primary text-white"
+                    : "text-text-secondary hover:bg-gray-100 hover:text-text-primary"
                 }`}
               >
                 Inscription patient
               </button>
-            ) : null}
+            )}
 
-            <Link to="/" className="rounded-xl px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100">
+            <Link
+              to="/"
+              className="rounded-lg px-4 py-2 text-sm font-medium text-text-secondary hover:bg-gray-100 hover:text-text-primary transition-colors"
+            >
               Annuaire public
             </Link>
           </div>
-        </div>
 
-        <form onSubmit={formSubmitHandler} className="space-y-5 px-8 py-7">
-          {error ? (
-            <p className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p>
-          ) : null}
-          {success ? (
-            <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
-              {success}
-            </p>
-          ) : null}
+          {/* Form */}
+          <form onSubmit={formSubmitHandler} className="flex-1 space-y-5 px-8 py-7">
 
-          {mode === "login" ? (
-            <>
-              <label className="block space-y-2">
-                <span className="text-sm font-medium text-slate-700">Email</span>
-                <div className="relative">
-                  <Mail className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={17} />
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(event) => setEmail(event.target.value)}
-                    required
-                    placeholder="nom@exemple.com"
-                    className="w-full rounded-xl border border-slate-200 bg-white px-10 py-2.5 text-sm text-slate-900 outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100"
-                  />
-                </div>
-              </label>
-
-              <label className="block space-y-2">
-                <span className="text-sm font-medium text-slate-700">Mot de passe</span>
-                <div className="relative">
-                  <Lock className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={17} />
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    value={password}
-                    onChange={(event) => setPassword(event.target.value)}
-                    required
-                    placeholder="Votre mot de passe"
-                    className="w-full rounded-xl border border-slate-200 bg-white px-10 py-2.5 pr-20 text-sm text-slate-900 outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword((prev) => !prev)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-cyan-700"
-                  >
-                    {showPassword ? "Masquer" : "Afficher"}
-                  </button>
-                </div>
-              </label>
-
-              <div className="-mt-2 text-right">
-                <button
-                  type="button"
-                  onClick={openForgotMode}
-                  className="text-sm font-semibold text-cyan-700 transition hover:text-cyan-800"
-                >
-                  Mot de passe oublie ?
-                </button>
+            {/* Alerts */}
+            {error && (
+              <div className="rounded-card border-l-4 border-medical-danger bg-medical-danger-bg px-4 py-3 text-sm text-medical-danger">
+                {error}
               </div>
-            </>
-          ) : mode === "forgot" ? (
-            <>
-              <label className="block space-y-2">
-                <span className="text-sm font-medium text-slate-700">Email</span>
-                <div className="relative">
-                  <Mail className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={17} />
-                  <input
-                    type="email"
-                    value={resetEmail}
-                    onChange={(event) => setResetEmail(event.target.value)}
-                    required
-                    readOnly={resetStep === "reset"}
-                    placeholder="nom@exemple.com"
-                    className="w-full rounded-xl border border-slate-200 bg-white px-10 py-2.5 text-sm text-slate-900 outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100"
-                  />
-                </div>
-              </label>
+            )}
+            {success && (
+              <div className="rounded-card border-l-4 border-medical-success bg-medical-success-bg px-4 py-3 text-sm text-medical-success">
+                {success}
+              </div>
+            )}
 
-              {resetStep === "reset" ? (
-                <>
+            {/* ── Login ── */}
+            {mode === "login" && (
+              <>
+                <label className="block space-y-1.5">
+                  <span className="block text-xs font-medium text-text-secondary uppercase tracking-wide">
+                    Email
+                  </span>
+                  <div className="relative">
+                    <Mail
+                      className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-muted"
+                      size={16}
+                    />
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                      placeholder="nom@exemple.com"
+                      autoComplete="email"
+                      className={`${inputCls} pl-9`}
+                    />
+                  </div>
+                </label>
+
+                <label className="block space-y-1.5">
+                  <span className="block text-xs font-medium text-text-secondary uppercase tracking-wide">
+                    Mot de passe
+                  </span>
+                  <div className="relative">
+                    <Lock
+                      className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-muted"
+                      size={16}
+                    />
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                      placeholder="Votre mot de passe"
+                      autoComplete="current-password"
+                      className={`${inputCls} pl-9 pr-20`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((p) => !p)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-accent hover:text-primary transition-colors"
+                    >
+                      {showPassword ? "Masquer" : "Afficher"}
+                    </button>
+                  </div>
+                </label>
+
+                <div className="text-right -mt-2">
                   <button
                     type="button"
-                    onClick={() => {
-                      setResetStep("request");
-                      setSuccess("");
-                      setError("");
-                    }}
-                    className="-mt-2 text-sm font-semibold text-cyan-700 transition hover:text-cyan-800"
+                    onClick={openForgotMode}
+                    className="text-sm font-medium text-accent hover:text-primary transition-colors"
                   >
-                    Changer l'email
+                    Mot de passe oublié ?
                   </button>
+                </div>
+              </>
+            )}
 
-                  <label className="block space-y-2">
-                    <span className="text-sm font-medium text-slate-700">Code recu par email</span>
-                    <input
-                      value={resetCode}
-                      onChange={(event) => setResetCode(event.target.value.replace(/\D/g, "").slice(0, 6))}
-                      required
-                      inputMode="numeric"
-                      maxLength={6}
-                      placeholder="000000"
-                      className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-center text-lg font-semibold tracking-[0.35em] text-slate-900 outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100"
+            {/* ── Forgot password ── */}
+            {mode === "forgot" && (
+              <>
+                <label className="block space-y-1.5">
+                  <span className="block text-xs font-medium text-text-secondary uppercase tracking-wide">
+                    Email
+                  </span>
+                  <div className="relative">
+                    <Mail
+                      className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-muted"
+                      size={16}
                     />
-                  </label>
+                    <input
+                      type="email"
+                      value={resetEmail}
+                      onChange={(e) => setResetEmail(e.target.value)}
+                      required
+                      readOnly={resetStep === "reset"}
+                      placeholder="nom@exemple.com"
+                      className={`${inputCls} pl-9 ${resetStep === "reset" ? "bg-gray-50 text-text-muted cursor-not-allowed" : ""}`}
+                    />
+                  </div>
+                </label>
 
-                  <label className="block space-y-2">
-                    <span className="text-sm font-medium text-slate-700">Nouveau mot de passe</span>
-                    <div className="relative">
-                      <Lock className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={17} />
+                {resetStep === "reset" && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => { setResetStep("request"); setSuccess(""); setError(""); }}
+                      className="text-sm font-medium text-accent hover:text-primary transition-colors -mt-2"
+                    >
+                      Changer l'email
+                    </button>
+
+                    <label className="block space-y-1.5">
+                      <span className="block text-xs font-medium text-text-secondary uppercase tracking-wide">
+                        Code reçu par email
+                      </span>
                       <input
-                        type="password"
-                        value={resetPassword}
-                        onChange={(event) => setResetPassword(event.target.value)}
+                        value={resetCode}
+                        onChange={(e) => setResetCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
                         required
-                        minLength={8}
-                        placeholder="Nouveau mot de passe"
-                        className="w-full rounded-xl border border-slate-200 bg-white px-10 py-2.5 text-sm text-slate-900 outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100"
+                        inputMode="numeric"
+                        maxLength={6}
+                        placeholder="000000"
+                        className={`${inputCls} text-center text-lg font-semibold tracking-[0.35em]`}
                       />
-                    </div>
-                  </label>
+                    </label>
 
-                  <label className="block space-y-2">
-                    <span className="text-sm font-medium text-slate-700">Confirmer le mot de passe</span>
-                    <div className="relative">
-                      <Lock className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={17} />
-                      <input
-                        type="password"
-                        value={resetPasswordConfirmation}
-                        onChange={(event) => setResetPasswordConfirmation(event.target.value)}
-                        required
-                        minLength={8}
-                        placeholder="Confirmer le mot de passe"
-                        className="w-full rounded-xl border border-slate-200 bg-white px-10 py-2.5 text-sm text-slate-900 outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100"
-                      />
-                    </div>
-                  </label>
-                </>
-              ) : null}
-            </>
-          ) : (
-            <div className="grid gap-3 md:grid-cols-2">
-              <input
-                value={registerForm.nom}
-                onChange={(event) => setRegisterForm((prev) => ({ ...prev, nom: event.target.value }))}
-                required
-                placeholder="Nom"
-                className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm"
-              />
-              <input
-                value={registerForm.prenom}
-                onChange={(event) => setRegisterForm((prev) => ({ ...prev, prenom: event.target.value }))}
-                required
-                placeholder="Prenom"
-                className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm"
-              />
-              <input
-                type="email"
-                value={registerForm.email}
-                onChange={(event) => setRegisterForm((prev) => ({ ...prev, email: event.target.value }))}
-                required
-                placeholder="Email"
-                className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm md:col-span-2"
-              />
-              <input
-                type="password"
-                value={registerForm.password}
-                onChange={(event) => setRegisterForm((prev) => ({ ...prev, password: event.target.value }))}
-                required
-                minLength={6}
-                placeholder="Mot de passe"
-                className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm md:col-span-2"
-              />
-              <input
-                value={registerForm.telephone}
-                onChange={(event) => setRegisterForm((prev) => ({ ...prev, telephone: event.target.value }))}
-                placeholder="Telephone"
-                className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm"
-              />
-              <input
-                value={registerForm.cin}
-                onChange={(event) => setRegisterForm((prev) => ({ ...prev, cin: event.target.value }))}
-                placeholder="CIN (optionnel)"
-                className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm"
-              />
-              <input
-                type="date"
-                value={registerForm.date_naissance}
-                onChange={(event) => setRegisterForm((prev) => ({ ...prev, date_naissance: event.target.value }))}
-                className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm"
-              />
-              <input
-                value={registerForm.city}
-                onChange={(event) => setRegisterForm((prev) => ({ ...prev, city: event.target.value }))}
-                placeholder="Ville"
-                className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm"
-              />
-            </div>
-          )}
+                    <label className="block space-y-1.5">
+                      <span className="block text-xs font-medium text-text-secondary uppercase tracking-wide">
+                        Nouveau mot de passe
+                      </span>
+                      <div className="relative">
+                        <Lock className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" size={16} />
+                        <input
+                          type="password"
+                          value={resetPassword}
+                          onChange={(e) => setResetPassword(e.target.value)}
+                          required
+                          minLength={8}
+                          placeholder="Nouveau mot de passe"
+                          className={`${inputCls} pl-9`}
+                        />
+                      </div>
+                    </label>
 
-          <button
-            type="submit"
-            disabled={isLoading}
-            className={`inline-flex w-full items-center justify-center rounded-xl bg-gradient-to-r ${space.accentClassName} px-4 py-2.5 text-sm font-semibold text-white transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-60`}
-          >
-            {submitLabel}
-          </button>
+                    <label className="block space-y-1.5">
+                      <span className="block text-xs font-medium text-text-secondary uppercase tracking-wide">
+                        Confirmer le mot de passe
+                      </span>
+                      <div className="relative">
+                        <Lock className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" size={16} />
+                        <input
+                          type="password"
+                          value={resetPasswordConfirmation}
+                          onChange={(e) => setResetPasswordConfirmation(e.target.value)}
+                          required
+                          minLength={8}
+                          placeholder="Confirmer le mot de passe"
+                          className={`${inputCls} pl-9`}
+                        />
+                      </div>
+                    </label>
+                  </>
+                )}
+              </>
+            )}
 
-          {mode === "forgot" ? (
+            {/* ── Register ── */}
+            {mode === "register" && (
+              <div className="grid gap-3 md:grid-cols-2">
+                {[
+                  { field: "nom",            placeholder: "Nom",              type: "text",     full: false },
+                  { field: "prenom",         placeholder: "Prénom",           type: "text",     full: false },
+                  { field: "email",          placeholder: "Email",            type: "email",    full: true  },
+                  { field: "password",       placeholder: "Mot de passe (6 min)", type: "password", full: true },
+                  { field: "telephone",      placeholder: "Téléphone",        type: "text",     full: false },
+                  { field: "cin",            placeholder: "CIN (optionnel)",  type: "text",     full: false },
+                  { field: "date_naissance", placeholder: "Date de naissance",type: "date",     full: false },
+                  { field: "city",           placeholder: "Ville",            type: "text",     full: false },
+                ].map(({ field, placeholder, type, full }) => (
+                  <input
+                    key={field}
+                    type={type}
+                    value={registerForm[field]}
+                    onChange={(e) =>
+                      setRegisterForm((prev) => ({ ...prev, [field]: e.target.value }))
+                    }
+                    required={["nom","prenom","email","password"].includes(field)}
+                    minLength={field === "password" ? 6 : undefined}
+                    placeholder={placeholder}
+                    className={`${inputCls} ${full ? "md:col-span-2" : ""}`}
+                  />
+                ))}
+              </div>
+            )}
+
+            {/* Submit button */}
             <button
-              type="button"
-              onClick={() => switchMode("login")}
-              className="inline-flex w-full items-center justify-center rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+              type="submit"
+              disabled={isLoading}
+              className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-white hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60 transition-colors"
             >
-              Retour a la connexion
+              {isLoading && (
+                <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.37 0 0 5.37 0 12h4z" />
+                </svg>
+              )}
+              {submitLabel}
             </button>
-          ) : null}
-        </form>
+
+            {mode === "forgot" && (
+              <button
+                type="button"
+                onClick={() => switchMode("login")}
+                className="inline-flex w-full items-center justify-center rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-text-primary hover:bg-gray-50 transition-colors"
+              >
+                Retour à la connexion
+              </button>
+            )}
+          </form>
+        </div>
       </div>
     </div>
   );

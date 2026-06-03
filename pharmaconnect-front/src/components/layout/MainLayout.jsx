@@ -4,10 +4,10 @@ import Navbar from "./Navbar";
 
 const MainLayout = () => {
   return (
-    <div className="min-h-screen bg-app-surface">
-      <div className="flex min-h-screen flex-col">
+    <div className="flex h-screen overflow-hidden bg-page font-sans">
+      <div className="flex flex-col flex-1 overflow-hidden">
         <Navbar onToggleSidebar={() => {}} />
-        <main className="mx-auto w-full max-w-7xl flex-1 p-4 sm:p-6 lg:p-8">
+        <main className="flex-1 overflow-y-auto p-6">
           <Outlet />
         </main>
       </div>

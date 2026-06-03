@@ -9,14 +9,14 @@ import MetricCard from "../../components/modules/MetricCard";
 import ModalPanel from "../../components/modules/ModalPanel";
 import ModuleHero from "../../components/modules/ModuleHero";
 import StatusPill from "../../components/modules/StatusPill";
-import { formatDateTime, getErrorMessage, textareaClassName } from "../../components/modules/moduleUtils";
+import { formatDateTime, getErrorMessage, inputClassName, textareaClassName } from "../../components/modules/moduleUtils";
 import api from "../../lib/api";
 
 const FILTERS = [
-  ["all", "Tous"],
+  ["all",        "Tous"],
   ["partenaire", "Partenaires"],
   ["en_attente", "Demandes en attente"],
-  ["refusee", "Refusees"],
+  ["refusee",    "Refusees"],
   ["disponible", "Disponibles"],
 ];
 
@@ -35,26 +35,20 @@ export default function PharmacistSupplierPage() {
   useEffect(() => {
     const loadDirectory = async () => {
       setLoading(true);
-
       try {
         const response = await api.get("/partnerships/directory", {
           params: deferredSearchTerm.trim() ? { search: deferredSearchTerm.trim() } : undefined,
         });
-
         setItems(Array.isArray(response.data?.items) ? response.data.items : []);
         setStats(response.data?.stats || {});
       } catch (requestError) {
-        setNotice({
-          type: "error",
-          message: getErrorMessage(requestError, "Impossible de charger l'annuaire fournisseur."),
-        });
+        setNotice({ type: "error", message: getErrorMessage(requestError, "Impossible de charger l'annuaire fournisseur.") });
         setItems([]);
         setStats({});
       } finally {
         setLoading(false);
       }
     };
-
     loadDirectory();
   }, [deferredSearchTerm]);
 
@@ -72,80 +66,56 @@ export default function PharmacistSupplierPage() {
   const submitPartnershipRequest = async (event) => {
     event.preventDefault();
     if (!selectedSupplier) return;
-
     setSubmitting(true);
-
     try {
-      await api.post("/partnerships/requests", {
-        supplier_id: selectedSupplier.id,
-        message: message.trim(),
-      });
-
+      await api.post("/partnerships/requests", { supplier_id: selectedSupplier.id, message: message.trim() });
       setNotice({ type: "success", message: "Demande de partenariat envoyee avec succes." });
       setSelectedSupplier(null);
       setMessage("");
-
       const refresh = await api.get("/partnerships/directory", {
         params: deferredSearchTerm.trim() ? { search: deferredSearchTerm.trim() } : undefined,
       });
-
       setItems(Array.isArray(refresh.data?.items) ? refresh.data.items : []);
       setStats(refresh.data?.stats || {});
     } catch (requestError) {
-      setNotice({
-        type: "error",
-        message: getErrorMessage(requestError, "Envoi de la demande impossible."),
-      });
+      setNotice({ type: "error", message: getErrorMessage(requestError, "Envoi de la demande impossible.") });
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <ModuleHero
         eyebrow="Espace pharmacien"
         title="Annuaire fournisseurs et partenariats"
-        description="Identifiez les fournisseurs disponibles, consultez leur profil, envoyez des demandes de partenariat et visualisez votre reseau actif dans le meme langage graphique que le reste de l'application."
+        description="Identifiez les fournisseurs disponibles, consultez leur profil, envoyez des demandes de partenariat et visualisez votre reseau actif."
       />
 
       <InlineAlert message={notice?.message} type={notice?.type || "info"} />
 
-      <section className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
-        <MetricCard icon={Building2} label="Fournisseurs" value={stats.total || 0} helper="Annuaire disponible pour votre pharmacie" tone="cyan" />
-        <MetricCard icon={Store} label="Partenaires" value={stats.partenaires || 0} helper="Relations actives pour vos reapprovisionnements" tone="emerald" />
-        <MetricCard icon={Send} label="En attente" value={stats.en_attente || 0} helper="Demandes de partenariat en cours de reponse" tone="amber" />
-        <MetricCard icon={UserRound} label="Refusees" value={stats.refuses || 0} helper="Demandes a relancer ou requalifier" tone="rose" />
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <MetricCard icon={Building2} label="Fournisseurs" value={stats.total || 0}        helper="Annuaire disponible pour votre pharmacie"         tone="cyan" />
+        <MetricCard icon={Store}     label="Partenaires"  value={stats.partenaires || 0}  helper="Relations actives pour vos reapprovisionnements"  tone="emerald" />
+        <MetricCard icon={Send}      label="En attente"   value={stats.en_attente || 0}   helper="Demandes de partenariat en cours"                 tone="amber" />
+        <MetricCard icon={UserRound} label="Refusees"     value={stats.refuses || 0}      helper="Demandes a relancer ou requalifier"               tone="rose" />
       </section>
 
-      <Card className="border-slate-200/90 bg-white/95 shadow-md">
+      <Card>
         <CardHeader className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <CardTitle>Reseau fournisseur</CardTitle>
-            <p className="mt-1 text-sm text-slate-500">Vos partenaires sont priorises, puis les fournisseurs disponibles a l'ouverture d'un nouveau partenariat.</p>
+            <p className="mt-0.5 text-xs text-text-secondary">Vos partenaires sont priorises, puis les fournisseurs disponibles.</p>
           </div>
           <div className="flex w-full flex-col gap-3 lg:w-auto lg:flex-row lg:items-center">
-            <div className="relative w-full lg:w-80">
-              <Search className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-              <input
-                type="search"
-                value={searchTerm}
-                onChange={(event) => setSearchTerm(event.target.value)}
-                placeholder="Rechercher un fournisseur..."
-                className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3 pl-11 pr-4 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-cyan-500 focus:bg-white focus:ring-4 focus:ring-cyan-100"
-              />
+            <div className="relative w-full lg:w-72">
+              <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" size={16} />
+              <input type="search" value={searchTerm} onChange={(event) => setSearchTerm(event.target.value)} placeholder="Rechercher un fournisseur..." className={`${inputClassName} pl-9`} />
             </div>
             <div className="flex flex-wrap gap-2">
               {FILTERS.map(([value, label]) => (
-                <button
-                  key={value}
-                  type="button"
-                  onClick={() => setActiveFilter(value)}
-                  className={`rounded-full px-4 py-2 text-sm font-medium transition ${
-                    activeFilter === value
-                      ? "bg-cyan-700 text-white shadow-sm"
-                      : "border border-slate-200 bg-white text-slate-600 hover:border-cyan-300 hover:text-cyan-700"
-                  }`}
+                <button key={value} type="button" onClick={() => setActiveFilter(value)}
+                  className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${activeFilter === value ? "bg-primary text-white" : "border border-border bg-card text-text-secondary hover:text-text-primary"}`}
                 >
                   {label}
                 </button>
@@ -157,58 +127,44 @@ export default function PharmacistSupplierPage() {
           {loading ? (
             <LoadingState message="Chargement des fournisseurs..." />
           ) : filteredItems.length === 0 ? (
-            <EmptyState
-              icon={Building2}
-              title="Aucun fournisseur a afficher"
-              description={searchTerm ? "Aucun fournisseur ne correspond a cette recherche." : "Le repertoire fournisseur est vide pour le moment."}
-            />
+            <EmptyState icon={Building2} title="Aucun fournisseur a afficher" description={searchTerm ? "Aucun fournisseur ne correspond a cette recherche." : "Le repertoire fournisseur est vide pour le moment."} />
           ) : (
             <div className="grid gap-4 xl:grid-cols-2">
               {filteredItems.map((supplier) => (
-                <article key={supplier.id} className="rounded-3xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-5 shadow-sm">
+                <article key={supplier.id} className="bg-card rounded-card border border-border shadow-card p-5">
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <h3 className="text-lg font-semibold text-slate-900">
+                      <h3 className="text-sm font-semibold text-text-primary">
                         {[supplier.prenom, supplier.nom].filter(Boolean).join(" ") || "Fournisseur"}
                       </h3>
-                      <p className="mt-1 text-sm text-slate-500">Ajoute le {formatDateTime(supplier.created_at)}</p>
+                      <p className="mt-0.5 text-xs text-text-secondary">Ajoute le {formatDateTime(supplier.created_at)}</p>
                     </div>
                     <StatusPill status={supplier.partnership_status === "disponible" ? "disponible_supplier" : supplier.partnership_status} />
                   </div>
 
-                  <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                    <div className="rounded-2xl bg-white px-4 py-3 shadow-sm">
-                      <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-                        <Mail size={14} />
-                        Email
-                      </p>
-                      <p className="mt-2 text-sm font-semibold text-slate-900">{supplier.email || "Non renseigne"}</p>
+                  <div className="mt-4 grid gap-2.5 sm:grid-cols-2">
+                    <div className="rounded-lg bg-gray-50 border border-border px-3 py-2.5">
+                      <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-text-secondary"><Mail size={11} />Email</p>
+                      <p className="mt-1 text-sm font-medium text-text-primary">{supplier.email || "Non renseigne"}</p>
                     </div>
-                    <div className="rounded-2xl bg-white px-4 py-3 shadow-sm">
-                      <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-                        <Phone size={14} />
-                        Telephone
-                      </p>
-                      <p className="mt-2 text-sm font-semibold text-slate-900">{supplier.telephone || "Non renseigne"}</p>
+                    <div className="rounded-lg bg-gray-50 border border-border px-3 py-2.5">
+                      <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-text-secondary"><Phone size={11} />Telephone</p>
+                      <p className="mt-1 text-sm font-medium text-text-primary">{supplier.telephone || "Non renseigne"}</p>
                     </div>
-                    <div className="rounded-2xl bg-white px-4 py-3 shadow-sm sm:col-span-2">
-                      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Produits actifs declares</p>
-                      <p className="mt-2 text-2xl font-semibold text-slate-900">{supplier.active_products || 0}</p>
+                    <div className="rounded-lg bg-gray-50 border border-border px-3 py-2.5 sm:col-span-2">
+                      <p className="text-[10px] font-semibold uppercase tracking-wide text-text-secondary">Produits actifs declares</p>
+                      <p className="mt-1 text-lg font-semibold text-text-primary">{supplier.active_products || 0}</p>
                     </div>
                   </div>
 
                   {supplier.response_note ? (
-                    <div className="mt-4 rounded-2xl bg-slate-50 px-4 py-4 text-sm text-slate-600">{supplier.response_note}</div>
+                    <div className="mt-3 rounded-lg bg-gray-50 border border-border px-3 py-2.5 text-xs text-text-secondary">{supplier.response_note}</div>
                   ) : null}
 
-                  <div className="mt-5 flex flex-wrap gap-3">
-                    <Button type="button" size="sm" variant="outline" onClick={() => setSelectedSupplier(supplier)}>
-                      Voir le profil
-                    </Button>
+                  <div className="mt-4 flex flex-wrap gap-2.5">
+                    <Button type="button" size="sm" variant="outline" onClick={() => setSelectedSupplier(supplier)}>Voir le profil</Button>
                     {supplier.partnership_status === "disponible" || supplier.partnership_status === "refusee" ? (
-                      <Button type="button" size="sm" onClick={() => setSelectedSupplier(supplier)} leftIcon={<Send size={15} />}>
-                        Demander un partenariat
-                      </Button>
+                      <Button type="button" size="sm" onClick={() => setSelectedSupplier(supplier)} leftIcon={<Send size={13} />}>Demander un partenariat</Button>
                     ) : null}
                   </div>
                 </article>
@@ -222,64 +178,52 @@ export default function PharmacistSupplierPage() {
         open={Boolean(selectedSupplier)}
         title={selectedSupplier ? [selectedSupplier.prenom, selectedSupplier.nom].filter(Boolean).join(" ") || "Profil fournisseur" : "Profil fournisseur"}
         subtitle={selectedSupplier?.email || ""}
-        onClose={() => {
-          setSelectedSupplier(null);
-          setMessage("");
-        }}
+        onClose={() => { setSelectedSupplier(null); setMessage(""); }}
         footer={
           <div className="flex flex-wrap justify-end gap-3">
-            <Button type="button" variant="outline" disabled={submitting} onClick={() => setSelectedSupplier(null)}>
-              Fermer
-            </Button>
+            <Button type="button" variant="outline" disabled={submitting} onClick={() => setSelectedSupplier(null)}>Fermer</Button>
             {selectedSupplier && (selectedSupplier.partnership_status === "disponible" || selectedSupplier.partnership_status === "refusee") ? (
-              <Button type="submit" form="partnership-form" isLoading={submitting} leftIcon={<Send size={16} />}>
-                Envoyer la demande
-              </Button>
+              <Button type="submit" form="partnership-form" isLoading={submitting} leftIcon={<Send size={14} />}>Envoyer la demande</Button>
             ) : null}
           </div>
         }
       >
         {selectedSupplier ? (
-          <div className="space-y-5">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="rounded-2xl bg-slate-50 px-4 py-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">Contact</p>
-                <p className="mt-2 text-sm font-semibold text-slate-900">{selectedSupplier.email || "Email non renseigne"}</p>
-                <p className="mt-1 text-sm text-slate-600">{selectedSupplier.telephone || "Telephone non renseigne"}</p>
+          <div className="space-y-4">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="rounded-lg bg-gray-50 border border-border px-4 py-3">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-text-secondary">Contact</p>
+                <p className="mt-1.5 text-sm font-medium text-text-primary">{selectedSupplier.email || "Email non renseigne"}</p>
+                <p className="mt-0.5 text-xs text-text-secondary">{selectedSupplier.telephone || "Telephone non renseigne"}</p>
               </div>
-              <div className="rounded-2xl bg-slate-50 px-4 py-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">Relation</p>
-                <div className="mt-2">
+              <div className="rounded-lg bg-gray-50 border border-border px-4 py-3">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-text-secondary">Relation</p>
+                <div className="mt-1.5">
                   <StatusPill status={selectedSupplier.partnership_status === "disponible" ? "disponible_supplier" : selectedSupplier.partnership_status} />
                 </div>
-                <p className="mt-2 text-sm text-slate-600">{selectedSupplier.active_products || 0} produit(s) actif(s)</p>
+                <p className="mt-1.5 text-xs text-text-secondary">{selectedSupplier.active_products || 0} produit(s) actif(s)</p>
               </div>
             </div>
 
             {selectedSupplier.request_message ? (
-              <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Dernier message envoye</p>
-                <p className="mt-2 text-sm text-slate-600">{selectedSupplier.request_message}</p>
+              <div className="rounded-lg border border-border bg-gray-50 px-4 py-3">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-text-secondary">Dernier message envoye</p>
+                <p className="mt-1.5 text-sm text-text-secondary">{selectedSupplier.request_message}</p>
               </div>
             ) : null}
 
             {selectedSupplier.response_note ? (
-              <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Retour fournisseur</p>
-                <p className="mt-2 text-sm text-slate-600">{selectedSupplier.response_note}</p>
+              <div className="rounded-lg border border-border bg-gray-50 px-4 py-3">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-text-secondary">Retour fournisseur</p>
+                <p className="mt-1.5 text-sm text-text-secondary">{selectedSupplier.response_note}</p>
               </div>
             ) : null}
 
             {(selectedSupplier.partnership_status === "disponible" || selectedSupplier.partnership_status === "refusee") ? (
               <form id="partnership-form" onSubmit={submitPartnershipRequest} className="space-y-3">
-                <label className="space-y-2">
-                  <span className="text-sm font-medium text-slate-700">Message d'introduction</span>
-                  <textarea
-                    value={message}
-                    onChange={(event) => setMessage(event.target.value)}
-                    className={textareaClassName}
-                    placeholder="Ex. Nous souhaitons etablir un partenariat durable pour les produits a rotation rapide."
-                  />
+                <label className="space-y-1.5">
+                  <span className="block text-xs font-medium text-text-secondary uppercase tracking-wide">Message d'introduction</span>
+                  <textarea value={message} onChange={(event) => setMessage(event.target.value)} className={textareaClassName} placeholder="Ex. Nous souhaitons etablir un partenariat durable pour les produits a rotation rapide." />
                 </label>
               </form>
             ) : null}

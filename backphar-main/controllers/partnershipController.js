@@ -40,12 +40,7 @@ export const getSupplierDirectoryForPharmacy = async (req, res) => {
          pr.status AS request_status,
          pr.created_at AS request_created_at,
          pr.responded_at,
-         CASE WHEN sp.supplier_id IS NULL THEN 0 ELSE 1 END AS is_partner,
-         (
-           SELECT COUNT(*)
-           FROM supplier_products products
-           WHERE products.supplier_id = s.id AND products.is_active = 1
-         ) AS active_products
+         CASE WHEN sp.supplier_id IS NULL THEN 0 ELSE 1 END AS is_partner
        FROM suppliers s
        LEFT JOIN supplier_partnership_requests pr
          ON pr.supplier_id = s.id AND pr.pharmacie_id = ?
@@ -62,7 +57,6 @@ export const getSupplierDirectoryForPharmacy = async (req, res) => {
     const items = rows.map((row) => ({
       ...row,
       partnership_status: buildStatus(row),
-      active_products: Number(row.active_products || 0),
       is_active: Boolean(row.is_active),
       is_partner: Number(row.is_partner) === 1,
     }));

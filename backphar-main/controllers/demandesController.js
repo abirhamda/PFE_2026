@@ -51,13 +51,6 @@ const upsertPharmacyStockFromDemand = async (connection, demande) => {
      ON DUPLICATE KEY UPDATE quantite = quantite + VALUES(quantite), updated_at = NOW()`,
     [demande.nom_medicament, demande.quantite, demande.pharmacie_id],
   );
-
-  await connection.execute(
-    `UPDATE supplier_products
-     SET quantite_disponible = GREATEST(0, quantite_disponible - ?), updated_at = NOW()
-     WHERE supplier_id = ? AND LOWER(nom) = LOWER(?)`,
-    [demande.quantite, demande.supplier_id, demande.nom_medicament],
-  );
 };
 
 const updateNotificationMirror = async (connection, demandeId, status) => {

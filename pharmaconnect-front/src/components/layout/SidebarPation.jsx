@@ -2,7 +2,6 @@ import React from "react";
 import {
   CalendarDays,
   FileText,
-  FolderOpen,
   Home,
   LogOut,
   Search,
@@ -80,7 +79,6 @@ const SidebarPation = ({ isOpen, onClose }) => {
           <NavItem to="/patient/discover" icon={<Search size={16} />} label="Recherche" />
           <NavItem to="/patient/appointments" icon={<CalendarDays size={16} />} label="Mes rendez-vous" />
           <NavItem to="/patient/ordonnances" icon={<FileText size={16} />} label="Mes ordonnances" />
-          <NavItem to="/patient/documents" icon={<FolderOpen size={16} />} label="Mes documents" />
 
           <NavSection label="Compte" />
           <NavItem to="/patient/profile" icon={<UserRound size={16} />} label="Profil" />

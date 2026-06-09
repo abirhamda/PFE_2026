@@ -15,6 +15,14 @@ const toHumanDateTime = (value) => {
   });
 };
 
+const formatDoctorLabel = (ordonnance) => {
+  const doctorName = [ordonnance.doctor_prenom, ordonnance.doctor_nom].filter(Boolean).join(" ").trim();
+  if (!doctorName) return "Medecin supprime ou non renseigne";
+
+  const specialty = String(ordonnance.doctor_specialty || "").trim();
+  return specialty ? `Dr. ${doctorName} (${specialty})` : `Dr. ${doctorName}`;
+};
+
 const PatientOrdonnancesPage = () => {
   const [ordonnances, setOrdonnances] = useState([]);
   const [search, setSearch] = useState("");
@@ -94,9 +102,7 @@ const PatientOrdonnancesPage = () => {
                   </span>
                 </div>
 
-                <p className="mt-2 text-xs text-slate-500">
-                  Dr. {ordonnance.doctor_prenom || "-"} {ordonnance.doctor_nom || "-"} ({ordonnance.doctor_specialty || "-"})
-                </p>
+                <p className="mt-2 text-xs text-slate-500">{formatDoctorLabel(ordonnance)}</p>
                 <p className="text-xs text-slate-500">{toHumanDateTime(ordonnance.created_at)}</p>
 
                 <pre className="mt-3 whitespace-pre-wrap rounded-lg bg-slate-50 p-3 text-sm text-slate-700">

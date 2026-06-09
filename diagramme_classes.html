@@ -1,9 +1,9 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Diagramme de Classes â€” MediCare</title>
+  <title>Diagramme de Classes — MediCare</title>
   <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -14,7 +14,7 @@
       color: #0f1e2e;
     }
 
-    /* â”€â”€ Top bar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    /* ── Top bar ───────────────────────────── */
     header {
       background: #0f2d4a;
       color: #fff;
@@ -61,7 +61,7 @@
     }
     .btn-export:hover { background: #1558b0; }
 
-    /* â”€â”€ Stats bar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    /* ── Stats bar ─────────────────────────── */
     .stats {
       display: flex;
       flex-wrap: wrap;
@@ -87,7 +87,7 @@
       border-radius: 50%;
     }
 
-    /* â”€â”€ Diagram container â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    /* ── Diagram container ─────────────────── */
     .diagram-wrapper {
       padding: 32px;
       overflow: auto;
@@ -125,7 +125,7 @@
       color: #0f1e2e !important;
     }
 
-    /* â”€â”€ Legend â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    /* ── Legend ────────────────────────────── */
     .legend {
       margin: 24px 32px;
       background: #fff;
@@ -168,7 +168,7 @@
 </head>
 <body>
 
-  <!-- â”€â”€ Header â”€â”€ -->
+  <!-- ── Header ── -->
   <header>
     <div class="logo">
       <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
@@ -178,10 +178,10 @@
       </svg>
       <div class="logo-text">
         <h1>MediCare</h1>
-        <p>Plateforme mÃ©dicale</p>
+        <p>Plateforme médicale</p>
       </div>
     </div>
-    <div class="badge">Diagramme de Classes â€” Base de donnÃ©es</div>
+    <div class="badge">Diagramme de Classes — Base de données</div>
     <button class="btn-export" onclick="window.print()">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
@@ -191,52 +191,34 @@
     </button>
   </header>
 
-  <!-- â”€â”€ Stats bar â”€â”€ -->
+  <!-- ── Stats bar ── -->
   <div class="stats">
-    <div class="stat-pill"><span class="dot" style="background:#0f2d4a"></span>23 EntitÃ©s</div>
-    <div class="stat-pill"><span class="dot" style="background:#1e6fd9"></span>18 Relations directes</div>
+    <div class="stat-pill"><span class="dot" style="background:#0f2d4a"></span>23 Entités</div>
+    <div class="stat-pill"><span class="dot" style="background:#1e6fd9"></span>25 Relations directes</div>
     <div class="stat-pill"><span class="dot" style="background:#0d6e4f"></span>1 Association M:N</div>
     <div class="stat-pill"><span class="dot" style="background:#b45309"></span>3 Vues SQL</div>
-    <div class="stat-pill"><span class="dot" style="background:#b91c1c"></span>6 RÃ´les utilisateurs</div>
+    <div class="stat-pill"><span class="dot" style="background:#b91c1c"></span>6 Rôles utilisateurs</div>
+    <div class="stat-pill"><span class="dot" style="background:#7c3aed"></span>5 FK user_id corrigées</div>
   </div>
 
-  <!-- â”€â”€ Diagram â”€â”€ -->
+  <!-- ── Diagram ── -->
   <div class="diagram-wrapper">
     <div class="diagram-card">
       <h2>
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0f2d4a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
         </svg>
-        Diagramme de Classes complet â€” application_medicale
+        Diagramme de Classes complet — application_medicale
       </h2>
 
       <pre class="mermaid">
-%%{init: {
-  'theme': 'base',
-  'themeVariables': {
-    'primaryColor': '#e8f0fe',
-    'primaryTextColor': '#0f1e2e',
-    'primaryBorderColor': '#0f2d4a',
-    'lineColor': '#1e6fd9',
-    'secondaryColor': '#e8f0fe',
-    'tertiaryColor': '#f0f4f8',
-    'background': '#ffffff',
-    'mainBkg': '#ffffff',
-    'nodeBorder': '#0f2d4a',
-    'clusterBkg': '#f0f4f8',
-    'titleColor': '#0f1e2e',
-    'edgeLabelBackground': '#ffffff',
-    'fontFamily': 'Segoe UI, Arial, sans-serif',
-    'fontSize': '13px'
-  }
-}}%%
 classDiagram
   direction TB
 
-  %% â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  %% ------------------------------
   %% AUTHENTIFICATION
-  %% â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-  class Users {
+  %% ------------------------------
+  class users {
     +INT id PK
     +VARCHAR_191 email
     +VARCHAR_30 cin
@@ -245,7 +227,7 @@ classDiagram
     +TIMESTAMP created_at
   }
 
-  class PasswordResetCode {
+  class password_reset_codes {
     +INT id PK
     +INT user_id FK
     +VARCHAR_255 code_hash
@@ -257,7 +239,7 @@ classDiagram
     +TIMESTAMP created_at
   }
 
-  class PatientPortalProfile {
+  class patient_portal_profiles {
     +INT id PK
     +INT user_id FK
     +VARCHAR_120 nom
@@ -274,32 +256,32 @@ classDiagram
     +TIMESTAMP updated_at
   }
 
-  class Admin {
+  class admin {
     +INT id PK
+    +INT user_id FK
     +VARCHAR_120 full_name
     +VARCHAR_191 email
-    +VARCHAR_255 mot_de_passe
     +VARCHAR_30 phone
     +VARCHAR_255 address
     +TIMESTAMP created_at
   }
 
-  %% â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-  %% MÃ‰DECIN
-  %% â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-  class Doctor {
+  %% ------------------------------
+  %% MEDECIN
+  %% ------------------------------
+  class doctors {
     +INT id PK
+    +INT user_id FK
     +VARCHAR_120 nom
     +VARCHAR_120 prenom
     +VARCHAR_191 email
-    +VARCHAR_255 password
     +VARCHAR_30 cin
     +VARCHAR_120 specialty
     +TINYINT_1 is_active
     +TIMESTAMP created_at
   }
 
-  class DoctorPublicProfile {
+  class doctor_public_profiles {
     +INT doctor_id PK FK
     +VARCHAR_160 display_name
     +VARCHAR_30 public_phone
@@ -316,19 +298,19 @@ classDiagram
     +TIMESTAMP updated_at
   }
 
-  class Secretary {
+  class secretaries {
     +INT id PK
+    +INT user_id FK
     +INT doctor_id FK
     +VARCHAR_120 nom
     +VARCHAR_120 prenom
     +VARCHAR_191 email
-    +VARCHAR_255 password
     +VARCHAR_30 telephone
     +TINYINT_1 is_active
     +TIMESTAMP created_at
   }
 
-  class WaitingRoomCounter {
+  class waiting_room_counters {
     +INT id PK
     +INT doctor_id FK
     +DATE counter_date
@@ -336,10 +318,10 @@ classDiagram
     +TIMESTAMP updated_at
   }
 
-  %% â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  %% ------------------------------
   %% PATIENT
-  %% â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-  class Patient {
+  %% ------------------------------
+  class patients {
     +INT id PK
     +VARCHAR_120 nom
     +VARCHAR_120 prenom
@@ -350,7 +332,7 @@ classDiagram
     +TIMESTAMP updated_at
   }
 
-  class DoctorPatient {
+  class doctor_patients {
     +INT id PK
     +INT doctor_id FK
     +INT patient_global_id FK
@@ -364,7 +346,7 @@ classDiagram
     +TIMESTAMP updated_at
   }
 
-  class PatientFicheNote {
+  class patient_fiche_notes {
     +INT id PK
     +INT doctor_id FK
     +INT patient_id FK
@@ -376,31 +358,15 @@ classDiagram
     +TIMESTAMP updated_at
   }
 
-  class PatientDocument {
-    +INT id PK
-    +INT patient_user_id FK
-    +INT doctor_id FK
-    +VARCHAR_160 title
-    +TEXT description
-    +VARCHAR_512 file_url
-    +TIMESTAMP created_at
-  }
-
-  %% â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  %% ------------------------------
   %% RENDEZ-VOUS & ORDONNANCES
-  %% â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-  class Appointment {
+  %% ------------------------------
+  class appointments {
     +INT id PK
     +INT doctor_id FK
-    +INT secretary_id FK
-    +INT patient_id FK
-    +INT booked_by_patient_user_id FK
-    +VARCHAR_30 patient_matricule
-    +VARCHAR_120 patient_nom
-    +VARCHAR_120 patient_prenom
-    +VARCHAR_30 patient_cin
-    +VARCHAR_30 patient_phone
-    +DATE patient_date_naissance
+    +INT secretary_id FK nullable
+    +INT patient_id FK nullable
+    +INT portal_patient_id FK nullable
     +DATETIME appointment_at
     +DECIMAL_10_2 payment_amount
     +TEXT payment_doctor_comment
@@ -410,10 +376,10 @@ classDiagram
     +TIMESTAMP updated_at
   }
 
-  class Ordonnance {
+  class ordonnances {
     +INT id PK
-    +INT doctor_id FK
-    +INT pation_id
+    +INT doctor_id FK nullable
+    +INT doctor_patient_id FK nullable
     +VARCHAR_30 cin
     +VARCHAR_120 nom
     +VARCHAR_120 prenom
@@ -422,32 +388,30 @@ classDiagram
     +TIMESTAMP created_at
   }
 
-  class PharmacyOrdonnanceView {
-    +INT id PK
-    +INT pharmacie_id FK
-    +INT ordonnance_id FK
-    +INT view_count
-    +TIMESTAMP first_viewed_at
-    +TIMESTAMP last_viewed_at
-  }
-
-  %% â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  %% ------------------------------
   %% PHARMACIE
-  %% â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-  class Pharmacie {
+  %% Note : pas de table pharmacie_public_profiles separee
+  %% Les champs publics sont integres dans pharmacie
+  %% (pharmacy_type, opening_hours_json, city, lat, lng)
+  %% ------------------------------
+  class pharmacie {
     +INT id_pharmacie PK
+    +INT user_id FK
     +VARCHAR_120 nom_pharmacie
     +VARCHAR_191 email
     +VARCHAR_30 telephone
-    +VARCHAR_255 mot_de_passe
     +VARCHAR_120 president_pharmacie
     +VARCHAR_255 address_line
     +VARCHAR_120 city
+    +ENUM pharmacy_type
+    +TEXT opening_hours_json
+    +DECIMAL_10_7 latitude
+    +DECIMAL_10_7 longitude
     +TINYINT_1 is_active
     +TIMESTAMP created_at
   }
 
-  class MedicamentStock {
+  class medicaments_stock {
     +INT id PK
     +INT id_pharmacie FK
     +VARCHAR_140 nom
@@ -458,40 +422,27 @@ classDiagram
     +TIMESTAMP updated_at
   }
 
-  %% â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  %% ------------------------------
   %% FOURNISSEUR
-  %% â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-  class Supplier {
+  %% ------------------------------
+  class suppliers {
     +INT id PK
+    +INT user_id FK
     +VARCHAR_120 nom
     +VARCHAR_120 prenom
     +VARCHAR_191 email
-    +VARCHAR_255 password
     +VARCHAR_30 telephone
     +TINYINT_1 is_active
     +TIMESTAMP created_at
   }
 
-  class SupplierProduct {
-    +INT id PK
-    +INT supplier_id FK
-    +VARCHAR_140 nom
-    +TEXT description
-    +DECIMAL_10_2 prix
-    +INT quantite_disponible
-    +VARCHAR_40 unite
-    +TINYINT_1 is_active
-    +TIMESTAMP created_at
-    +TIMESTAMP updated_at
-  }
-
-  class SupplierPharmacie {
+  class supplier_pharmacie {
     +INT supplier_id PK FK
     +INT pharmacie_id PK FK
     +TIMESTAMP created_at
   }
 
-  class SupplierPartnershipRequest {
+  class supplier_partnership_requests {
     +INT id PK
     +INT pharmacie_id FK
     +INT supplier_id FK
@@ -503,7 +454,7 @@ classDiagram
     +DATETIME responded_at
   }
 
-  class Demande {
+  class demandes {
     +INT id PK
     +INT pharmacie_id FK
     +INT supplier_id FK
@@ -516,7 +467,7 @@ classDiagram
     +TIMESTAMP updated_at
   }
 
-  class Notification {
+  class notifications {
     +INT id PK
     +VARCHAR_140 nom_medicament
     +INT quantite
@@ -528,108 +479,163 @@ classDiagram
     +TIMESTAMP created_at
   }
 
-  %% â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-  %% RELATIONS â€” AUTHENTIFICATION
-  %% â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-  Users "1" --> "0..*" PasswordResetCode : gÃ©nÃ¨re
-  Users "1" --> "0..1" PatientPortalProfile : possÃ¨de
-  Users "1" --> "0..*" PatientDocument : tÃ©lÃ©verse
-  Users "1" --> "0..*" Appointment : rÃ©serve (patient)
+  %% ------------------------------
+  %% MODULE IA (service externe FastAPI — non persiste en BD)
+  %% ------------------------------
+  class AiAnalysisService {
+    +String endpoint
+    +String model_path
+    +String device
+  }
 
-  %% â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-  %% RELATIONS â€” MÃ‰DECIN
-  %% â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-  Doctor "1" *-- "1" DoctorPublicProfile : profil public
-  Doctor "1" *-- "0..*" Secretary : emploie
-  Doctor "1" *-- "0..*" Ordonnance : rÃ©dige
-  Doctor "1" *-- "0..*" DoctorPatient : suit
-  Doctor "1" *-- "0..*" Appointment : planifie
-  Doctor "1" *-- "0..*" PatientFicheNote : renseigne
-  Doctor "1" --> "0..*" PatientDocument : associe
-  Doctor "1" *-- "0..*" WaitingRoomCounter : gÃ¨re
+  class ChestXRayClassifier {
+    +String architecture
+    +INT num_classes
+    +String weights_path
+  }
 
-  %% â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-  %% RELATIONS â€” SECRÃ‰TAIRE
-  %% â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-  Secretary "1" --> "0..*" Appointment : crÃ©e
+  class GradCAM {
+    +String target_layer
+  }
 
-  %% â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-  %% RELATIONS â€” PATIENT
-  %% â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-  Patient "1" --> "0..*" DoctorPatient : rÃ©fÃ©rencÃ©_dans
-  DoctorPatient "1" --> "0..*" Appointment : concerne
-  DoctorPatient "1" *-- "0..*" PatientFicheNote : contient
+  class AiAnalysisRequest {
+    +File image
+    +String content_type
+  }
 
-  %% â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-  %% RELATIONS â€” ORDONNANCE
-  %% â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-  Ordonnance "1" --> "0..*" PharmacyOrdonnanceView : consultÃ©e_par
+  class AiAnalysisResult {
+    +TEXT rapport
+    +String gradcam_image
+    +String gradcam_target
+    +String device
+  }
 
-  %% â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-  %% RELATIONS â€” PHARMACIE
-  %% â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-  Pharmacie "1" *-- "0..*" MedicamentStock : stocke
-  Pharmacie "1" --> "0..*" PharmacyOrdonnanceView : consulte
-  Pharmacie "1" --> "0..*" SupplierPartnershipRequest : soumet
-  Pharmacie "1" --> "0..*" Demande : commande
-  Pharmacie "1" --> "0..*" Notification : reÃ§oit
-  Pharmacie "1" --> "0..*" SupplierPharmacie : liste dans
+  class PathologyPrediction {
+    +String name
+    +Float probability
+  }
 
-  %% â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-  %% RELATIONS â€” FOURNISSEUR
-  %% â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-  Supplier "1" *-- "0..*" SupplierProduct : propose
-  Supplier "1" --> "0..*" SupplierPartnershipRequest : reÃ§oit
-  Supplier "1" --> "0..*" Demande : traite
-  Supplier "1" --> "0..*" Notification : gÃ©nÃ¨re
-  Supplier "1" --> "0..*" SupplierPharmacie : liste dans
+  %% ------------------------------
+  %% RELATIONS AUTHENTIFICATION (user_id FK sur toutes les entites)
+  %% ------------------------------
+  users "1" *-- "0..1" doctors : compte
+  users "1" *-- "0..1" secretaries : compte
+  users "1" *-- "0..1" pharmacie : compte
+  users "1" *-- "0..1" suppliers : compte
+  users "1" *-- "0..1" admin : compte
+  users "1" --> "0..*" password_reset_codes : genere
+  users "1" --> "0..1" patient_portal_profiles : possede
 
-  %% Relation M:N via table d'association
-  SupplierPharmacie --> Pharmacie : pharmacie_id
-  SupplierPharmacie --> Supplier : supplier_id
+  %% ------------------------------
+  %% RELATIONS MEDECIN
+  %% ------------------------------
+  doctors "1" *-- "1" doctor_public_profiles : profilPublic
+  doctors "1" *-- "0..*" secretaries : emploie
+  doctors "0..1" --> "0..*" ordonnances : redige
+  doctors "1" *-- "0..*" doctor_patients : suit
+  doctors "1" *-- "0..*" appointments : planifie
+  doctors "1" *-- "0..*" patient_fiche_notes : renseigne
+  doctors "1" *-- "0..*" waiting_room_counters : gere
 
-  %% â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-  %% RELATIONS â€” DEMANDE
-  %% â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-  Demande "1" --> "0..*" Notification : dÃ©clenche
+  %% ------------------------------
+  %% RELATIONS SECRETAIRE
+  %% ------------------------------
+  secretaries "0..1" --> "0..*" appointments : cree
+  secretaries "0..*" --> "0..1" doctor_public_profiles : gereProfilPublic
+
+  %% ------------------------------
+  %% RELATIONS PATIENT
+  %% doctor_patients porte la FK patient_global_id → patients.id
+  %% ------------------------------
+  doctor_patients "0..*" --> "0..1" patients : patient global
+  doctor_patients "1" --> "0..*" appointments : concerne
+  doctor_patients "1" *-- "0..*" patient_fiche_notes : contient
+  patient_portal_profiles "1" --> "0..*" appointments : reserve en ligne
+
+  %% ------------------------------
+  %% RELATIONS ORDONNANCE
+  %% ------------------------------
+  doctor_patients "1" --> "0..*" ordonnances : concerne
+  %% ------------------------------
+  %% RELATIONS PHARMACIE
+  %% ------------------------------
+  pharmacie "1" *-- "0..*" medicaments_stock : stocke
+  pharmacie "1" ..> "0..*" ordonnances : verifie
+  pharmacie "1" --> "0..*" supplier_partnership_requests : soumet
+  pharmacie "1" --> "0..*" demandes : commande
+  pharmacie "1" --> "0..*" notifications : recoit
+  pharmacie "1" --> "0..*" supplier_pharmacie : pharmacie_id
+
+  %% ------------------------------
+  %% RELATIONS FOURNISSEUR
+  %% ------------------------------
+  suppliers "1" --> "0..*" supplier_partnership_requests : recoit
+  suppliers "1" --> "0..*" demandes : traite
+  suppliers "1" --> "0..*" notifications : genere
+  suppliers "1" --> "0..*" supplier_pharmacie : supplier_id
+
+  %% ------------------------------
+  %% RELATIONS ADMIN (gestion metier)
+  %% ..> = dependance fonctionnelle (pas FK)
+  %% ------------------------------
+  admin ..> pharmacie : gere
+  admin ..> doctors : gere
+  admin ..> suppliers : gere
+  admin ..> secretaries : gere
+  admin ..> patients : gere
+
+  %% ------------------------------
+  %% RELATIONS DEMANDE
+  %% ------------------------------
+  demandes "1" --> "0..*" notifications : declenche
+
+  %% ------------------------------
+  %% RELATIONS MODULE IA
+  %% ------------------------------
+  doctors ..> AiAnalysisRequest : utilise
+  AiAnalysisRequest --> AiAnalysisService : envoieImage
+  AiAnalysisService *-- ChestXRayClassifier : charge
+  AiAnalysisService *-- GradCAM : genere
+  AiAnalysisService --> AiAnalysisResult : retourne
+  AiAnalysisResult *-- PathologyPrediction : contient
       </pre>
     </div>
   </div>
 
-  <!-- â”€â”€ Legend â”€â”€ -->
+  <!-- ── Legend ── -->
   <div class="legend">
-    <h3>LÃ©gende des relations</h3>
+    <h3>Légende des relations</h3>
     <div class="legend-grid">
       <div class="legend-item">
         <div class="legend-line" style="background:#0f2d4a; border-top: 2px solid #0f2d4a;"></div>
-        <span><strong>*--</strong> Composition (CASCADE DELETE) â€” entitÃ© dÃ©pendante</span>
+        <span><strong>*--</strong> Composition (CASCADE DELETE) — entité dépendante</span>
       </div>
       <div class="legend-item">
         <div class="legend-line" style="border-top: 2px solid #1e6fd9;"></div>
-        <span><strong>--&gt;</strong> Association (SET NULL) â€” lien optionnel</span>
+        <span><strong>--&gt;</strong> Association (SET NULL) — lien optionnel</span>
       </div>
       <div class="legend-item">
         <div class="legend-line" style="border-top: 2px dashed #b45309;"></div>
-        <span><strong>PK</strong> ClÃ© primaire</span>
+        <span><strong>PK</strong> Clé primaire</span>
       </div>
       <div class="legend-item">
         <div class="legend-line" style="border-top: 2px dashed #0d6e4f;"></div>
-        <span><strong>FK</strong> ClÃ© Ã©trangÃ¨re</span>
+        <span><strong>FK</strong> Clé étrangere</span>
       </div>
       <div class="legend-item">
         <div class="legend-line" style="border-top: 2px solid #b91c1c;"></div>
-        <span><strong>1 â†’ 0..*</strong> Un Ã  plusieurs (One-to-Many)</span>
+        <span><strong>1 → 0..*</strong> Un à plusieurs (One-to-Many)</span>
       </div>
       <div class="legend-item">
         <div class="legend-line" style="border-top: 2px solid #7c3aed;"></div>
-        <span><strong>* â€” *</strong> Plusieurs Ã  plusieurs via SupplierPharmacie</span>
+        <span><strong>* — *</strong> Plusieurs à plusieurs via supplier_pharmacie</span>
       </div>
     </div>
   </div>
 
-  <!-- â”€â”€ Footer note â”€â”€ -->
+  <!-- ── Footer note ── -->
   <div style="text-align:center; padding: 16px; font-size: 12px; color: #8fa0b3; border-top: 1px solid #dde3ec; background: #fff; margin-top: 8px;">
-    MediCare â€” application_medicale (MySQL 8+) Â· 23 entitÃ©s Â· 3 vues SQL (rendez_vous, medecins_patients, medecins)
+    MediCare — application_medicale (MySQL 8+) · 22 entités · 3 vues SQL (rendez_vous, medecins_patients, medecins)
   </div>
 
   <script>

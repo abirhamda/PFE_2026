@@ -26,6 +26,18 @@ const validatePharmacyData = (data) => {
   return { isValid: true };
 };
 
+const parseJsonField = (value) => {
+  if (!value) return null;
+  if (typeof value === "object") return value;
+  try { return JSON.parse(value); } catch { return null; }
+};
+
+const pharmacyTypeLabel = (type) => {
+  if (type === "night") return "Pharmacie de nuit";
+  if (type === "both") return "Pharmacie jour et nuit";
+  return "Pharmacie de jour";
+};
+
 const shapePharmacy = (row) => ({
   id_pharmacie: Number(row.id_pharmacie),
   nom_pharmacie: row.nom_pharmacie,
@@ -34,6 +46,10 @@ const shapePharmacy = (row) => ({
   president_pharmacie: row.president_pharmacie,
   address_line: row.address_line || null,
   city: row.city || null,
+  pharmacy_type: row.pharmacy_type || "day",
+  opening_hours: parseJsonField(row.opening_hours_json),
+  latitude: row.latitude != null ? Number(row.latitude) : null,
+  longitude: row.longitude != null ? Number(row.longitude) : null,
   is_active: Boolean(row.is_active),
   created_at: row.created_at,
 });
@@ -46,12 +62,18 @@ const shapePublicPharmacy = (row) => ({
   president_pharmacie: row.president_pharmacie || null,
   address_line: row.address_line || null,
   city: row.city || null,
-  type_label: "Pharmacie",
+  pharmacy_type: row.pharmacy_type || "day",
+  type_label: pharmacyTypeLabel(row.pharmacy_type),
+  opening_hours: parseJsonField(row.opening_hours_json),
+  latitude: row.latitude != null ? Number(row.latitude) : null,
+  longitude: row.longitude != null ? Number(row.longitude) : null,
 });
 
 const getPharmacyById = async (connection, pharmacyId) => {
   const [rows] = await connection.execute(
-    `SELECT id_pharmacie, nom_pharmacie, email, telephone, president_pharmacie, address_line, city, is_active, created_at
+    `SELECT id_pharmacie, nom_pharmacie, email, telephone, president_pharmacie,
+            address_line, city, pharmacy_type, opening_hours_json, latitude, longitude,
+            is_active, created_at
      FROM pharmacie
      WHERE id_pharmacie = ?
      LIMIT 1`,
@@ -91,16 +113,19 @@ export const createPharmacy = async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    // 1. Create the auth account in users
     const [userResult] = await connection.execute(
       "INSERT INTO users (email, password, role, created_at) VALUES (?, ?, 'pharmacist', NOW())",
       [email, hashedPassword],
     );
+    const userId = userResult.insertId;
 
+    // 2. Create the pharmacy profile linked via user_id (no password stored here)
     const [pharmacyResult] = await connection.execute(
       `INSERT INTO pharmacie
-       (nom_pharmacie, email, telephone, mot_de_passe, president_pharmacie, is_active, created_at)
+       (user_id, nom_pharmacie, email, telephone, president_pharmacie, is_active, created_at)
        VALUES (?, ?, ?, ?, ?, 1, NOW())`,
-      [nom_pharmacie, email, telephone, hashedPassword, president_pharmacie],
+      [userId, nom_pharmacie, email, telephone, president_pharmacie],
     );
 
     const pharmacy = await getPharmacyById(connection, pharmacyResult.insertId);
@@ -203,10 +228,17 @@ export const updateProfile = async (req, res) => {
     );
 
     if (email !== current.email) {
-      await connection.execute(
-        "UPDATE users SET email = ? WHERE email = ? AND role = 'pharmacist'",
-        [email, current.email],
+      // Sync auth account via user_id FK — no more WHERE email = ? AND role = ?
+      const [pharmRow] = await connection.execute(
+        "SELECT user_id FROM pharmacie WHERE id_pharmacie = ? LIMIT 1",
+        [pharmacyId],
       );
+      if (pharmRow.length > 0) {
+        await connection.execute(
+          "UPDATE users SET email = ? WHERE id = ?",
+          [email, pharmRow[0].user_id],
+        );
+      }
     }
 
     const updated = await getPharmacyById(connection, pharmacyId);
@@ -256,16 +288,22 @@ export const changePassword = async (req, res) => {
       return res.status(400).json({ error: "Le nouveau mot de passe doit contenir au moins 6 caracteres" });
     }
 
-    const [rows] = await connection.execute(
-      "SELECT email, mot_de_passe FROM pharmacie WHERE id_pharmacie = ? LIMIT 1",
+    // Get user_id from pharmacie — password lives only in users table
+    const [pharmRows] = await connection.execute(
+      "SELECT user_id FROM pharmacie WHERE id_pharmacie = ? LIMIT 1",
       [pharmacyId],
     );
-    if (rows.length === 0) {
+    if (pharmRows.length === 0) {
       await connection.rollback();
       return res.status(404).json({ error: "Pharmacie non trouvee" });
     }
+    const userId = pharmRows[0].user_id;
 
-    const match = await bcrypt.compare(oldPassword, rows[0].mot_de_passe);
+    const [userRows] = await connection.execute(
+      "SELECT password FROM users WHERE id = ? LIMIT 1",
+      [userId],
+    );
+    const match = await bcrypt.compare(oldPassword, userRows[0].password);
     if (!match) {
       await connection.rollback();
       return res.status(400).json({ error: "Ancien mot de passe incorrect" });
@@ -273,13 +311,10 @@ export const changePassword = async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(newPassword, 10);
 
+    // Update only in users — single source of truth
     await connection.execute(
-      "UPDATE pharmacie SET mot_de_passe = ? WHERE id_pharmacie = ?",
-      [hashedPassword, pharmacyId],
-    );
-    await connection.execute(
-      "UPDATE users SET password = ? WHERE email = ? AND role = 'pharmacist'",
-      [hashedPassword, rows[0].email],
+      "UPDATE users SET password = ? WHERE id = ?",
+      [hashedPassword, userId],
     );
 
     await connection.commit();
@@ -372,7 +407,7 @@ export const searchPublicPharmacies = async (req, res) => {
 
     const [rows] = await db.execute(
       `SELECT id_pharmacie, nom_pharmacie, telephone, email, president_pharmacie,
-              address_line, city
+              address_line, city, pharmacy_type, opening_hours_json, latitude, longitude
        FROM pharmacie
        WHERE ${conditions.join(" AND ")}
        ORDER BY nom_pharmacie ASC
@@ -397,14 +432,16 @@ export const deletePharmacy = async (req, res) => {
     const pharmacyId = Number(req.params.id);
     await connection.beginTransaction();
 
-    const pharmacy = await getPharmacyById(connection, pharmacyId);
-    if (!pharmacy) {
+    // Get user_id — cascade on users FK handles pharmacie deletion
+    const [pharmRow] = await connection.execute(
+      "SELECT user_id FROM pharmacie WHERE id_pharmacie = ? LIMIT 1",
+      [pharmacyId],
+    );
+    if (pharmRow.length === 0) {
       await connection.rollback();
       return res.status(404).json({ error: "Pharmacie non trouvee" });
     }
-
-    await connection.execute("DELETE FROM pharmacie WHERE id_pharmacie = ?", [pharmacyId]);
-    await connection.execute("DELETE FROM users WHERE email = ? AND role = 'pharmacist'", [pharmacy.email]);
+    await connection.execute("DELETE FROM users WHERE id = ?", [pharmRow[0].user_id]);
 
     await connection.commit();
     return res.json({ message: "Pharmacie et compte utilisateur supprimes avec succes" });
@@ -412,6 +449,40 @@ export const deletePharmacy = async (req, res) => {
     await connection.rollback();
     console.error("Error deleting pharmacy:", error);
     return res.status(500).json({ error: "Erreur lors de la suppression" });
+  } finally {
+    connection.release();
+  }
+};
+
+export const updatePublicProfile = async (req, res) => {
+  const connection = await db.getConnection();
+  try {
+    const pharmacy = await resolvePharmacyContext(connection, req.user);
+    if (!pharmacy) {
+      return res.status(403).json({ error: "Profil pharmacien invalide" });
+    }
+
+    const { pharmacy_type, opening_hours, address_line, city, latitude, longitude } = req.body;
+
+    const validTypes = ["day", "night", "both"];
+    const type = validTypes.includes(pharmacy_type) ? pharmacy_type : "day";
+    const openingHoursJson = opening_hours ? JSON.stringify(opening_hours) : null;
+    const lat = latitude != null && latitude !== "" ? Number(latitude) : null;
+    const lng = longitude != null && longitude !== "" ? Number(longitude) : null;
+
+    await connection.execute(
+      `UPDATE pharmacie
+       SET pharmacy_type = ?, opening_hours_json = ?, address_line = ?, city = ?,
+           latitude = ?, longitude = ?
+       WHERE id_pharmacie = ?`,
+      [type, openingHoursJson, address_line || null, city || null, lat, lng, pharmacy.id_pharmacie],
+    );
+
+    const updated = await getPharmacyById(connection, pharmacy.id_pharmacie);
+    return res.json({ success: true, message: "Profil public mis a jour avec succes", profile: shapePharmacy(updated) });
+  } catch (error) {
+    console.error("Error updating public profile:", error);
+    return res.status(500).json({ error: "Erreur lors de la mise a jour du profil public" });
   } finally {
     connection.release();
   }
@@ -442,12 +513,6 @@ export const getMyDashboard = async (req, res) => {
        ORDER BY created_at DESC`,
       [pharmacy.id_pharmacie],
     );
-    const [viewRows] = await connection.execute(
-      `SELECT COALESCE(SUM(view_count), 0) AS total_views
-       FROM pharmacy_ordonnance_views
-       WHERE pharmacie_id = ?`,
-      [pharmacy.id_pharmacie],
-    );
 
     const rupture = stockRows.filter((item) => Number(item.quantite || 0) <= 0).length;
     const faibleStock = stockRows.filter(
@@ -475,7 +540,6 @@ export const getMyDashboard = async (req, res) => {
         medicaments_en_stock: stockRows.length,
         ruptures: rupture,
         demandes_envoyees: demandeRows.length,
-        ordonnances_consultees: Number(viewRows[0]?.total_views || 0),
         faible_stock: faibleStock,
       },
       recent_stock: recentStock,
@@ -495,6 +559,7 @@ export default {
   getMyProfile,
   updateProfile,
   updateMyProfile,
+  updatePublicProfile,
   changePassword,
   toggleStatus,
   getAllPharmacies,

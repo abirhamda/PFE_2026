@@ -54,7 +54,7 @@ export const LOGIN_SPACES = [
     label: "Connexion Patient",
     shortLabel: "Patient",
     title: "Connexion patient",
-    description: "Acces aux rendez-vous, documents et ordonnances.",
+    description: "Acces aux rendez-vous et ordonnances.",
     accentClassName: "from-cyan-700 via-teal-600 to-emerald-500",
     allowRegister: true,
   },

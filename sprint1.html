@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<title>Sprint 1 — Diagramme de Classes</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: #f0f4f8; color: #0f1e2e; }
+  header {
+    background: #0f2d4a; color: #fff;
+    padding: 18px 32px;
+    display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; z-index: 10;
+    box-shadow: 0 2px 8px rgba(15,29,74,.18);
+  }
+  header .logo { display: flex; align-items: center; gap: 12px; }
+  header .logo-text h1 { font-size: 18px; font-weight: 600; }
+  header .logo-text p  { font-size: 11px; opacity: .55; letter-spacing: .18em; text-transform: uppercase; }
+  header .badge {
+    background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.2);
+    border-radius: 20px; padding: 6px 14px; font-size: 12px; font-weight: 500;
+  }
+  .stats {
+    display: flex; flex-wrap: wrap; gap: 12px;
+    padding: 14px 32px; background: #fff;
+    border-bottom: 1px solid #dde3ec;
+  }
+  .stat-pill {
+    display: flex; align-items: center; gap: 8px;
+    background: #f0f4f8; border: 1px solid #dde3ec;
+    border-radius: 20px; padding: 5px 14px;
+    font-size: 12px; font-weight: 500;
+  }
+  .dot { width: 8px; height: 8px; border-radius: 50%; }
+  .diagram-wrapper { padding: 28px 32px; overflow: auto; }
+  .diagram-card {
+    background: #fff; border-radius: 12px;
+    border: 1px solid #dde3ec;
+    box-shadow: 0 1px 3px rgba(15,29,74,.06);
+    padding: 28px; min-width: 1100px;
+  }
+  .diagram-card h2 {
+    font-size: 15px; font-weight: 700; color: #0f1e2e;
+    margin-bottom: 20px; padding-bottom: 12px;
+    border-bottom: 1px solid #dde3ec;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .num-badge {
+    width: 32px; height: 32px; border-radius: 50%;
+    background: #0f2d4a; color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 15px; font-weight: 800;
+  }
+  .mermaid { min-width: 1000px; }
+  .mermaid text, .mermaid .nodeLabel,
+  .mermaid .classTitle, .mermaid .label {
+    fill: #0f1e2e !important; color: #0f1e2e !important;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+      <rect width="36" height="36" rx="8" fill="rgba(255,255,255,.12)"/>
+      <path d="M18 8C12.477 8 8 12.477 8 18s4.477 10 10 10 10-4.477 10-10S23.523 8 18 8z" stroke="white" stroke-width="1.5" fill="none"/>
+      <path d="M18 13v10M13 18h10" stroke="white" stroke-width="2" stroke-linecap="round"/>
+    </svg>
+    <div class="logo-text">
+      <h1>MediCare — Sprint 1</h1>
+      <p>Espace médecin &amp; secrétaire</p>
+    </div>
+  </div>
+  <div class="badge">US1 · US4 · US5 · US6 · US7 · US8 · US9 · US10 · US11</div>
+</header>
+
+<div class="stats">
+  <div class="stat-pill"><span class="dot" style="background:#0f2d4a"></span>12 Entités</div>
+  <div class="stat-pill"><span class="dot" style="background:#1e6fd9"></span>11 Relations</div>
+  <div class="stat-pill"><span class="dot" style="background:#0d6e4f"></span>Acteurs : Médecin, Secrétaire</div>
+  <div class="stat-pill"><span class="dot" style="background:#b45309"></span>US1 US4 US5 US6 US7 US8 US9 US10 US11</div>
+</div>
+
+<div class="diagram-wrapper">
+  <div class="diagram-card">
+    <h2>
+      <div class="num-badge">1</div>
+      Diagramme de classes — Sprint 1
+    </h2>
+    <pre class="mermaid">
+classDiagram
+  direction TB
+
+  class users {
+    +INT id PK
+    +VARCHAR email
+    +VARCHAR cin
+    +VARCHAR password
+    +ENUM role
+    +TIMESTAMP created_at
+  }
+
+  class password_reset_codes {
+    +INT id PK
+    +INT user_id FK
+    +VARCHAR code_hash
+    +DATETIME expires_at
+    +INT attempts
+    +DATETIME used_at
+    +TIMESTAMP created_at
+  }
+
+  class doctors {
+    +INT id PK
+    +VARCHAR nom
+    +VARCHAR prenom
+    +VARCHAR email
+    +VARCHAR password
+    +VARCHAR cin
+    +VARCHAR specialty
+    +TINYINT is_active
+    +TIMESTAMP created_at
+  }
+
+  class doctor_public_profiles {
+    +INT doctor_id PK FK
+    +VARCHAR display_name
+    +VARCHAR public_phone
+    +VARCHAR address_line
+    +VARCHAR city
+    +DECIMAL latitude
+    +DECIMAL longitude
+    +DECIMAL consultation_fee
+    +INT consultation_duration_min
+    +TEXT working_hours_json
+    +TINYINT online_visibility
+    +TINYINT online_booking_enabled
+    +TIMESTAMP updated_at
+  }
+
+  class secretaries {
+    +INT id PK
+    +INT doctor_id FK
+    +VARCHAR nom
+    +VARCHAR prenom
+    +VARCHAR email
+    +VARCHAR password
+    +VARCHAR telephone
+    +TINYINT is_active
+    +TIMESTAMP created_at
+  }
+
+  class waiting_room_counters {
+    +INT id PK
+    +INT doctor_id FK
+    +DATE counter_date
+    +INT waiting_count
+    +TIMESTAMP updated_at
+  }
+
+  class patients {
+    +INT id PK
+    +VARCHAR nom
+    +VARCHAR prenom
+    +VARCHAR cin
+    +VARCHAR telephone
+    +DATE date_naissance
+    +TIMESTAMP created_at
+    +TIMESTAMP updated_at
+  }
+
+  class doctor_patients {
+    +INT id PK
+    +INT doctor_id FK
+    +INT patient_global_id FK
+    +VARCHAR matricule
+    +VARCHAR nom
+    +VARCHAR prenom
+    +VARCHAR cin
+    +VARCHAR telephone
+    +DATE date_naissance
+    +TIMESTAMP created_at
+    +TIMESTAMP updated_at
+  }
+
+  class patient_fiche_notes {
+    +INT id PK
+    +INT doctor_id FK
+    +INT patient_id FK
+    +DATETIME entry_at
+    +TEXT doctor_notes
+    +DECIMAL payment_amount
+    +TEXT payment_doctor_comment
+    +TIMESTAMP created_at
+    +TIMESTAMP updated_at
+  }
+
+  class appointments {
+    +INT id PK
+    +INT doctor_id FK
+    +INT secretary_id FK
+    +INT patient_id FK
+    +INT booked_by_patient_user_id FK
+    +VARCHAR patient_nom
+    +VARCHAR patient_prenom
+    +VARCHAR patient_cin
+    +DATETIME appointment_at
+    +DECIMAL payment_amount
+    +TEXT doctor_notes
+    +ENUM created_by_role
+    +TIMESTAMP created_at
+    +TIMESTAMP updated_at
+  }
+
+  class ordonnances {
+    +INT id PK
+    +INT doctor_id FK
+    +VARCHAR cin
+    +VARCHAR nom
+    +VARCHAR prenom
+    +TEXT ordonnance
+    +VARCHAR status
+    +TIMESTAMP created_at
+  }
+
+  %% Relations
+  users        "1" --> "0..*" password_reset_codes  : genere
+
+  doctors       "1" *-- "1"    doctor_public_profiles : profilPublic
+  doctors       "1" *-- "0..*" secretaries           : emploie
+  doctors       "1" *-- "0..*" ordonnances          : redige
+  doctors       "1" *-- "0..*" doctor_patients       : suit
+  doctors       "1" *-- "0..*" appointments         : planifie
+  doctors       "1" *-- "0..*" patient_fiche_notes    : renseigne
+  doctors       "1" *-- "0..*" waiting_room_counters  : gere
+
+  secretaries    "0..1" --> "0..*" appointments         : cree (optionnel)
+  secretaries    "0..*" --> "0..1" doctor_public_profiles : gereProfilPublic
+
+  patients      "1" --> "0..*" doctor_patients       : reference
+
+  doctor_patients "1" --> "0..*" appointments        : concerne
+  doctor_patients "1" *-- "0..*" patient_fiche_notes   : contient
+    </pre>
+  </div>
+</div>
+
+<script>
+  mermaid.initialize({
+    startOnLoad: true, theme: 'base',
+    classDiagram: { diagramPadding: 30 },
+    fontFamily: "'Segoe UI', Arial, sans-serif", fontSize: 13
+  });
+</script>
+</body>
+</html>

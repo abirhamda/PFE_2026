@@ -74,21 +74,12 @@ DELETE FROM demandes
 WHERE pharmacie_id IN (@old_ph1, @old_ph2, @seed_ph_sahloul, @seed_ph_khezama, @seed_ph_boujaafar, @seed_ph_hammam, @seed_ph_medina)
    OR supplier_id IN (@old_sup1, @old_sup2, @seed_sup_chaari, @seed_sup_jlassi, @seed_sup_haddad, @seed_sup_belhadj);
 
-DELETE FROM supplier_products
-WHERE supplier_id IN (@old_sup1, @old_sup2, @seed_sup_chaari, @seed_sup_jlassi, @seed_sup_haddad, @seed_sup_belhadj);
-
 DELETE FROM supplier_pharmacie
 WHERE supplier_id IN (@old_sup1, @old_sup2, @seed_sup_chaari, @seed_sup_jlassi, @seed_sup_haddad, @seed_sup_belhadj)
    OR pharmacie_id IN (@old_ph1, @old_ph2, @seed_ph_sahloul, @seed_ph_khezama, @seed_ph_boujaafar, @seed_ph_hammam, @seed_ph_medina);
 
 DELETE FROM medicaments_stock
 WHERE id_pharmacie IN (@old_ph1, @old_ph2, @seed_ph_sahloul, @seed_ph_khezama, @seed_ph_boujaafar, @seed_ph_hammam, @seed_ph_medina);
-
-DELETE FROM patient_documents
-WHERE patient_user_id IN (
-  @old_pat_user1, @old_pat_user2,
-  @seed_pat_user_malek, @seed_pat_user_sarra, @seed_pat_user_youssef, @seed_pat_user_meriem
-);
 
 DELETE FROM patient_fiche_notes
 WHERE doctor_id IN (
@@ -111,21 +102,6 @@ WHERE doctor_id IN (
   @old_doc1, @old_doc2,
   @seed_doc_amine, @seed_doc_manel, @seed_doc_riadh, @seed_doc_rim, @seed_doc_walid, @seed_doc_nesrine
 );
-
-DELETE FROM pharmacy_ordonnance_views
-WHERE pharmacie_id IN (@old_ph1, @old_ph2, @seed_ph_sahloul, @seed_ph_khezama, @seed_ph_boujaafar, @seed_ph_hammam, @seed_ph_medina)
-   OR ordonnance_id IN (
-     SELECT id
-     FROM ordonnances
-     WHERE doctor_id IN (
-       @old_doc1, @old_doc2,
-       @seed_doc_amine, @seed_doc_manel, @seed_doc_riadh, @seed_doc_rim, @seed_doc_walid, @seed_doc_nesrine
-     )
-        OR pation_id IN (
-          @old_pat_profile1, @old_pat_profile2,
-          @seed_pat_profile_malek, @seed_pat_profile_sarra, @seed_pat_profile_youssef, @seed_pat_profile_meriem
-        )
-   );
 
 DELETE FROM ordonnances
 WHERE doctor_id IN (
@@ -486,27 +462,6 @@ SET @sup_jlassi = (SELECT id FROM suppliers WHERE email = 'oussema.jlassi@pharma
 SET @sup_haddad = (SELECT id FROM suppliers WHERE email = 'imen.haddad@pharmaconnect.tn' LIMIT 1);
 SET @sup_belhadj = (SELECT id FROM suppliers WHERE email = 'nizar.belhadj@pharmaconnect.tn' LIMIT 1);
 
-INSERT INTO supplier_products (supplier_id, nom, description, prix, quantite_disponible, unite, is_active)
-VALUES
-  (@sup_chaari, 'Paracetamol 1g', 'Comprime antalgique et antipyeretique.', 2.80, 300, 'boite', 1),
-  (@sup_chaari, 'Amoxicilline 1g', 'Antibiotique voie orale.', 8.50, 140, 'boite', 1),
-  (@sup_chaari, 'Omeprazole 20mg', 'Protection gastrique.', 6.20, 180, 'boite', 1),
-  (@sup_jlassi, 'Ibuprofene 400mg', 'Anti-inflammatoire non steroidien.', 4.60, 210, 'boite', 1),
-  (@sup_jlassi, 'Ventoline inhaler', 'Bronchodilatateur pour asthme.', 16.50, 85, 'piece', 1),
-  (@sup_jlassi, 'Spasfon', 'Antispasmodique digestif.', 5.90, 160, 'boite', 1),
-  (@sup_haddad, 'Metformine 850mg', 'Traitement du diabete type 2.', 7.10, 220, 'boite', 1),
-  (@sup_haddad, 'Amlodipine 5mg', 'Traitement antihypertenseur.', 9.90, 150, 'boite', 1),
-  (@sup_haddad, 'Fer et acide folique', 'Complement pour grossesse.', 11.40, 90, 'boite', 1),
-  (@sup_belhadj, 'Collyre lubricifiant', 'Gouttes oculaires hydratantes.', 13.50, 120, 'flacon', 1),
-  (@sup_belhadj, 'Larmes artificielles', 'Soulagement secheresse oculaire.', 14.20, 95, 'flacon', 1),
-  (@sup_belhadj, 'Vitamine D3', 'Supplementation vitaminique.', 10.80, 180, 'boite', 1)
-ON DUPLICATE KEY UPDATE
-  description = VALUES(description),
-  prix = VALUES(prix),
-  quantite_disponible = VALUES(quantite_disponible),
-  unite = VALUES(unite),
-  is_active = VALUES(is_active);
-
 -- ----------------------------------
 -- Supplier / pharmacy relations
 -- ----------------------------------
@@ -675,43 +630,6 @@ VALUES
   (@doc_manel, @doc_manel, @pat_profile_sarra, '13000002', 'Ben Hmida', 'Sarra', 'Paracetamol sirop pediatrique si fievre, surveillance hydratation et repos.', 'En attente'),
   (@doc_riadh, @doc_riadh, @pat_profile_youssef, '13000003', 'Jallouli', 'Youssef', 'Creme emolliente matin et soir pendant 14 jours. Eviter les irritants cutanes.', 'Validee'),
   (@doc_rim, @doc_rim, @pat_profile_meriem, '13000004', 'Ben Salem', 'Meriem', 'Fer et acide folique 1 cp par jour pendant 3 mois.', 'Validee');
-
-SET @ord_amine_malek = (
-  SELECT id FROM ordonnances
-  WHERE doctor_id = @doc_amine AND cin = '13000001'
-  ORDER BY id DESC LIMIT 1
-);
-SET @ord_manel_sarra = (
-  SELECT id FROM ordonnances
-  WHERE doctor_id = @doc_manel AND cin = '13000002'
-  ORDER BY id DESC LIMIT 1
-);
-SET @ord_riadh_youssef = (
-  SELECT id FROM ordonnances
-  WHERE doctor_id = @doc_riadh AND cin = '13000003'
-  ORDER BY id DESC LIMIT 1
-);
-
-INSERT INTO pharmacy_ordonnance_views (pharmacie_id, ordonnance_id, view_count, first_viewed_at, last_viewed_at)
-VALUES
-  (@ph_sahloul, @ord_amine_malek, 2, NOW(), NOW()),
-  (@ph_khezama, @ord_manel_sarra, 1, NOW(), NOW()),
-  (@ph_boujaafar, @ord_riadh_youssef, 1, NOW(), NOW())
-ON DUPLICATE KEY UPDATE
-  view_count = VALUES(view_count),
-  last_viewed_at = VALUES(last_viewed_at);
-
--- ----------------------------------
--- Patient documents
--- ----------------------------------
-
-INSERT INTO patient_documents (patient_user_id, doctor_id, title, description, file_url, created_at)
-VALUES
-  (@pat_user_malek, @doc_amine, 'Bilan cardiologique', 'Compte rendu initial de suivi cardiologique.', NULL, NOW()),
-  (@pat_user_malek, @doc_walid, 'Analyse biologique', 'Resultats de suivi general.', NULL, NOW()),
-  (@pat_user_sarra, @doc_manel, 'Carnet de suivi', 'Controle pediatrique et suivi vaccinal.', NULL, NOW()),
-  (@pat_user_youssef, @doc_riadh, 'Compte rendu dermatologie', 'Observation clinique et traitement local.', NULL, NOW()),
-  (@pat_user_meriem, @doc_rim, 'Suivi gynecologique', 'Document de suivi et recommandations.', NULL, NOW());
 
 -- ----------------------------------
 -- Waiting room counters

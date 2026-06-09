@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Diagrammes de Séquence — PharmaConnect</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: #f5f5f5;
+    padding: 18px 14px;
+    color: #222;
+  }
+  h1 {
+    text-align: center;
+    font-size: 18px;
+    margin-bottom: 22px;
+    color: #1a3a5c;
+    letter-spacing: 0.5px;
+  }
+  .diagram-section {
+    background: #fff;
+    border: 1px solid #d0d0d0;
+    border-radius: 4px;
+    margin-bottom: 28px;
+    overflow: hidden;
+    box-shadow: 0 1px 5px rgba(0,0,0,.06);
+  }
+  .diagram-title {
+    background: #1a3a5c;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 6px 12px;
+    letter-spacing: 0.3px;
+    border-bottom: 1px solid #d0d0d0;
+    display: inline-block;
+  }
+  .diagram-wrapper {
+    padding: 14px 10px;
+    overflow-x: auto;
+    min-height: 160px;
+  }
+  .mermaid { min-width: 620px; }
+  .mermaid svg {
+    max-width: 100%;
+    height: auto;
+  }
+
+  /* ── Mermaid theme overrides ──────────────────────── */
+  :root {
+    --mermaid-font-family: 'Segoe UI', Arial, sans-serif;
+  }
+</style>
+</head>
+<body>
+
+<h1>Diagrammes de Séquence — MediCare / PharmaConnect</h1>
+
+<!-- ══════════════════════════════════════════════════════════
+     DIAGRAMME 1 : Utiliser l'aide au diagnostic
+═══════════════════════════════════════════════════════════ -->
+<div class="diagram-section">
+  <div class="diagram-title">interaction Utiliser l'aide au diagnostic</div>
+  <div class="diagram-wrapper">
+    <div class="mermaid">
+%%{init: {
+  "theme": "base",
+  "themeVariables": {
+    "background": "#ffffff",
+    "primaryColor": "#dce8f5",
+    "primaryTextColor": "#000000",
+    "primaryBorderColor": "#7a9fc0",
+    "secondaryColor": "#fff8e1",
+    "tertiaryColor": "#fff",
+    "lineColor": "#555",
+    "loopTextColor": "#000",
+    "activationBorderColor": "#3a74a8",
+    "activationBkgColor": "#c8dff5",
+    "labelBoxBkgColor": "#dce8f5",
+    "labelBoxBorderColor": "#7a9fc0",
+    "noteBorderColor": "#e8a800",
+    "noteBkgColor": "#fff8e1",
+    "sequenceNumberColor": "#000"
+  }
+}}%%
+sequenceDiagram
+    autonumber
+
+    actor M as :Médecin
+    participant I as interface :<br/>Analyse IA
+    participant C as Contrôleur<br/>Analyse
+    participant AI as Service IA<br/>(Python)
+
+    rect rgb(255,255,220)
+        Note over M,AI: ref — Diagramme de séquence s'authentifier
+    end
+
+    M->>I: cliquer sur "Analyse IA"
+    I->>I: Demander formulaire d'analyse
+    I-->>M: Formulaire affiché
+
+    M->>M: Remplir la description clinique
+
+    loop [format image invalide]
+        M->>I: Télécharger l'image médicale
+        I->>I: Vérification du format image<br/>(JPG, PNG, DICOM...)
+
+        break [format valide]
+            I-->>M: Image acceptée
+        end
+
+        I-->>M: "Format invalide, réessayez<br/>(JPG, PNG, DICOM uniquement)"
+    end
+
+    loop Saisie et soumission
+        M->>I: cliquer "Lancer l'analyse"
+        I->>I: Vérification des champs<br/>(description non vide)
+
+        break [champs valide]
+            I->>I: Formulaire prêt
+        end
+
+        I-->>M: message d'erreur affiché{#  #}
+    end
+
+    I->>C: Envoi données d'analyse<br/>(image + description)
+    C->>AI: Envoyer requête analyse IA
+    AI->>AI: Traitement de l'image
+
+    alt [Analyse réussie]
+        AI-->>C: Résultats d'analyse retournés
+        C-->>I: Afficher les résultats
+        I-->>M: Rapport d'analyse affiché<br/>(diagnostics + recommandations)
+    else [Échec du service IA]
+        AI-->>C: Erreur de traitement
+        C-->>I: Message "Erreur"
+        I-->>M: Message d'erreur affiché
+    end
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     DIAGRAMME 2 : Réinitialiser mot de passe
+═══════════════════════════════════════════════════════════ -->
+<div class="diagram-section">
+  <div class="diagram-title">interaction Réinitialiser mot de passe</div>
+  <div class="diagram-wrapper">
+    <div class="mermaid">
+%%{init: {
+  "theme": "base",
+  "themeVariables": {
+    "background": "#ffffff",
+    "primaryColor": "#dce8f5",
+    "primaryTextColor": "#000000",
+    "primaryBorderColor": "#7a9fc0",
+    "secondaryColor": "#fff8e1",
+    "tertiaryColor": "#fff",
+    "lineColor": "#555",
+    "loopTextColor": "#000",
+    "activationBorderColor": "#3a74a8",
+    "activationBkgColor": "#c8dff5",
+    "labelBoxBkgColor": "#dce8f5",
+    "labelBoxBorderColor": "#7a9fc0",
+    "noteBorderColor": "#e8a800",
+    "noteBkgColor": "#fff8e1",
+    "sequenceNumberColor": "#000"
+  }
+}}%%
+sequenceDiagram
+    autonumber
+
+    actor A as :Acteur
+    participant I as interface :<br/>Réinitialiser<br/>mot de passe
+    participant C as Contrôleur<br/>Utilisateur
+    participant U as Table<br/>users
+    participant R as Table<br/>password_reset_codes
+    participant E as Service<br/>Email
+
+    A->>I: cliquer "Mot de passe oublié"
+    I-->>A: Formulaire de demande affiché
+
+    loop Saisie de l'email
+        A->>I: saisir l'email
+        A->>I: cliquer "Envoyer le code"
+        I->>I: Vérification format email
+
+        break [email invalide]
+            I-->>A: message d'erreur affiché
+        end
+    end
+
+    I->>C: Soumettre email de réinitialisation
+    C->>U: Vérifier existence de l'email
+    U-->>C: Réponse requête
+
+    alt [email trouvé]
+        C->>R: Générer et enregistrer le code<br/>(user_id + code_hash + expires_at)
+        C->>E: Envoyer code par email
+        E-->>A: Email avec code reçu
+        C-->>I: "Code envoyé, vérifiez votre email"
+        I-->>A: Message de confirmation affiché
+    else [email non trouvé]
+        C-->>I: Réponse neutre (sécurité)
+        I-->>A: "Si ce compte existe, un code a été envoyé"
+    end
+
+    loop Saisie du nouveau mot de passe
+        A->>I: saisir le code reçu (6 chiffres)
+        A->>I: saisir le nouveau mot de passe
+        A->>I: confirmer le mot de passe
+        I->>I: Vérification : mots de passe identiques
+
+        break [mots de passe différents]
+            I-->>A: "Les mots de passe ne correspondent pas"
+        end
+    end
+
+    A->>I: cliquer "Réinitialiser"
+    I->>C: Soumettre code + nouveau mot de passe
+    C->>R: Vérifier le code<br/>(validité + non expiré + non utilisé)
+    R-->>C: Résultat vérification
+
+    alt [code valide]
+        C->>U: Hacher et mettre à jour le mot de passe
+        C->>R: Marquer le code comme utilisé
+        U-->>C: Confirmation mise à jour utilisateur
+        R-->>C: Confirmation code utilisé
+        C-->>I: Réinitialisation réussie
+        I-->>A: Redirection vers la page de connexion<br/>+ message de succès
+    else [code invalide ou expiré]
+        C-->>I: Message "Code invalide ou expiré"
+        I-->>A: Message d'erreur affiché
+    end
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     DIAGRAMME 3 : Envoyer une demande de partenariat
+═══════════════════════════════════════════════════════════ -->
+<div class="diagram-section">
+  <div class="diagram-title">interaction Envoyer une demande de partenariat</div>
+  <div class="diagram-wrapper">
+    <div class="mermaid">
+%%{init: {
+  "theme": "base",
+  "themeVariables": {
+    "background": "#ffffff",
+    "primaryColor": "#dce8f5",
+    "primaryTextColor": "#000000",
+    "primaryBorderColor": "#7a9fc0",
+    "secondaryColor": "#fff8e1",
+    "tertiaryColor": "#fff",
+    "lineColor": "#555",
+    "loopTextColor": "#000",
+    "activationBorderColor": "#3a74a8",
+    "activationBkgColor": "#c8dff5",
+    "labelBoxBkgColor": "#dce8f5",
+    "labelBoxBorderColor": "#7a9fc0",
+    "noteBorderColor": "#e8a800",
+    "noteBkgColor": "#fff8e1",
+    "sequenceNumberColor": "#000"
+  }
+}}%%
+sequenceDiagram
+    autonumber
+
+    actor P  as :Pharmacien
+    participant I  as interface :<br/>Annuaire<br/>Fournisseurs
+    participant C  as Contrôleur<br/>Partenariat
+    participant FDB as Table<br/>suppliers
+    participant PDB as Table<br/>supplier_pharmacie
+    participant DDB as Table<br/>supplier_partnership_requests
+
+    rect rgb(255,255,220)
+        Note over P,DDB: ref — Diagramme de séquence s'authentifier
+    end
+
+    P->>I: Accéder à l'annuaire fournisseurs
+    I->>C: Charger la liste des fournisseurs
+    C->>FDB: Récupérer les fournisseurs actifs
+    FDB-->>C: Liste des fournisseurs
+    C->>PDB: Vérifier les partenariats existants<br/>(pharmacie_id + supplier_id)
+    PDB-->>C: Statuts de relation retournés
+    C-->>I: Données chargées
+    I-->>P: Liste affichée<br/>(disponible / partenaire / en attente / refusé)
+
+    P->>I: Sélectionner un fournisseur disponible<br/>et cliquer "Voir le profil"
+    I-->>P: Profil fournisseur affiché<br/>(contact et statut)
+
+    alt [statut = partenaire ou en attente]
+        I-->>P: Bouton "Demander un partenariat"<br/>non affiché
+    else [statut = disponible ou refusé]
+        P->>I: Cliquer "Demander un partenariat"
+        I-->>P: Formulaire de demande affiché
+
+        loop Saisie du message
+            P->>I: Saisir le message d'introduction
+            P->>I: Cliquer "Envoyer la demande"
+            I->>I: Vérification des champs
+
+            break [formulaire valide]
+                I->>I: Prêt à soumettre
+            end
+
+            I-->>P: Message d'erreur affiché
+        end
+
+        I->>C: Soumettre la demande de partenariat<br/>(supplier_id + message)
+        C->>DDB: Enregistrer la demande<br/>(pharmacie_id + supplier_id + status = en_attente)
+        DDB-->>C: Demande enregistrée
+
+        alt [Succès]
+            C-->>I: Confirmation
+            I-->>P: Message "Demande envoyée avec succès"
+            I->>I: Statut fournisseur mis à jour<br/>en "en attente" dans l'annuaire
+        else [Erreur serveur]
+            C-->>I: Erreur
+            I-->>P: Message d'erreur affiché
+        end
+    end
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     DIAGRAMME 4 : Gérer une demande d'approvisionnement
+═══════════════════════════════════════════════════════════ -->
+<div class="diagram-section">
+  <div class="diagram-title">interaction Gérer une demande d'approvisionnement</div>
+  <div class="diagram-wrapper">
+    <div class="mermaid">
+%%{init: {
+  "theme": "base",
+  "themeVariables": {
+    "background": "#ffffff",
+    "primaryColor": "#dce8f5",
+    "primaryTextColor": "#000000",
+    "primaryBorderColor": "#7a9fc0",
+    "secondaryColor": "#fff8e1",
+    "tertiaryColor": "#fff",
+    "lineColor": "#555",
+    "loopTextColor": "#000",
+    "activationBorderColor": "#3a74a8",
+    "activationBkgColor": "#c8dff5",
+    "labelBoxBkgColor": "#dce8f5",
+    "labelBoxBorderColor": "#7a9fc0",
+    "noteBorderColor": "#e8a800",
+    "noteBkgColor": "#fff8e1",
+    "sequenceNumberColor": "#000"
+  }
+}}%%
+sequenceDiagram
+    autonumber
+
+    actor F  as :Fournisseur
+    participant I  as interface :<br/>Demandes
+    participant C  as Contrôleur<br/>Demandes
+    participant DDB as Table<br/>demandes
+    participant NDB as Table<br/>notifications
+
+    rect rgb(255,255,220)
+        Note over F,NDB: ref — Diagramme de séquence s'authentifier
+    end
+
+    F->>I: Accéder à la liste des demandes reçues
+    I->>C: Charger les demandes
+    C->>DDB: Récupérer les demandes du fournisseur<br/>(supplier_id)
+    DDB-->>C: Liste des demandes retournée
+    C-->>I: Données chargées
+    I-->>F: Demandes affichées<br/>(médicament, quantité, pharmacie, date, statut)
+
+    F->>I: Sélectionner une demande « en attente »
+    I-->>F: Détails de la demande affichés
+
+    alt [Fournisseur accepte]
+        F->>I: Cliquer « Accepter »
+        I->>C: Mettre à jour statut → acceptée
+        C->>DDB: UPDATE demandes<br/>(status = 'acceptee')
+        DDB-->>C: Confirmation
+        C->>NDB: Créer notification pour le pharmacien
+        C-->>I: Succès
+        I-->>F: Statut mis à jour — « Acceptée »<br/>Pharmacien notifié
+
+    else [Fournisseur refuse]
+        F->>I: Cliquer « Refuser »
+        I-->>F: Champ note de refus affiché
+        F->>I: Saisir la note de refus (facultatif)
+        F->>I: Confirmer le refus
+        I->>C: Mettre à jour statut → refusée + note
+        C->>DDB: UPDATE demandes<br/>(status = 'refusee', response_note = ?)
+        DDB-->>C: Confirmation
+        C->>NDB: Créer notification pour le pharmacien
+        C-->>I: Succès
+        I-->>F: Statut mis à jour — « Refusée »<br/>Pharmacien notifié
+    end
+    </div>
+  </div>
+</div>
+
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    sequence: {
+      diagramMarginX: 18,
+      diagramMarginY: 12,
+      actorMargin: 48,
+      width: 118,
+      height: 42,
+      boxMargin: 6,
+      boxTextMargin: 4,
+      noteMargin: 8,
+      messageMargin: 28,
+      mirrorActors: false,
+      useMaxWidth: true
+    },
+    fontFamily: "'Segoe UI', Arial, sans-serif",
+    fontSize: 11
+  });
+</script>
+</body>
+</html>

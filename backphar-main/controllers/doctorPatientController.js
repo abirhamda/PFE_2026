@@ -124,6 +124,27 @@ const safeRollback = async (connection) => {
 
 const isDuplicateEntryError = (error) => error?.code === "ER_DUP_ENTRY";
 
+/**
+ * Whenever a doctor/secretary creates or updates a patient, we update
+ * patient_portal_profiles.patient_global_id for any portal account that
+ * shares the same CIN.  This is the "link" between the two patient systems.
+ * Fails silently if the column doesn't exist yet (pre-migration).
+ */
+const syncPortalProfileLink = async (connection, cin, patientGlobalId) => {
+  if (!cin || !patientGlobalId) return;
+  try {
+    await connection.execute(
+      `UPDATE patient_portal_profiles
+       SET patient_global_id = ?
+       WHERE cin = ? AND (patient_global_id IS NULL OR patient_global_id != ?)`,
+      [patientGlobalId, cin, patientGlobalId],
+    );
+  } catch (error) {
+    if (error?.code === "ER_BAD_FIELD_ERROR" || error?.code === "ER_NO_SUCH_TABLE") return;
+    throw error;
+  }
+};
+
 const buildGeneratedMatricule = async (connection, doctorId) => {
   const prefix = `PAT-${doctorId}-`;
   const [rows] = await connection.execute(
@@ -403,7 +424,7 @@ export const createPatient = async (req, res) => {
     const isCinAvailable = await ensureDoctorCinIsAvailable(connection, context.doctorId, cin);
     if (!isCinAvailable) {
       await safeRollback(connection);
-      return res.status(409).json({ error: "Ce CIN existe deja pour ce docteur" });
+      return res.status(409).json({ error: "Ce CIN est deja utilise pour un autre patient de ce medecin" });
     }
 
     const matricule = await buildGeneratedMatricule(connection, context.doctorId);
@@ -421,7 +442,7 @@ export const createPatient = async (req, res) => {
     );
     if (existing.length > 0) {
       await safeRollback(connection);
-      return res.status(409).json({ error: "Ce matricule existe deja pour ce docteur" });
+      return res.status(409).json({ error: "Ce matricule existe deja pour ce medecin" });
     }
 
     const [insertResult] = await connection.execute(
@@ -440,6 +461,9 @@ export const createPatient = async (req, res) => {
     );
     await linkUnknownAppointmentsToPatient(connection, context.doctorId, rows[0]);
 
+    // Link portal account (if any) that shares this CIN to the same global record
+    await syncPortalProfileLink(connection, cin, patientGlobalId);
+
     await connection.commit();
     return res.status(201).json({
       message: "Patient cree avec succes",
@@ -449,7 +473,7 @@ export const createPatient = async (req, res) => {
     await safeRollback(connection);
     console.error("Error creating doctor patient:", error);
     if (isDuplicateEntryError(error)) {
-      return res.status(409).json({ error: "Ce CIN ou ce matricule existe deja pour ce docteur" });
+      return res.status(409).json({ error: "Ce CIN est deja utilise pour un autre patient de ce medecin" });
     }
     return res.status(500).json({ error: "Erreur lors de la creation du patient", details: error.message });
   } finally {
@@ -483,7 +507,7 @@ export const updatePatient = async (req, res) => {
     const { nom, prenom, cin, telephone, dateNaissance } = validation.data;
     const isCinAvailable = await ensureDoctorCinIsAvailable(connection, context.doctorId, cin, patientId);
     if (!isCinAvailable) {
-      return res.status(409).json({ error: "Ce CIN existe deja pour ce docteur" });
+      return res.status(409).json({ error: "Ce CIN est deja utilise pour un autre patient de ce medecin" });
     }
 
     await connection.beginTransaction();
@@ -520,6 +544,10 @@ export const updatePatient = async (req, res) => {
     );
 
     await linkUnknownAppointmentsToPatient(connection, context.doctorId, rows[0]);
+
+    // Keep portal account in sync with the updated global record
+    await syncPortalProfileLink(connection, cin, patientGlobalId);
+
     await connection.commit();
 
     return res.json({
@@ -530,7 +558,7 @@ export const updatePatient = async (req, res) => {
     await safeRollback(connection);
     console.error("Error updating doctor patient:", error);
     if (isDuplicateEntryError(error)) {
-      return res.status(409).json({ error: "Ce CIN existe deja pour ce docteur" });
+      return res.status(409).json({ error: "Ce CIN est deja utilise pour un autre patient de ce medecin" });
     }
     return res.status(500).json({ error: "Erreur lors de la mise a jour du patient", details: error.message });
   } finally {

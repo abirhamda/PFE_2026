@@ -141,7 +141,13 @@ const LoginForm = ({ space, defaultMode = "login" }) => {
       setMode("login");
       setEmail(registerForm.email);
     } catch (registerError) {
-      setError(registerError.response?.data?.error || "Inscription impossible");
+      const status = registerError.response?.status;
+      const msg    = registerError.response?.data?.error;
+      if (status === 409 && msg) {
+        setError(msg);
+      } else {
+        setError(msg || "Inscription impossible. Vérifiez vos informations et réessayez.");
+      }
     } finally {
       setIsLoading(false);
     }

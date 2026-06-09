@@ -54,12 +54,18 @@ const createSupplier = async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    await connection.execute("INSERT INTO users (email, password, role) VALUES (?, ?, ?)", [email, hashedPassword, "supplier"]);
+    // 1. Create the auth account in users
+    const [userInsert] = await connection.execute(
+      "INSERT INTO users (email, password, role) VALUES (?, ?, 'supplier')",
+      [email, hashedPassword],
+    );
+    const userId = userInsert.insertId;
 
+    // 2. Create the supplier profile linked via user_id (no password stored here)
     const [result] = await connection.execute(
-      `INSERT INTO suppliers (nom, prenom, email, password, telephone, is_active, created_at)
+      `INSERT INTO suppliers (user_id, nom, prenom, email, telephone, is_active, created_at)
        VALUES (?, ?, ?, ?, ?, 1, NOW())`,
-      [nom, prenom, email, hashedPassword, telephone],
+      [userId, nom, prenom, email, telephone],
     );
 
     const [newRows] = await connection.execute(
@@ -135,15 +141,18 @@ const updateSupplier = async (req, res) => {
 
     await connection.beginTransaction();
 
-    const [existingRows] = await connection.execute("SELECT id, email FROM suppliers WHERE id = ?", [supplierId]);
+    const [existingRows] = await connection.execute("SELECT id, user_id, email FROM suppliers WHERE id = ?", [supplierId]);
     if (existingRows.length === 0) {
       await connection.rollback();
       return res.status(404).json({ error: "Fournisseur non trouve" });
     }
 
-    const oldEmail = existingRows[0].email;
+    const { user_id: userId, email: oldEmail } = existingRows[0];
 
-    const [duplicate] = await connection.execute("SELECT id FROM suppliers WHERE email = ? AND id <> ?", [email, supplierId]);
+    const [duplicate] = await connection.execute(
+      "SELECT id FROM suppliers WHERE email = ? AND id <> ?",
+      [email, supplierId],
+    );
     if (duplicate.length > 0) {
       await connection.rollback();
       return res.status(400).json({ error: "Email deja utilise par un autre fournisseur" });
@@ -154,8 +163,9 @@ const updateSupplier = async (req, res) => {
       [nom, prenom, email, telephone, supplierId],
     );
 
+    // Sync auth account via user_id FK — no more WHERE email = ? AND role = ?
     if (email !== oldEmail) {
-      await connection.execute("UPDATE users SET email = ? WHERE email = ? AND role = ?", [email, oldEmail, "supplier"]);
+      await connection.execute("UPDATE users SET email = ? WHERE id = ?", [email, userId]);
     }
 
     const [updatedRows] = await connection.execute(
@@ -215,17 +225,16 @@ const deleteSupplier = async (req, res) => {
     const supplierId = Number(req.params.id);
     await connection.beginTransaction();
 
-    const [rows] = await connection.execute("SELECT email FROM suppliers WHERE id = ?", [supplierId]);
+    const [rows] = await connection.execute("SELECT user_id FROM suppliers WHERE id = ?", [supplierId]);
     if (rows.length === 0) {
       await connection.rollback();
       return res.status(404).json({ error: "Fournisseur non trouve" });
     }
 
-    const email = rows[0].email;
+    const userId = rows[0].user_id;
 
-    await connection.execute("DELETE FROM supplier_pharmacie WHERE supplier_id = ?", [supplierId]);
-    await connection.execute("DELETE FROM suppliers WHERE id = ?", [supplierId]);
-    await connection.execute("DELETE FROM users WHERE email = ? AND role = ?", [email, "supplier"]);
+    // Deleting users row cascades to suppliers via FK (supplier_pharmacie cascade is on suppliers FK)
+    await connection.execute("DELETE FROM users WHERE id = ?", [userId]);
 
     await connection.commit();
 
@@ -257,13 +266,22 @@ const changePassword = async (req, res) => {
 
     await connection.beginTransaction();
 
-    const [rows] = await connection.execute("SELECT email, password FROM suppliers WHERE id = ?", [supplierId]);
-    if (rows.length === 0) {
+    // Get user_id — password lives only in users table
+    const [suppRows] = await connection.execute(
+      "SELECT user_id FROM suppliers WHERE id = ? LIMIT 1",
+      [supplierId],
+    );
+    if (suppRows.length === 0) {
       await connection.rollback();
       return res.status(404).json({ error: "Fournisseur non trouve" });
     }
+    const userId = suppRows[0].user_id;
 
-    const isMatch = await bcrypt.compare(oldPassword, rows[0].password);
+    const [userRows] = await connection.execute(
+      "SELECT password FROM users WHERE id = ? LIMIT 1",
+      [userId],
+    );
+    const isMatch = await bcrypt.compare(oldPassword, userRows[0].password);
     if (!isMatch) {
       await connection.rollback();
       return res.status(400).json({ error: "Ancien mot de passe incorrect" });
@@ -271,12 +289,8 @@ const changePassword = async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(newPassword, 10);
 
-    await connection.execute("UPDATE suppliers SET password = ? WHERE id = ?", [hashedPassword, supplierId]);
-    await connection.execute("UPDATE users SET password = ? WHERE email = ? AND role = ?", [
-      hashedPassword,
-      rows[0].email,
-      "supplier",
-    ]);
+    // Update only in users — single source of truth
+    await connection.execute("UPDATE users SET password = ? WHERE id = ?", [hashedPassword, userId]);
 
     await connection.commit();
 
@@ -505,7 +519,11 @@ const updateMyProfile = async (req, res) => {
     );
 
     if (payload.email !== supplier.email) {
-      await connection.execute("UPDATE users SET email = ? WHERE email = ? AND role = 'supplier'", [payload.email, supplier.email]);
+      // Sync auth account via user_id FK
+      await connection.execute(
+        "UPDATE users SET email = ? WHERE id = (SELECT user_id FROM suppliers WHERE id = ? LIMIT 1)",
+        [payload.email, supplier.id],
+      );
     }
 
     await connection.commit();
@@ -547,12 +565,6 @@ const getMyDashboard = async (req, res) => {
        WHERE supplier_id = ?`,
       [supplier.id],
     );
-    const [productRows] = await connection.execute(
-      `SELECT COUNT(*) AS total
-       FROM supplier_products
-       WHERE supplier_id = ? AND is_active = 1`,
-      [supplier.id],
-    );
 
     const merged = [
       ...demandeRows.map((row) => ({ ...row, request_kind: "medicament" })),
@@ -565,7 +577,6 @@ const getMyDashboard = async (req, res) => {
       acceptees: merged.filter((item) => item.status === "acceptee").length,
       refusees: merged.filter((item) => item.status === "refusee").length,
       pharmacies_partenaires: Number(partnerRows[0]?.total || 0),
-      produits_disponibles: Number(productRows[0]?.total || 0),
     };
 
     return res.json({

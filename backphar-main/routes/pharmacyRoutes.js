@@ -7,6 +7,7 @@ const adminOnly = [authenticateToken, authorizeRoles("admin")];
 
 router.get("/me", authenticateToken, authorizeRoles("pharmacist"), pharmacyController.getMyProfile);
 router.put("/me/profile", authenticateToken, authorizeRoles("pharmacist"), pharmacyController.updateMyProfile);
+router.put("/me/public-profile", authenticateToken, authorizeRoles("pharmacist"), pharmacyController.updatePublicProfile);
 router.get("/me/dashboard", authenticateToken, authorizeRoles("pharmacist"), pharmacyController.getMyDashboard);
 
 router.post("/", ...adminOnly, pharmacyController.createPharmacy);

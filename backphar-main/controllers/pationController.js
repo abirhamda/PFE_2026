@@ -48,19 +48,19 @@ export const createPation = async (req, res) => {
     const [existingPationByEmail] = await connection.execute("SELECT id FROM pations WHERE email = ?", [email]);
     if (existingPationByEmail.length > 0) {
       await connection.rollback();
-      return res.status(400).json({ error: "Un pation avec cet email existe deja" });
+      return res.status(409).json({ error: "Cet email est deja utilise par un autre patient." });
     }
 
     const [existingPationByCin] = await connection.execute("SELECT id FROM pations WHERE cin = ?", [cin]);
     if (existingPationByCin.length > 0) {
       await connection.rollback();
-      return res.status(400).json({ error: "Un pation avec ce CIN existe deja" });
+      return res.status(409).json({ error: "Ce CIN est deja utilise par un autre patient." });
     }
 
     const [existingUser] = await connection.execute("SELECT id FROM users WHERE email = ?", [email]);
     if (existingUser.length > 0) {
       await connection.rollback();
-      return res.status(400).json({ error: "Un compte utilisateur avec cet email existe deja" });
+      return res.status(409).json({ error: "Cet email est deja utilise par un autre compte." });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -157,13 +157,13 @@ export const updatePation = async (req, res) => {
     const [emailExists] = await connection.execute("SELECT id FROM pations WHERE email = ? AND id <> ?", [email, pationId]);
     if (emailExists.length > 0) {
       await connection.rollback();
-      return res.status(400).json({ error: "Un pation avec cet email existe deja" });
+      return res.status(409).json({ error: "Cet email est deja utilise par un autre patient." });
     }
 
     const [cinExists] = await connection.execute("SELECT id FROM pations WHERE cin = ? AND id <> ?", [cin, pationId]);
     if (cinExists.length > 0) {
       await connection.rollback();
-      return res.status(400).json({ error: "Un pation avec ce CIN existe deja" });
+      return res.status(409).json({ error: "Ce CIN est deja utilise par un autre patient." });
     }
 
     await connection.execute(

@@ -12,6 +12,43 @@ const normalizeCin = (cin) => {
 };
 const isDuplicateEntryError = (error) => error?.code === "ER_DUP_ENTRY";
 
+/**
+ * Finds an existing canonical patients row by CIN (or name+birthdate),
+ * or creates one if none exists.  Returns the patients.id.
+ * Tolerates a missing patients table (returns null) so old deployments
+ * without the global registry still work.
+ */
+const resolveOrCreateGlobalPatient = async (connection, { nom, prenom, cin, telephone, dateNaissance }) => {
+  try {
+    if (cin) {
+      const [byCin] = await connection.execute(
+        "SELECT id FROM patients WHERE cin = ? LIMIT 1",
+        [cin],
+      );
+      if (byCin.length > 0) return Number(byCin[0].id);
+    }
+
+    const [byIdentity] = await connection.execute(
+      `SELECT id FROM patients
+       WHERE nom = ? AND prenom = ?
+         AND IFNULL(date_naissance, '') = IFNULL(?, '')
+       LIMIT 1`,
+      [nom, prenom, dateNaissance || null],
+    );
+    if (byIdentity.length > 0) return Number(byIdentity[0].id);
+
+    const [result] = await connection.execute(
+      `INSERT INTO patients (nom, prenom, cin, telephone, date_naissance, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, NOW(), NOW())`,
+      [nom, prenom, cin || null, telephone || null, dateNaissance || null],
+    );
+    return Number(result.insertId);
+  } catch (error) {
+    if (error?.code === "ER_NO_SUCH_TABLE") return null;
+    throw error;
+  }
+};
+
 const ensureCinIsAvailableForUser = async (connection, cin, excludedUserId = null) => {
   if (!cin) {
     return true;
@@ -393,13 +430,25 @@ export const registerPatientPortalAccount = async (req, res) => {
     const [existingUsers] = await connection.execute("SELECT id FROM users WHERE email = ? LIMIT 1", [email]);
     if (existingUsers.length > 0) {
       await connection.rollback();
-      return res.status(409).json({ error: "Un compte avec cet email existe deja" });
+      return res.status(409).json({ error: "Cet email est deja utilise par un autre compte. Essayez de vous connecter." });
     }
 
     const isCinAvailable = await ensureCinIsAvailableForUser(connection, cin);
     if (!isCinAvailable) {
       await connection.rollback();
-      return res.status(409).json({ error: "Ce CIN est deja utilise par un autre utilisateur" });
+      return res.status(409).json({ error: "Ce CIN est deja associe a un autre compte. Essayez de vous connecter." });
+    }
+
+    // Check CIN uniqueness against patient_portal_profiles too
+    if (cin) {
+      const [cinInPortal] = await connection.execute(
+        "SELECT id FROM patient_portal_profiles WHERE cin = ? LIMIT 1",
+        [cin],
+      );
+      if (cinInPortal.length > 0) {
+        await connection.rollback();
+        return res.status(409).json({ error: "Ce CIN appartient deja a un compte patient existant." });
+      }
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -408,12 +457,27 @@ export const registerPatientPortalAccount = async (req, res) => {
       [email, cin, hashedPassword],
     );
 
+    // Find or create the canonical patients row and link immediately
+    const patientGlobalId = await resolveOrCreateGlobalPatient(connection, {
+      nom, prenom, cin, telephone, dateNaissance,
+    });
+
     await connection.execute(
       `INSERT INTO patient_portal_profiles
-       (user_id, nom, prenom, email, telephone, cin, date_naissance, city, latitude, longitude, is_active, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, NOW(), NOW())`,
-      [userInsert.insertId, nom, prenom, email, telephone, cin, dateNaissance, city, latitude, longitude],
+       (user_id, nom, prenom, email, telephone, cin, date_naissance, city, latitude, longitude,
+        patient_global_id, is_active, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, NOW(), NOW())`,
+      [userInsert.insertId, nom, prenom, email, telephone, cin, dateNaissance, city, latitude, longitude,
+       patientGlobalId],
     );
+
+    // Back-fill any doctor_patients rows that share this CIN but lack a global link
+    if (cin && patientGlobalId) {
+      await connection.execute(
+        "UPDATE doctor_patients SET patient_global_id = ? WHERE cin = ? AND patient_global_id IS NULL",
+        [patientGlobalId, cin],
+      );
+    }
 
     await connection.commit();
 
@@ -424,7 +488,10 @@ export const registerPatientPortalAccount = async (req, res) => {
     await connection.rollback();
     console.error("Error registering patient portal account:", error);
     if (isDuplicateEntryError(error)) {
-      return res.status(409).json({ error: "Ce CIN ou cet email existe deja" });
+      if (String(error.message || "").toLowerCase().includes("cin")) {
+        return res.status(409).json({ error: "Ce CIN est deja utilise par un autre compte." });
+      }
+      return res.status(409).json({ error: "Cet email est deja utilise par un autre compte." });
     }
     return res.status(500).json({ error: "Erreur lors de l'inscription", details: error.message });
   } finally {
@@ -486,19 +553,44 @@ export const updateMyPatientPortalProfile = async (req, res) => {
 
     const isCinAvailable = await ensureCinIsAvailableForUser(connection, cin, userId);
     if (!isCinAvailable) {
-      return res.status(409).json({ error: "Ce CIN est deja utilise par un autre utilisateur" });
+      return res.status(409).json({ error: "Ce CIN est deja associe a un autre compte." });
+    }
+
+    // Check uniqueness in patient_portal_profiles too (excluding current user)
+    if (cin) {
+      const [cinInPortal] = await connection.execute(
+        "SELECT id FROM patient_portal_profiles WHERE cin = ? AND user_id <> ? LIMIT 1",
+        [cin, userId],
+      );
+      if (cinInPortal.length > 0) {
+        return res.status(409).json({ error: "Ce CIN appartient deja a un autre compte patient." });
+      }
     }
 
     await connection.beginTransaction();
 
+    // Re-resolve the canonical patients link (CIN may have changed)
+    const patientGlobalId = await resolveOrCreateGlobalPatient(connection, {
+      nom, prenom, cin, telephone, dateNaissance,
+    });
+
     await connection.execute(
       `UPDATE patient_portal_profiles
-       SET nom = ?, prenom = ?, telephone = ?, cin = ?, date_naissance = ?, city = ?, latitude = ?, longitude = ?, updated_at = NOW()
+       SET nom = ?, prenom = ?, telephone = ?, cin = ?, date_naissance = ?, city = ?,
+           latitude = ?, longitude = ?, patient_global_id = ?, updated_at = NOW()
        WHERE user_id = ?`,
-      [nom, prenom, telephone, cin, dateNaissance, city, latitude, longitude, userId],
+      [nom, prenom, telephone, cin, dateNaissance, city, latitude, longitude, patientGlobalId, userId],
     );
 
     await connection.execute("UPDATE users SET cin = ? WHERE id = ?", [cin, userId]);
+
+    // Back-fill doctor_patients rows
+    if (cin && patientGlobalId) {
+      await connection.execute(
+        "UPDATE doctor_patients SET patient_global_id = ? WHERE cin = ? AND patient_global_id IS NULL",
+        [patientGlobalId, cin],
+      );
+    }
 
     await connection.commit();
 
@@ -508,7 +600,10 @@ export const updateMyPatientPortalProfile = async (req, res) => {
     await connection.rollback();
     console.error("Error updating patient portal profile:", error);
     if (isDuplicateEntryError(error)) {
-      return res.status(409).json({ error: "Ce CIN existe deja" });
+      if (String(error.message || "").toLowerCase().includes("cin")) {
+        return res.status(409).json({ error: "Ce CIN est deja utilise par un autre compte." });
+      }
+      return res.status(409).json({ error: "Cet email est deja utilise par un autre compte." });
     }
     return res.status(500).json({ error: "Erreur lors de la mise a jour du profil", details: error.message });
   } finally {
@@ -894,13 +989,14 @@ export const bookAppointmentOnline = async (req, res) => {
 
     const [insertResult] = await connection.execute(
       `INSERT INTO appointments
-       (doctor_id, secretary_id, patient_id, booked_by_patient_user_id, patient_matricule, patient_nom, patient_prenom,
-        patient_cin, patient_phone, patient_date_naissance,
+       (doctor_id, secretary_id, patient_id, portal_patient_id, booked_by_patient_user_id,
+        patient_matricule, patient_nom, patient_prenom, patient_cin, patient_phone, patient_date_naissance,
         appointment_at, payment_amount, payment_doctor_comment, doctor_notes, created_by_role, created_at, updated_at)
-       VALUES (?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL, NULL, 'doctor', NOW(), NOW())`,
+       VALUES (?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL, NULL, 'pation', NOW(), NOW())`,
       [
         doctorId,
         doctorPatient?.id || null,
+        profile.id,
         userId,
         doctorPatient?.matricule || null,
         patientNom,
@@ -1055,31 +1151,6 @@ export const getMyOrdonnances = async (req, res) => {
   }
 };
 
-export const getMyDocuments = async (req, res) => {
-  const connection = await db.getConnection();
-  try {
-    const userId = Number(req.user?.id);
-    if (!Number.isInteger(userId) || userId <= 0) {
-      return res.status(400).json({ error: "Token utilisateur invalide" });
-    }
-
-    const [rows] = await connection.execute(
-      `SELECT id, patient_user_id, doctor_id, title, description, file_url, created_at
-       FROM patient_documents
-       WHERE patient_user_id = ?
-       ORDER BY created_at DESC`,
-      [userId],
-    );
-
-    return res.json({ success: true, count: rows.length, documents: rows });
-  } catch (error) {
-    console.error("Error loading patient documents:", error);
-    return res.status(500).json({ error: "Erreur lors du chargement des documents", details: error.message });
-  } finally {
-    connection.release();
-  }
-};
-
 export default {
   registerPatientPortalAccount,
   getMyPatientPortalProfile,
@@ -1092,5 +1163,4 @@ export default {
   getMyBookedAppointments,
   cancelMyBookedAppointment,
   getMyOrdonnances,
-  getMyDocuments,
 };

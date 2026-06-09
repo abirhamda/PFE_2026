@@ -266,41 +266,6 @@ const backfillAppointmentPatientLinks = async (connection) => {
   return updates;
 };
 
-const fillPatientDocuments = async (connection) => {
-  const [profiles] = await connection.execute(
-    `SELECT user_id, nom, prenom
-     FROM patient_portal_profiles
-     ORDER BY id ASC`,
-  );
-
-  let inserts = 0;
-  for (const profile of profiles) {
-    const [existing] = await connection.execute(
-      "SELECT COUNT(*) AS total FROM patient_documents WHERE patient_user_id = ?",
-      [profile.user_id],
-    );
-    if (Number(existing[0]?.total || 0) > 0) continue;
-
-    const fullName = `${profile.prenom || ""} ${profile.nom || ""}`.trim();
-    await connection.execute(
-      `INSERT INTO patient_documents
-       (patient_user_id, doctor_id, title, description, file_url, created_at)
-       VALUES
-       (?, 5, 'Compte rendu consultation', ?, NULL, NOW()),
-       (?, 5, 'Bilan biologique', ?, NULL, NOW())`,
-      [
-        profile.user_id,
-        `Compte rendu initial pour ${fullName || "patient"}.`,
-        profile.user_id,
-        `Resultats de bilan de suivi pour ${fullName || "patient"}.`,
-      ],
-    );
-    inserts += 2;
-  }
-
-  return inserts;
-};
-
 const fillWaitingRoomCounters = async (connection) => {
   const [doctors] = await connection.execute(
     "SELECT id FROM doctors WHERE is_active = 1 ORDER BY id ASC",
@@ -331,7 +296,6 @@ const run = async () => {
     const patientProfiles = await fillPatientPortalProfiles(connection);
     await fillAppointmentsEmptyColumns(connection);
     const backfilledAppointmentPatients = await backfillAppointmentPatientLinks(connection);
-    const patientDocs = await fillPatientDocuments(connection);
     const waitingCounters = await fillWaitingRoomCounters(connection);
 
     await connection.commit();
@@ -339,7 +303,6 @@ const run = async () => {
     console.log(`[ok] Doctor public profiles assures: ${doctorProfiles}`);
     console.log(`[ok] Patient portal profiles updated: ${patientProfiles}`);
     console.log(`[ok] Appointment patient links backfilled: ${backfilledAppointmentPatients}`);
-    console.log(`[ok] Patient documents inserted: ${patientDocs}`);
     console.log(`[ok] Waiting room counters upserted: ${waitingCounters}`);
   } catch (error) {
     if (connection) {

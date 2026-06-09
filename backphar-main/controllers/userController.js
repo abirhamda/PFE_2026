@@ -14,16 +14,15 @@ const buildDisplayName = (nom, prenom, fallback = "") => {
   return full || fallback;
 };
 
-const getProfileForUser = async (role, email) => {
-  if (!role || !email) {
-    return {};
-  }
+// Fetches the entity profile using the users.id (user_id FK) — no email scan needed
+const getProfileForUser = async (role, userId) => {
+  if (!role || !userId) return {};
 
   switch (role) {
     case "admin": {
       const [rows] = await db.execute(
-        "SELECT id, full_name, phone, address FROM admin WHERE email = ? LIMIT 1",
-        [email],
+        "SELECT id, full_name, phone, address FROM admin WHERE user_id = ? LIMIT 1",
+        [userId],
       );
       if (rows.length === 0) return {};
       return {
@@ -37,8 +36,8 @@ const getProfileForUser = async (role, email) => {
     case "pharmacist": {
       const [rows] = await db.execute(
         `SELECT id_pharmacie, nom_pharmacie, president_pharmacie, telephone, is_active
-         FROM pharmacie WHERE email = ? LIMIT 1`,
-        [email],
+         FROM pharmacie WHERE user_id = ? LIMIT 1`,
+        [userId],
       );
       if (rows.length === 0) return {};
       return {
@@ -53,8 +52,8 @@ const getProfileForUser = async (role, email) => {
 
     case "doctor": {
       const [rows] = await db.execute(
-        "SELECT id, nom, prenom, specialty, cin, is_active FROM doctors WHERE email = ? LIMIT 1",
-        [email],
+        "SELECT id, nom, prenom, specialty, cin, is_active FROM doctors WHERE user_id = ? LIMIT 1",
+        [userId],
       );
       if (rows.length === 0) return {};
       return {
@@ -70,8 +69,8 @@ const getProfileForUser = async (role, email) => {
 
     case "supplier": {
       const [rows] = await db.execute(
-        "SELECT id, nom, prenom, telephone, is_active FROM suppliers WHERE email = ? LIMIT 1",
-        [email],
+        "SELECT id, nom, prenom, telephone, is_active FROM suppliers WHERE user_id = ? LIMIT 1",
+        [userId],
       );
       if (rows.length === 0) return {};
       return {
@@ -86,12 +85,13 @@ const getProfileForUser = async (role, email) => {
 
     case "secretaire": {
       const [rows] = await db.execute(
-        `SELECT s.id, s.nom, s.prenom, s.telephone, s.is_active, s.doctor_id, d.nom AS doctor_nom, d.prenom AS doctor_prenom
+        `SELECT s.id, s.nom, s.prenom, s.telephone, s.is_active, s.doctor_id,
+                d.nom AS doctor_nom, d.prenom AS doctor_prenom
          FROM secretaries s
          INNER JOIN doctors d ON d.id = s.doctor_id
-         WHERE s.email = ?
+         WHERE s.user_id = ?
          LIMIT 1`,
-        [email],
+        [userId],
       );
       if (rows.length === 0) return {};
       return {
@@ -108,11 +108,12 @@ const getProfileForUser = async (role, email) => {
 
     case "pation": {
       const [rows] = await db.execute(
-        `SELECT p.id, p.user_id, p.nom, p.prenom, p.email, p.telephone, p.cin, p.date_naissance, p.city, p.latitude, p.longitude, p.is_active
+        `SELECT p.id, p.user_id, p.nom, p.prenom, p.email, p.telephone, p.cin,
+                p.date_naissance, p.city, p.latitude, p.longitude, p.is_active
          FROM patient_portal_profiles p
-         WHERE p.email = ?
+         WHERE p.user_id = ?
          LIMIT 1`,
-        [email],
+        [userId],
       );
       if (rows.length === 0) return {};
       return {
@@ -219,7 +220,8 @@ export const loginUser = async (req, res) => {
     }
 
     const role = normalizeRole(user.role);
-    const profile = await getProfileForUser(role, email);
+    // Use users.id as the key to fetch the entity profile via user_id FK
+    const profile = await getProfileForUser(role, user.id);
     const entityId = profile.entityId || user.id;
 
     const token = jwt.sign({ id: user.id, role, email: user.email }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });

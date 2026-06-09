@@ -44,7 +44,8 @@ const PatientEditModal = ({ patient, onClose, onSave }) => {
         date_naissance: form.date_naissance || null,
       });
     } catch (requestError) {
-      setError(requestError.response?.data?.error || "Mise a jour impossible");
+      const msg = requestError.response?.data?.error;
+      setError(msg || "Mise a jour impossible");
     } finally {
       setSaving(false);
     }
@@ -184,7 +185,8 @@ const SecretaryPatientsPage = ({
       resetForm();
       await loadPatients();
     } catch (requestError) {
-      setError(requestError.response?.data?.error || "Operation impossible");
+      const msg = requestError.response?.data?.error;
+      setError(msg || "Operation impossible");
     }
   };
 

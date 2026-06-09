@@ -231,15 +231,6 @@ export const getOrdonnanceById = async (req, res) => {
       if (!pharmacy) {
         return res.status(403).json({ error: "Profil pharmacien invalide" });
       }
-
-      await connection.execute(
-        `INSERT INTO pharmacy_ordonnance_views (pharmacie_id, ordonnance_id, view_count, first_viewed_at, last_viewed_at)
-         VALUES (?, ?, 1, NOW(), NOW())
-         ON DUPLICATE KEY UPDATE
-           view_count = view_count + 1,
-           last_viewed_at = NOW()`,
-        [pharmacy.id_pharmacie, ordonnanceId],
-      );
     }
 
     return res.json(rows[0]);

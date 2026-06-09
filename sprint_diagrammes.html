@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Diagrammes de Classes par Sprint — MediCare</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: #f0f4f8;
+    color: #0f1e2e;
+  }
+
+  header {
+    background: #0f2d4a;
+    color: #fff;
+    padding: 12px 22px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    box-shadow: 0 2px 8px rgba(15,29,74,0.18);
+  }
+  header .logo { display: flex; align-items: center; gap: 12px; }
+  header .logo-text h1 { font-size: 16px; font-weight: 600; }
+  header .logo-text p  { font-size: 10px; opacity: 0.55; letter-spacing: 0.14em; text-transform: uppercase; }
+  header .badge {
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 20px;
+    padding: 5px 12px;
+    font-size: 11px;
+    font-weight: 500;
+  }
+
+  .page-body { padding: 18px 22px; }
+
+  /* ── Sprint overview table ─────────────────────── */
+  .overview-section {
+    margin-bottom: 24px;
+  }
+  .section-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: #0f2d4a;
+    margin-bottom: 12px;
+    padding-left: 12px;
+    border-left: 4px solid #1e6fd9;
+    letter-spacing: 0.02em;
+  }
+
+  .sprint-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+  }
+
+  .sprint-card {
+    background: #fff;
+    border-radius: 8px;
+    border: 1px solid #dde3ec;
+    box-shadow: 0 1px 4px rgba(15,29,74,0.07);
+    overflow: hidden;
+  }
+  .sprint-card-header {
+    padding: 10px 12px;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .sprint-card-header .sprint-num {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.25);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 800;
+  }
+  .s1 .sprint-card-header { background: #0f2d4a; }
+  .s2 .sprint-card-header { background: #1e6fd9; }
+  .s3 .sprint-card-header { background: #0d6e4f; }
+
+  .sprint-card-body { padding: 10px 12px; }
+
+  .us-list { list-style: none; }
+  .us-list li {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    padding: 3px 0;
+    font-size: 11px;
+    color: #374151;
+    border-bottom: 1px dashed #e5e7eb;
+  }
+  .us-list li:last-child { border-bottom: none; }
+  .us-badge {
+    flex-shrink: 0;
+    font-size: 9px;
+    font-weight: 700;
+    padding: 1px 6px;
+    border-radius: 10px;
+    letter-spacing: 0.03em;
+  }
+  .s1 .us-badge { background: #dce8f5; color: #0f2d4a; }
+  .s2 .us-badge { background: #dbeafe; color: #1d4ed8; }
+  .s3 .us-badge { background: #d1fae5; color: #065f46; }
+
+  .entities-bar {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid #f0f4f8;
+  }
+  .entities-bar p {
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #9ca3af;
+    margin-bottom: 7px;
+  }
+  .entity-tags { display: flex; flex-wrap: wrap; gap: 4px; }
+  .entity-tag {
+    font-size: 9px;
+    font-weight: 600;
+    padding: 2px 6px;
+    border-radius: 8px;
+    border: 1px solid;
+  }
+  .s1 .entity-tag { background: #f0f6ff; border-color: #c3d8f0; color: #0f2d4a; }
+  .s2 .entity-tag { background: #eff6ff; border-color: #bfdbfe; color: #1e40af; }
+  .s3 .entity-tag { background: #f0fdf4; border-color: #a7f3d0; color: #065f46; }
+
+  /* ── Diagram sections ──────────────────────────── */
+  .diagram-section {
+    background: #fff;
+    border: 1px solid #dde3ec;
+    border-radius: 8px;
+    margin-bottom: 28px;
+    overflow: hidden;
+    box-shadow: 0 1px 4px rgba(15,29,74,0.07);
+  }
+  .diagram-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 16px;
+    border-bottom: 1px solid #dde3ec;
+  }
+  .sprint-badge-big {
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 800;
+    flex-shrink: 0;
+  }
+  .bg-s1 { background: #0f2d4a; }
+  .bg-s2 { background: #1e6fd9; }
+  .bg-s3 { background: #0d6e4f; }
+
+  .diagram-header-text h2 {
+    font-size: 13px;
+    font-weight: 700;
+    color: #0f1e2e;
+  }
+  .diagram-header-text p {
+    font-size: 10px;
+    color: #6b7280;
+    margin-top: 1px;
+  }
+
+  .diagram-wrapper {
+    padding: 14px;
+    overflow-x: auto;
+  }
+  .mermaid { min-width: 760px; }
+  .mermaid svg {
+    max-width: 100%;
+    height: auto;
+  }
+
+  .mermaid text,
+  .mermaid .nodeLabel,
+  .mermaid .classTitle,
+  .mermaid .label {
+    fill: #0f1e2e !important;
+    color: #0f1e2e !important;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+      <rect width="36" height="36" rx="8" fill="rgba(255,255,255,0.12)"/>
+      <path d="M18 8C12.477 8 8 12.477 8 18s4.477 10 10 10 10-4.477 10-10S23.523 8 18 8z" stroke="white" stroke-width="1.5" fill="none"/>
+      <path d="M18 13v10M13 18h10" stroke="white" stroke-width="2" stroke-linecap="round"/>
+    </svg>
+    <div class="logo-text">
+      <h1>MediCare</h1>
+      <p>Diagrammes par Sprint</p>
+    </div>
+  </div>
+  <div class="badge">3 Sprints · 22 Entités · 24 User Stories</div>
+</header>
+
+<div class="page-body">
+
+  <!-- ════════════════════════════════════════════
+       SECTION 1 : VUE GLOBALE DES SPRINTS
+  ═══════════════════════════════════════════════ -->
+  <div class="overview-section">
+    <p class="section-title">Vue globale des sprints</p>
+
+    <div class="sprint-grid">
+
+      <!-- Sprint 1 -->
+      <div class="sprint-card s1">
+        <div class="sprint-card-header">
+          <div class="sprint-num">1</div>
+          Sprint 1 — Espace médecin &amp; secrétaire
+        </div>
+        <div class="sprint-card-body">
+          <ul class="us-list">
+            <li><span class="us-badge">US1</span>  S'authentifier</li>
+            <li><span class="us-badge">US4</span>  Gérer secrétaires</li>
+            <li><span class="us-badge">US5</span>  Gérer patients</li>
+            <li><span class="us-badge">US6</span>  Gérer rendez-vous</li>
+            <li><span class="us-badge">US7</span>  Gérer informations publiques (médecin / secrétaire)</li>
+            <li><span class="us-badge">US8</span>  Gérer fiches patients</li>
+            <li><span class="us-badge">US9</span>  Consulter fiches patients</li>
+            <li><span class="us-badge">US10</span> Gérer ordonnances</li>
+            <li><span class="us-badge">US11</span> Consulter ordonnances</li>
+          </ul>
+          <div class="entities-bar">
+            <p>Entités impliquées</p>
+            <div class="entity-tags">
+              <span class="entity-tag">users</span>
+              <span class="entity-tag">password_reset_codes</span>
+              <span class="entity-tag">doctors</span>
+              <span class="entity-tag">doctor_public_profiles</span>
+              <span class="entity-tag">secretaries</span>
+              <span class="entity-tag">patients</span>
+              <span class="entity-tag">doctor_patients</span>
+              <span class="entity-tag">patient_fiche_notes</span>
+              <span class="entity-tag">appointments</span>
+              <span class="entity-tag">waiting_room_counters</span>
+              <span class="entity-tag">ordonnances</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sprint 2 -->
+      <div class="sprint-card s2">
+        <div class="sprint-card-header">
+          <div class="sprint-num">2</div>
+          Sprint 2 — Espace admin &amp; patient
+        </div>
+        <div class="sprint-card-body">
+          <ul class="us-list">
+            <li><span class="us-badge">US2</span>  Gérer comptes</li>
+            <li><span class="us-badge">US2</span>  Réinitialiser mot de passe</li>
+            <li><span class="us-badge">US3</span>  Gérer accès module IA</li>
+            <li><span class="us-badge">US12</span> Utiliser module IA</li>
+            <li><span class="us-badge">US13</span> S'inscrire</li>
+            <li><span class="us-badge">US14</span> Consulter médecins</li>
+            <li><span class="us-badge">US15</span> Consulter pharmacies</li>
+            <li><span class="us-badge">US16</span> Prendre rendez-vous</li>
+            <li><span class="us-badge">US17</span> Consulter ses informations</li>
+          </ul>
+          <div class="entities-bar">
+            <p>Entités impliquées</p>
+            <div class="entity-tags">
+              <span class="entity-tag">users</span>
+              <span class="entity-tag">password_reset_codes</span>
+              <span class="entity-tag">admin</span>
+              <span class="entity-tag">patient_portal_profiles</span>
+              <span class="entity-tag">patients</span>
+              <span class="entity-tag">doctor_public_profiles</span>
+              <span class="entity-tag">pharmacie</span>
+              <span class="entity-tag">appointments</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sprint 3 -->
+      <div class="sprint-card s3">
+        <div class="sprint-card-header">
+          <div class="sprint-num">3</div>
+          Sprint 3 — Espace pharmacien &amp; fournisseur
+        </div>
+        <div class="sprint-card-body">
+          <ul class="us-list">
+            <li><span class="us-badge">US18</span> Consulter ordonnances</li>
+            <li><span class="us-badge">US20</span> Envoyer demandes</li>
+            <li><span class="us-badge">US21</span> Gérer fournisseurs</li>
+            <li><span class="us-badge">US22</span> Gérer demandes</li>
+            <li><span class="us-badge">US24</span> Consulter pharmacies</li>
+          </ul>
+          <div class="entities-bar">
+            <p>Entités impliquées</p>
+            <div class="entity-tags">
+              <span class="entity-tag">pharmacie</span>
+              <span class="entity-tag">medicaments_stock</span>
+              <span class="entity-tag">ordonnances</span>
+              <span class="entity-tag">suppliers</span>
+              <span class="entity-tag">supplier_pharmacie</span>
+              <span class="entity-tag">supplier_partnership_requests</span>
+              <span class="entity-tag">demandes</span>
+              <span class="entity-tag">notifications</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /sprint-grid -->
+  </div><!-- /overview-section -->
+
+
+  <!-- ════════════════════════════════════════════
+       SECTION 2 : DIAGRAMME DE CLASSES — SPRINT 1
+  ═══════════════════════════════════════════════ -->
+  <div class="diagram-section">
+    <div class="diagram-header">
+      <div class="sprint-badge-big bg-s1">1</div>
+      <div class="diagram-header-text">
+        <h2>Diagramme de classes — Sprint 1</h2>
+        <p>Espace médecin &amp; secrétaire · US1 US4 US5 US6 US7 US8 US9 US10 US11</p>
+      </div>
+    </div>
+    <div class="diagram-wrapper">
+      <pre class="mermaid">
+classDiagram
+  direction TB
+
+  class users {
+    +INT id PK
+    +VARCHAR email
+    +VARCHAR cin
+    +VARCHAR password
+    +ENUM role
+    +TIMESTAMP created_at
+  }
+
+  class password_reset_codes {
+    +INT id PK
+    +INT user_id FK
+    +VARCHAR code_hash
+    +DATETIME expires_at
+    +INT attempts
+    +DATETIME used_at
+    +TIMESTAMP created_at
+  }
+
+  class doctors {
+    +INT id PK
+    +VARCHAR nom
+    +VARCHAR prenom
+    +VARCHAR email
+    +VARCHAR password
+    +VARCHAR cin
+    +VARCHAR specialty
+    +TINYINT is_active
+    +TIMESTAMP created_at
+  }
+
+  class doctor_public_profiles {
+    +INT doctor_id PK FK
+    +VARCHAR display_name
+    +VARCHAR public_phone
+    +VARCHAR address_line
+    +VARCHAR city
+    +DECIMAL latitude
+    +DECIMAL longitude
+    +DECIMAL consultation_fee
+    +INT consultation_duration_min
+    +TEXT working_hours_json
+    +TINYINT online_visibility
+    +TINYINT online_booking_enabled
+    +TIMESTAMP updated_at
+  }
+
+  class secretaries {
+    +INT id PK
+    +INT doctor_id FK
+    +VARCHAR nom
+    +VARCHAR prenom
+    +VARCHAR email
+    +VARCHAR password
+    +VARCHAR telephone
+    +TINYINT is_active
+    +TIMESTAMP created_at
+  }
+
+  class waiting_room_counters {
+    +INT id PK
+    +INT doctor_id FK
+    +DATE counter_date
+    +INT waiting_count
+    +TIMESTAMP updated_at
+  }
+
+  class patients {
+    +INT id PK
+    +VARCHAR nom
+    +VARCHAR prenom
+    +VARCHAR cin
+    +VARCHAR telephone
+    +DATE date_naissance
+    +TIMESTAMP created_at
+    +TIMESTAMP updated_at
+  }
+
+  class doctor_patients {
+    +INT id PK
+    +INT doctor_id FK
+    +INT patient_global_id FK
+    +VARCHAR matricule
+    +VARCHAR nom
+    +VARCHAR prenom
+    +VARCHAR cin
+    +VARCHAR telephone
+    +DATE date_naissance
+    +TIMESTAMP created_at
+    +TIMESTAMP updated_at
+  }
+
+  class patient_fiche_notes {
+    +INT id PK
+    +INT doctor_id FK
+    +INT patient_id FK
+    +DATETIME entry_at
+    +TEXT doctor_notes
+    +DECIMAL payment_amount
+    +TEXT payment_doctor_comment
+    +TIMESTAMP created_at
+    +TIMESTAMP updated_at
+  }
+
+  class appointments {
+    +INT id PK
+    +INT doctor_id FK
+    +INT secretary_id FK
+    +INT patient_id FK
+    +INT booked_by_patient_user_id FK
+    +VARCHAR patient_nom
+    +VARCHAR patient_prenom
+    +VARCHAR patient_cin
+    +DATETIME appointment_at
+    +DECIMAL payment_amount
+    +TEXT doctor_notes
+    +ENUM created_by_role
+    +TIMESTAMP created_at
+    +TIMESTAMP updated_at
+  }
+
+  class ordonnances {
+    +INT id PK
+    +INT doctor_id FK
+    +VARCHAR cin
+    +VARCHAR nom
+    +VARCHAR prenom
+    +TEXT ordonnance
+    +VARCHAR status
+    +TIMESTAMP created_at
+  }
+
+  %% Relations
+  users "1" --> "0..*" password_reset_codes : genere
+
+  doctors "1" *-- "1"    doctor_public_profiles : profilPublic
+  doctors "1" *-- "0..*" secretaries          : emploie
+  doctors "1" *-- "0..*" ordonnances         : redige
+  doctors "1" *-- "0..*" doctor_patients      : suit
+  doctors "1" *-- "0..*" appointments        : planifie
+  doctors "1" *-- "0..*" patient_fiche_notes   : renseigne
+  doctors "1" *-- "0..*" waiting_room_counters : gere
+
+  secretaries "1" --> "0..*" appointments : cree
+  secretaries "0..*" --> "1" doctor_public_profiles : gereProfilPublic
+
+  patients "1" --> "0..*" doctor_patients : reference
+
+  doctor_patients "1" --> "0..*" appointments    : concerne
+  doctor_patients "1" *-- "0..*" patient_fiche_notes : contient
+      </pre>
+    </div>
+  </div>
+
+
+  <!-- ════════════════════════════════════════════
+       SECTION 3 : DIAGRAMME DE CLASSES — SPRINT 2
+  ═══════════════════════════════════════════════ -->
+  <div class="diagram-section">
+    <div class="diagram-header">
+      <div class="sprint-badge-big bg-s2">2</div>
+      <div class="diagram-header-text">
+        <h2>Diagramme de classes — Sprint 2</h2>
+        <p>Espace admin &amp; patient portal · US2 US3 US12 US13 US14 US15 US16 US17</p>
+      </div>
+    </div>
+    <div class="diagram-wrapper">
+      <pre class="mermaid">
+classDiagram
+  direction TB
+
+  class users {
+    +INT id PK
+    +VARCHAR email
+    +VARCHAR cin
+    +VARCHAR password
+    +ENUM role
+    +TIMESTAMP created_at
+  }
+
+  class password_reset_codes {
+    +INT id PK
+    +INT user_id FK
+    +VARCHAR code_hash
+    +DATETIME expires_at
+    +INT attempts
+    +DATETIME used_at
+    +TIMESTAMP created_at
+  }
+
+  class admin {
+    +INT id PK
+    +VARCHAR full_name
+    +VARCHAR email
+    +VARCHAR mot_de_passe
+    +VARCHAR phone
+    +VARCHAR address
+    +TIMESTAMP created_at
+  }
+
+  class patient_portal_profiles {
+    +INT id PK
+    +INT user_id FK
+    +INT patient_global_id FK
+    +VARCHAR nom
+    +VARCHAR prenom
+    +VARCHAR email
+    +VARCHAR telephone
+    +VARCHAR cin
+    +DATE date_naissance
+    +VARCHAR city
+    +DECIMAL latitude
+    +DECIMAL longitude
+    +TINYINT is_active
+    +TIMESTAMP created_at
+    +TIMESTAMP updated_at
+  }
+
+  class patients {
+    +INT id PK
+    +VARCHAR nom
+    +VARCHAR prenom
+    +VARCHAR cin
+    +VARCHAR telephone
+    +DATE date_naissance
+    +TIMESTAMP created_at
+    +TIMESTAMP updated_at
+  }
+
+  class doctor_public_profiles {
+    +INT doctor_id PK FK
+    +VARCHAR display_name
+    +VARCHAR public_phone
+    +VARCHAR address_line
+    +VARCHAR city
+    +DECIMAL latitude
+    +DECIMAL longitude
+    +DECIMAL consultation_fee
+    +INT consultation_duration_min
+    +TEXT working_hours_json
+    +TINYINT online_visibility
+    +TINYINT online_booking_enabled
+    +TIMESTAMP updated_at
+  }
+
+  class pharmacie {
+    +INT id_pharmacie PK
+    +VARCHAR nom_pharmacie
+    +VARCHAR email
+    +VARCHAR telephone
+    +VARCHAR president_pharmacie
+    +VARCHAR address_line
+    +VARCHAR city
+    +ENUM pharmacy_type
+    +TEXT opening_hours_json
+    +DECIMAL latitude
+    +DECIMAL longitude
+    +TINYINT is_active
+    +TIMESTAMP created_at
+  }
+
+  class appointments {
+    +INT id PK
+    +INT doctor_id FK
+    +INT booked_by_patient_user_id FK
+    +VARCHAR patient_nom
+    +VARCHAR patient_prenom
+    +VARCHAR patient_cin
+    +DATETIME appointment_at
+    +ENUM created_by_role
+    +TIMESTAMP created_at
+    +TIMESTAMP updated_at
+  }
+
+  %% Relations
+  users "1" --> "0..*" password_reset_codes   : genere
+  users "1" --> "0..1" patient_portal_profiles : possede
+  users "1" --> "0..*" appointments          : reserve
+
+  patients "1" --> "0..1" patient_portal_profiles : lie
+
+  patient_portal_profiles "1" --> "0..*" appointments : prendRendezVous
+      </pre>
+    </div>
+  </div>
+
+
+  <!-- ════════════════════════════════════════════
+       SECTION 4 : DIAGRAMME DE CLASSES — SPRINT 3
+  ═══════════════════════════════════════════════ -->
+  <div class="diagram-section">
+    <div class="diagram-header">
+      <div class="sprint-badge-big bg-s3">3</div>
+      <div class="diagram-header-text">
+        <h2>Diagramme de classes — Sprint 3</h2>
+        <p>Espace pharmacien &amp; fournisseur · US18 US19 US20 US21 US22 US24</p>
+      </div>
+    </div>
+    <div class="diagram-wrapper">
+      <pre class="mermaid">
+classDiagram
+  direction TB
+
+  class pharmacie {
+    +INT id_pharmacie PK
+    +VARCHAR nom_pharmacie
+    +VARCHAR email
+    +VARCHAR telephone
+    +VARCHAR president_pharmacie
+    +VARCHAR address_line
+    +VARCHAR city
+    +ENUM pharmacy_type
+    +TEXT opening_hours_json
+    +DECIMAL latitude
+    +DECIMAL longitude
+    +TINYINT is_active
+    +TIMESTAMP created_at
+  }
+
+  class medicaments_stock {
+    +INT id PK
+    +INT id_pharmacie FK
+    +VARCHAR nom
+    +INT quantite
+    +DECIMAL prix
+    +INT seuil_alerte
+    +TIMESTAMP created_at
+    +TIMESTAMP updated_at
+  }
+
+  class ordonnances {
+    +INT id PK
+    +INT doctor_id FK
+    +VARCHAR cin
+    +VARCHAR nom
+    +VARCHAR prenom
+    +TEXT ordonnance
+    +VARCHAR status
+    +TIMESTAMP created_at
+  }
+
+  class suppliers {
+    +INT id PK
+    +VARCHAR nom
+    +VARCHAR prenom
+    +VARCHAR email
+    +VARCHAR password
+    +VARCHAR telephone
+    +TINYINT is_active
+    +TIMESTAMP created_at
+  }
+
+  class supplier_pharmacie {
+    +INT supplier_id PK FK
+    +INT pharmacie_id PK FK
+    +TIMESTAMP created_at
+  }
+
+  class supplier_partnership_requests {
+    +INT id PK
+    +INT pharmacie_id FK
+    +INT supplier_id FK
+    +TEXT message
+    +ENUM status
+    +TEXT response_note
+    +TIMESTAMP created_at
+    +TIMESTAMP updated_at
+    +DATETIME responded_at
+  }
+
+  class demandes {
+    +INT id PK
+    +INT pharmacie_id FK
+    +INT supplier_id FK
+    +VARCHAR nom_medicament
+    +INT quantite
+    +ENUM status
+    +TEXT response_note
+    +DATETIME date_acceptation
+    +TIMESTAMP created_at
+    +TIMESTAMP updated_at
+  }
+
+  class notifications {
+    +INT id PK
+    +VARCHAR nom_medicament
+    +INT quantite
+    +INT pharmacien_id FK
+    +INT fournisseur_id FK
+    +TEXT message
+    +ENUM status
+    +INT demande_id FK
+    +TIMESTAMP created_at
+  }
+
+  %% Relations
+  pharmacie "1" *-- "0..*" medicaments_stock              : stocke
+  pharmacie "1" ..> "0..*" ordonnances                     : consulte
+  pharmacie "1" --> "0..*" supplier_partnership_requests    : soumet
+  pharmacie "1" --> "0..*" demandes                       : commande
+  pharmacie "1" --> "0..*" notifications                  : recoit
+  pharmacie "1" --> "0..*" supplier_pharmacie             : pharmacie_id
+
+  suppliers "1" --> "0..*" supplier_partnership_requests     : recoit
+  suppliers "1" --> "0..*" demandes                        : traite
+  suppliers "1" --> "0..*" notifications                   : genere
+  suppliers "1" --> "0..*" supplier_pharmacie              : supplier_id
+
+  demandes "1" --> "0..*" notifications                    : declenche
+      </pre>
+    </div>
+  </div>
+
+</div><!-- /page-body -->
+
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'base',
+    classDiagram: { diagramPadding: 18 },
+    fontFamily: "'Segoe UI', Arial, sans-serif",
+    fontSize: 11
+  });
+</script>
+</body>
+</html>

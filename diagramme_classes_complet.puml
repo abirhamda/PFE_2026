@@ -38,9 +38,9 @@ class PasswordResetCode <<Security>> {
 
 class Admin <<Admin>> {
   +id : INT <<PK>>
+  +user_id : INT <<FK>>
   +full_name : VARCHAR(120)
   +email : VARCHAR(191) <<UNIQUE>>
-  +mot_de_passe : VARCHAR(255)
   +phone : VARCHAR(30)
   +address : VARCHAR(255)
   +created_at : TIMESTAMP
@@ -68,10 +68,10 @@ class PatientPortalProfile <<Profil patient>> {
 ' =========================================================
 class Doctor <<Medecin>> {
   +id : INT <<PK>>
+  +user_id : INT <<FK>>
   +nom : VARCHAR(120)
   +prenom : VARCHAR(120)
   +email : VARCHAR(191) <<UNIQUE>>
-  +password : VARCHAR(255)
   +cin : VARCHAR(30) <<UNIQUE>>
   +specialty : VARCHAR(120)
   +is_active : TINYINT
@@ -97,11 +97,11 @@ class DoctorPublicProfile <<Profil public>> {
 
 class Secretary <<Secretaire>> {
   +id : INT <<PK>>
+  +user_id : INT <<FK>>
   +doctor_id : INT <<FK>>
   +nom : VARCHAR(120)
   +prenom : VARCHAR(120)
   +email : VARCHAR(191) <<UNIQUE>>
-  +password : VARCHAR(255)
   +telephone : VARCHAR(30)
   +is_active : TINYINT
   +created_at : TIMESTAMP
@@ -144,33 +144,17 @@ class PatientFicheNote <<Fiche medicale>> {
   +updated_at : TIMESTAMP
 }
 
-class PatientDocument <<Document patient>> {
-  +id : INT <<PK>>
-  +patient_user_id : INT <<FK>>
-  +doctor_id : INT <<FK>>
-  +title : VARCHAR(160)
-  +description : TEXT
-  +file_url : VARCHAR(512)
-  +created_at : TIMESTAMP
-}
-
 class Appointment <<Rendez-vous>> {
   +id : INT <<PK>>
   +doctor_id : INT <<FK>>
-  +secretary_id : INT <<FK>>
-  +patient_id : INT <<FK>>
-  +booked_by_patient_user_id : INT <<FK>>
-  +patient_matricule : VARCHAR(30)
-  +patient_nom : VARCHAR(120)
-  +patient_prenom : VARCHAR(120)
-  +patient_cin : VARCHAR(30)
-  +patient_phone : VARCHAR(30)
-  +patient_date_naissance : DATE
+  +secretary_id : INT <<FK, nullable>>
+  +patient_id : INT <<FK, nullable>>
+  +portal_patient_id : INT <<FK, nullable>>
   +appointment_at : DATETIME
   +payment_amount : DECIMAL(10,2)
   +payment_doctor_comment : TEXT
   +doctor_notes : TEXT
-  +created_by_role : ENUM(doctor, secretaire)
+  +created_by_role : ENUM(doctor, secretaire, pation)
   +created_at : TIMESTAMP
   +updated_at : TIMESTAMP
 }
@@ -185,9 +169,8 @@ class WaitingRoomCounter <<Salle attente>> {
 
 class Ordonnance <<Ordonnance>> {
   +id : INT <<PK>>
-  +doctor_id : INT <<FK>>
-  +id_doctor : INT
-  +pation_id : INT
+  +doctor_id : INT <<FK, nullable>>
+  +doctor_patient_id : INT <<FK, nullable>>
   +cin : VARCHAR(30)
   +nom : VARCHAR(120)
   +prenom : VARCHAR(120)
@@ -201,13 +184,17 @@ class Ordonnance <<Ordonnance>> {
 ' =========================================================
 class Pharmacie <<Pharmacien>> {
   +id_pharmacie : INT <<PK>>
+  +user_id : INT <<FK>>
   +nom_pharmacie : VARCHAR(120)
   +email : VARCHAR(191) <<UNIQUE>>
   +telephone : VARCHAR(30)
-  +mot_de_passe : VARCHAR(255)
   +president_pharmacie : VARCHAR(120)
   +address_line : VARCHAR(255)
   +city : VARCHAR(120)
+  +pharmacy_type : ENUM(day,night,both)
+  +opening_hours_json : TEXT
+  +latitude : DECIMAL(10,7)
+  +longitude : DECIMAL(10,7)
   +is_active : TINYINT
   +created_at : TIMESTAMP
 }
@@ -225,26 +212,13 @@ class MedicamentStock <<Stock medicament>> {
 
 class Supplier <<Fournisseur>> {
   +id : INT <<PK>>
+  +user_id : INT <<FK>>
   +nom : VARCHAR(120)
   +prenom : VARCHAR(120)
   +email : VARCHAR(191) <<UNIQUE>>
-  +password : VARCHAR(255)
   +telephone : VARCHAR(30)
   +is_active : TINYINT
   +created_at : TIMESTAMP
-}
-
-class SupplierProduct <<Produit fournisseur>> {
-  +id : INT <<PK>>
-  +supplier_id : INT <<FK>>
-  +nom : VARCHAR(140)
-  +description : TEXT
-  +prix : DECIMAL(10,2)
-  +quantite_disponible : INT
-  +unite : VARCHAR(40)
-  +is_active : TINYINT
-  +created_at : TIMESTAMP
-  +updated_at : TIMESTAMP
 }
 
 class SupplierPharmacie <<Association M:N>> {
@@ -288,15 +262,6 @@ class Notification <<Notification>> {
   +status : ENUM(en_attente, acceptee, refusee, recue)
   +demande_id : INT <<FK>>
   +created_at : TIMESTAMP
-}
-
-class PharmacyOrdonnanceView <<Suivi consultation>> {
-  +id : INT <<PK>>
-  +pharmacie_id : INT <<FK>>
-  +ordonnance_id : INT <<FK>>
-  +view_count : INT
-  +first_viewed_at : TIMESTAMP
-  +last_viewed_at : TIMESTAMP
 }
 
 ' =========================================================
@@ -347,14 +312,13 @@ class PathologyPrediction <<Prediction>> {
 ' =========================================================
 User "1" -- "0..*" PasswordResetCode : genere
 User "1" -- "0..1" PatientPortalProfile : possede
-User "1" -- "0..*" PatientDocument : televerse
-User "1" -- "0..*" Appointment : reserve
+PatientPortalProfile "1" -- "0..*" Appointment : reserve en ligne
 
-User .. Doctor : compte role doctor\n(email + role)
-User .. Secretary : compte role secretaire\n(email + role)
-User .. Supplier : compte role supplier\n(email + role)
-User .. Pharmacie : compte role pharmacist\n(email + role)
-User .. Admin : compte role admin\n(email + role)
+User "1" *-- "0..1" Doctor : compte (user_id FK)
+User "1" *-- "0..1" Secretary : compte (user_id FK)
+User "1" *-- "0..1" Supplier : compte (user_id FK)
+User "1" *-- "0..1" Pharmacie : compte (user_id FK)
+User "1" *-- "0..1" Admin : compte (user_id FK)
 
 ' =========================================================
 ' Relations - medecin, patients et rendez-vous
@@ -362,21 +326,20 @@ User .. Admin : compte role admin\n(email + role)
 Doctor "1" -- "0..1" DoctorPublicProfile : publie
 Doctor "1" -- "0..*" Secretary : gere
 Doctor "1" -- "0..*" DoctorPatient : suit
-Patient "0..1" -- "0..*" DoctorPatient : reference globale
+DoctorPatient "0..*" --> "0..1" Patient : patient global
 DoctorPatient "0..1" -- "0..*" Appointment : concerne
 DoctorPatient "1" -- "0..*" PatientFicheNote : contient
 Doctor "1" -- "0..*" Appointment : planifie
 Secretary "0..1" -- "0..*" Appointment : cree
 Doctor "1" -- "0..*" PatientFicheNote : renseigne
-Doctor "1" -- "0..*" PatientDocument : associe
 Doctor "1" -- "0..*" WaitingRoomCounter : gere
-Doctor "1" -- "0..*" Ordonnance : redige
+Doctor "0..1" -- "0..*" Ordonnance : redige
 
 ' =========================================================
 ' Relations - pharmacie, ordonnances et fournisseurs
 ' =========================================================
-Ordonnance "1" -- "0..*" PharmacyOrdonnanceView : est consultee
-Pharmacie "1" -- "0..*" PharmacyOrdonnanceView : consulte
+DoctorPatient "1" -- "0..*" Ordonnance : concerne
+Pharmacie "1" ..> "0..*" Ordonnance : verifie
 Pharmacie "1" -- "0..*" MedicamentStock : stocke
 Pharmacie "1" -- "0..*" SupplierPharmacie : partenariat
 Supplier "1" -- "0..*" SupplierPharmacie : partenariat
@@ -384,7 +347,6 @@ Pharmacie "1" -- "0..*" SupplierPartnershipRequest : envoie
 Supplier "1" -- "0..*" SupplierPartnershipRequest : recoit
 Pharmacie "1" -- "0..*" Demande : passe
 Supplier "1" -- "0..*" Demande : traite
-Supplier "1" -- "0..*" SupplierProduct : propose
 Pharmacie "1" -- "0..*" Notification : recoit
 Supplier "1" -- "0..*" Notification : envoie
 Demande "0..1" -- "0..*" Notification : declenche
@@ -406,10 +368,11 @@ note right of AiAnalysisService
 end note
 
 note bottom of User
-  Les profils Doctor, Secretary, Supplier,
-  Pharmacie et Admin sont synchronises
-  avec User par email + role dans le code.
-  Seul PatientPortalProfile possede un user_id FK.
+  Chaque entite metier (Doctor, Secretary, Supplier,
+  Pharmacie, Admin) possede un user_id FK (UNIQUE)
+  qui reference users.id avec ON DELETE CASCADE.
+  Le mot de passe est stocke UNIQUEMENT dans users.password.
+  PatientPortalProfile est lie a User de la meme facon.
 end note
 
 @enduml

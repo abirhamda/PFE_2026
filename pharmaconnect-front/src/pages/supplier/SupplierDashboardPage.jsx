@@ -15,7 +15,6 @@ import api from "../../lib/api";
 const dashboardRoutes = [
   { title: "Centre des demandes",   description: "Traiter les demandes medicament et partenariat.", to: "/supplier/demandes" },
   { title: "Pharmacies partenaires",description: "Consulter les pharmacies actives.",                to: "/supplier/pharmacies" },
-  { title: "Catalogue produits",    description: "Maintenir une offre disponible et structuree.",   to: "/supplier/produits" },
   { title: "Mes informations",      description: "Mettre a jour le profil fournisseur.",             to: "/supplier/profile" },
 ];
 
@@ -59,8 +58,8 @@ export default function SupplierDashboardPage() {
             <Button variant="outline" className="border-white/30 bg-white/10 text-white hover:bg-white/20" onClick={() => navigate("/supplier/demandes")}>
               Ouvrir les demandes
             </Button>
-            <Button variant="outline" className="bg-white text-primary hover:bg-gray-50 border-white" onClick={() => navigate("/supplier/produits")}>
-              Gerer les produits
+            <Button variant="outline" className="bg-white text-primary hover:bg-gray-50 border-white" onClick={() => navigate("/supplier/pharmacies")}>
+              Voir les pharmacies
             </Button>
           </>
         }
@@ -140,7 +139,7 @@ export default function SupplierDashboardPage() {
             </Card>
           </section>
 
-          <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <section className="grid gap-4 md:grid-cols-3">
             {dashboardRoutes.map((item) => (
               <button key={item.to} type="button" onClick={() => navigate(item.to)} className="bg-card rounded-card border border-border shadow-card p-5 text-left hover:border-accent/30 hover:shadow-card-hover transition-all">
                 <p className="text-sm font-semibold text-text-primary">{item.title}</p>

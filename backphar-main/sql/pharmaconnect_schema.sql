@@ -84,37 +84,44 @@ CREATE TABLE patient_portal_profiles (
 
 CREATE TABLE admin (
   id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL UNIQUE,
   full_name VARCHAR(120) NOT NULL,
   email VARCHAR(191) NOT NULL UNIQUE,
-  mot_de_passe VARCHAR(255) NOT NULL,
   phone VARCHAR(30) NULL,
   address VARCHAR(255) NULL,
-  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_admin_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
 CREATE TABLE pharmacie (
   id_pharmacie INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL UNIQUE,
   nom_pharmacie VARCHAR(120) NOT NULL,
   email VARCHAR(191) NOT NULL UNIQUE,
   telephone VARCHAR(30) NOT NULL,
-  mot_de_passe VARCHAR(255) NOT NULL,
   president_pharmacie VARCHAR(120) NOT NULL,
   address_line VARCHAR(255) NULL,
   city VARCHAR(120) NULL,
+  pharmacy_type ENUM('day','night','both') NOT NULL DEFAULT 'day',
+  opening_hours_json TEXT NULL,
+  latitude DECIMAL(10,7) NULL,
+  longitude DECIMAL(10,7) NULL,
   is_active TINYINT(1) NOT NULL DEFAULT 1,
-  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_pharmacie_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
 CREATE TABLE doctors (
   id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL UNIQUE,
   nom VARCHAR(120) NOT NULL,
   prenom VARCHAR(120) NOT NULL,
   email VARCHAR(191) NOT NULL UNIQUE,
-  password VARCHAR(255) NOT NULL,
   cin VARCHAR(30) NOT NULL UNIQUE,
   specialty VARCHAR(120) NOT NULL,
   is_active TINYINT(1) NOT NULL DEFAULT 1,
-  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_doctors_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
 CREATE TABLE patients (
@@ -152,43 +159,46 @@ CREATE TABLE doctor_public_profiles (
 
 CREATE TABLE secretaries (
   id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL UNIQUE,
   doctor_id INT NOT NULL,
   nom VARCHAR(120) NOT NULL,
   prenom VARCHAR(120) NOT NULL,
   email VARCHAR(191) NOT NULL UNIQUE,
-  password VARCHAR(255) NOT NULL,
   telephone VARCHAR(30) NULL,
   is_active TINYINT(1) NOT NULL DEFAULT 1,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_secretaries_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
   CONSTRAINT fk_secretaries_doctor FOREIGN KEY (doctor_id) REFERENCES doctors(id) ON DELETE CASCADE,
   INDEX idx_secretaries_doctor (doctor_id)
 ) ENGINE=InnoDB;
 
 CREATE TABLE suppliers (
   id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL UNIQUE,
   nom VARCHAR(120) NOT NULL,
   prenom VARCHAR(120) NOT NULL,
   email VARCHAR(191) NOT NULL UNIQUE,
-  password VARCHAR(255) NOT NULL,
   telephone VARCHAR(30) NOT NULL,
   is_active TINYINT(1) NOT NULL DEFAULT 1,
-  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_suppliers_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
 CREATE TABLE ordonnances (
   id INT AUTO_INCREMENT PRIMARY KEY,
-  doctor_id INT NOT NULL,
-  id_doctor INT NULL,
-  pation_id INT NULL,
+  doctor_id INT NULL,
+  doctor_patient_id INT NULL,
   cin VARCHAR(30) NULL,
   nom VARCHAR(120) NOT NULL,
   prenom VARCHAR(120) NOT NULL,
   ordonnance TEXT NOT NULL,
   status VARCHAR(50) NOT NULL DEFAULT 'En attente',
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  CONSTRAINT fk_ordonnances_doctor FOREIGN KEY (doctor_id) REFERENCES doctors(id) ON DELETE CASCADE,
-  INDEX idx_ordonnances_cin (cin),
-  INDEX idx_ordonnances_pation_id (pation_id)
+  CONSTRAINT fk_ordonnances_doctor FOREIGN KEY (doctor_id) REFERENCES doctors(id) ON DELETE SET NULL,
+  CONSTRAINT fk_ordonnances_doctor_patient FOREIGN KEY (doctor_patient_id) REFERENCES doctor_patients(id) ON DELETE SET NULL,
+  INDEX idx_ordonnances_doctor (doctor_id),
+  INDEX idx_ordonnances_doctor_patient (doctor_patient_id),
+  INDEX idx_ordonnances_cin (cin)
 ) ENGINE=InnoDB;
 
 CREATE TABLE doctor_patients (
@@ -215,10 +225,11 @@ CREATE TABLE appointments (
   doctor_id INT NOT NULL,
   secretary_id INT NULL,
   patient_id INT NULL,
+  portal_patient_id INT NULL,
   booked_by_patient_user_id INT NULL,
   patient_matricule VARCHAR(30) NULL,
-  patient_nom VARCHAR(120) NOT NULL,
-  patient_prenom VARCHAR(120) NOT NULL,
+  patient_nom VARCHAR(120) NULL,
+  patient_prenom VARCHAR(120) NULL,
   patient_cin VARCHAR(30) NULL,
   patient_phone VARCHAR(30) NULL,
   patient_date_naissance DATE NULL,
@@ -226,16 +237,16 @@ CREATE TABLE appointments (
   payment_amount DECIMAL(10,2) NULL,
   payment_doctor_comment TEXT NULL,
   doctor_notes TEXT NULL,
-  created_by_role ENUM('doctor', 'secretaire') NOT NULL,
+  created_by_role ENUM('doctor', 'secretaire', 'pation') NOT NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   CONSTRAINT fk_appointments_doctor FOREIGN KEY (doctor_id) REFERENCES doctors(id) ON DELETE CASCADE,
   CONSTRAINT fk_appointments_secretary FOREIGN KEY (secretary_id) REFERENCES secretaries(id) ON DELETE SET NULL,
   CONSTRAINT fk_appointments_patient FOREIGN KEY (patient_id) REFERENCES doctor_patients(id) ON DELETE SET NULL,
-  CONSTRAINT fk_appointments_booked_by_patient_user FOREIGN KEY (booked_by_patient_user_id) REFERENCES users(id) ON DELETE SET NULL,
+  CONSTRAINT fk_appointments_portal_patient FOREIGN KEY (portal_patient_id) REFERENCES patient_portal_profiles(id) ON DELETE SET NULL,
   INDEX idx_appointments_doctor_date (doctor_id, appointment_at),
-  INDEX idx_appointments_patient (doctor_id, patient_matricule),
-  INDEX idx_appointments_booked_by_patient (booked_by_patient_user_id, appointment_at)
+  INDEX idx_appointments_patient (patient_id),
+  INDEX idx_appointments_portal_patient (portal_patient_id, appointment_at)
 ) ENGINE=InnoDB;
 
 CREATE TABLE patient_fiche_notes (
@@ -251,19 +262,6 @@ CREATE TABLE patient_fiche_notes (
   CONSTRAINT fk_patient_fiche_notes_doctor FOREIGN KEY (doctor_id) REFERENCES doctors(id) ON DELETE CASCADE,
   CONSTRAINT fk_patient_fiche_notes_patient FOREIGN KEY (patient_id) REFERENCES doctor_patients(id) ON DELETE CASCADE,
   INDEX idx_patient_fiche_notes_lookup (doctor_id, patient_id, entry_at)
-) ENGINE=InnoDB;
-
-CREATE TABLE patient_documents (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  patient_user_id INT NOT NULL,
-  doctor_id INT NULL,
-  title VARCHAR(160) NOT NULL,
-  description TEXT NULL,
-  file_url VARCHAR(512) NULL,
-  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  CONSTRAINT fk_patient_documents_user FOREIGN KEY (patient_user_id) REFERENCES users(id) ON DELETE CASCADE,
-  CONSTRAINT fk_patient_documents_doctor FOREIGN KEY (doctor_id) REFERENCES doctors(id) ON DELETE SET NULL,
-  INDEX idx_patient_documents_user_date (patient_user_id, created_at)
 ) ENGINE=InnoDB;
 
 CREATE TABLE waiting_room_counters (
@@ -287,22 +285,6 @@ CREATE TABLE medicaments_stock (
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   CONSTRAINT fk_stock_pharmacie FOREIGN KEY (id_pharmacie) REFERENCES pharmacie(id_pharmacie) ON DELETE CASCADE,
   UNIQUE KEY uq_stock_pharmacie_nom (id_pharmacie, nom)
-) ENGINE=InnoDB;
-
-CREATE TABLE supplier_products (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  supplier_id INT NOT NULL,
-  nom VARCHAR(140) NOT NULL,
-  description TEXT NULL,
-  prix DECIMAL(10,2) NULL,
-  quantite_disponible INT NOT NULL DEFAULT 0,
-  unite VARCHAR(40) NULL,
-  is_active TINYINT(1) NOT NULL DEFAULT 1,
-  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  CONSTRAINT fk_supplier_products_supplier FOREIGN KEY (supplier_id) REFERENCES suppliers(id) ON DELETE CASCADE,
-  UNIQUE KEY uq_supplier_product_nom (supplier_id, nom),
-  INDEX idx_supplier_products_supplier (supplier_id, is_active)
 ) ENGINE=InnoDB;
 
 CREATE TABLE supplier_pharmacie (
@@ -365,19 +347,6 @@ CREATE TABLE notifications (
   INDEX idx_notifications_status (status)
 ) ENGINE=InnoDB;
 
-CREATE TABLE pharmacy_ordonnance_views (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  pharmacie_id INT NOT NULL,
-  ordonnance_id INT NOT NULL,
-  view_count INT NOT NULL DEFAULT 1,
-  first_viewed_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  last_viewed_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  CONSTRAINT fk_pharmacy_ordonnance_views_pharmacy FOREIGN KEY (pharmacie_id) REFERENCES pharmacie(id_pharmacie) ON DELETE CASCADE,
-  CONSTRAINT fk_pharmacy_ordonnance_views_ordonnance FOREIGN KEY (ordonnance_id) REFERENCES ordonnances(id) ON DELETE CASCADE,
-  UNIQUE KEY uq_pharmacy_ordonnance_view (pharmacie_id, ordonnance_id),
-  INDEX idx_pharmacy_ordonnance_views_pharmacy (pharmacie_id, last_viewed_at)
-) ENGINE=InnoDB;
-
 CREATE OR REPLACE VIEW rendez_vous AS
 SELECT * FROM appointments;
 
@@ -389,5 +358,5 @@ SELECT * FROM doctors;
 
 -- Optional seed admin (replace hashed password before production)
 -- INSERT INTO users (email, password, role) VALUES ('admin@medicare.local', '$2a$10$replace_me_with_bcrypt_hash', 'admin');
--- INSERT INTO admin (full_name, email, mot_de_passe, phone, address)
--- VALUES ('System Admin', 'admin@medicare.local', '$2a$10$replace_me_with_bcrypt_hash', NULL, NULL);
+-- INSERT INTO admin (user_id, full_name, email, phone, address)
+-- VALUES (LAST_INSERT_ID(), 'System Admin', 'admin@medicare.local', NULL, NULL);

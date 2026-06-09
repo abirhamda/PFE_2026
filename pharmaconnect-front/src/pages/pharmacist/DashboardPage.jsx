@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { AlertTriangle, ArrowRight, ClipboardList, FileSearch, Package2, Pill, Truck } from "lucide-react";
+import { AlertTriangle, ArrowRight, ClipboardList, Package2, Pill, Truck } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import Button from "../../components/ui/Button";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/Card";
@@ -76,7 +76,7 @@ export default function DashboardPage() {
             <MetricCard icon={Pill}         label="Medicaments en stock"     value={stats.medicaments_en_stock || 0} helper="References actuellement suivies"          tone="cyan" />
             <MetricCard icon={AlertTriangle}label="Ruptures"                 value={stats.ruptures || 0}            helper="Produits indisponibles a traiter"         tone="rose" />
             <MetricCard icon={Truck}        label="Demandes envoyees"        value={stats.demandes_envoyees || 0}   helper="Reapprovisionnements traces"              tone="amber" />
-            <MetricCard icon={FileSearch}   label="Ordonnances consultees"   value={stats.ordonnances_consultees || 0} helper="Historique de consultation de votre officine" tone="emerald" />
+            <MetricCard icon={Package2}     label="Stock faible"             value={stats.faible_stock || 0}        helper="References sous le seuil d'alerte"        tone="emerald" />
           </section>
 
           <section className="grid gap-5 xl:grid-cols-[1.15fr_0.85fr]">

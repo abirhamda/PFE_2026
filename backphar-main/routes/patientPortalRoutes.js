@@ -57,11 +57,5 @@ router.get(
   authorizeRoles("pation"),
   patientPortalController.getMyOrdonnances,
 );
-router.get(
-  "/documents",
-  authenticateToken,
-  authorizeRoles("pation"),
-  patientPortalController.getMyDocuments,
-);
 
 export default router;

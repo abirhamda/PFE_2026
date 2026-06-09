@@ -9,6 +9,7 @@ import OrdonnancesPage from './pages/pharmacist/OrdonnancesPage';
 import PharmacistSupplierPage from './pages/pharmacist/PharmacistSupplierPage';
 import PharmacyStockPage from './pages/pharmacist/PharmacyStockPage';
 import PharmacyDemandesPage from './pages/pharmacist/PharmacyDemandesPage';
+import PharmacyPublicProfilePage from './pages/pharmacist/PharmacyPublicProfilePage';
 
 import PharmacyManagementPage from './pages/admin/PharmacyManagementPage';
 import DashboardAdminPage from './pages/admin/DashboardAdminPage';
@@ -30,13 +31,11 @@ import SecretaryOrdonnancesPage from './pages/secretaire/SecretaryOrdonnancesPag
 import PharmaciesListPage from './pages/supplier/PharmaciesListPage';
 import NotificationsPage from './pages/supplier/NotificationsPage';
 import SupplierDashboardPage from './pages/supplier/SupplierDashboardPage';
-import SupplierProductsPage from './pages/supplier/SupplierProductsPage';
 
 import PatientDashboardPage from './pages/pation/DashboardPage';
 import DiscoverDoctorsPage from './pages/pation/DiscoverDoctorsPage';
 import PatientAppointmentsPage from './pages/pation/MyAppointmentsPage';
 import PatientOrdonnancesPage from './pages/pation/OrdonnancesPage';
-import PatientDocumentsPage from './pages/pation/DocumentsPage';
 
 import SettingsPage from './pages/SettingsPage';
 import ProfilePage from './pages/ProfilePage';
@@ -115,6 +114,7 @@ function App() {
               <Route path="/pharmacy/stock" element={<PharmacyStockPage />} />
               <Route path="/pharmacy/demandes" element={<PharmacyDemandesPage />} />
               <Route path="/pharmacy/fournisseurs" element={<PharmacistSupplierPage />} />
+              <Route path="/pharmacy/public-profile" element={<PharmacyPublicProfilePage />} />
               <Route path="/pharmacy/profile" element={<ProfilePage />} />
               <Route path="/pharmacy/settings" element={<SettingsPage />} />
             </Route>
@@ -126,7 +126,6 @@ function App() {
               <Route path="/supplier/dashboard" element={<SupplierDashboardPage />} />
               <Route path="/supplier/demandes" element={<NotificationsPage />} />
               <Route path="/supplier/pharmacies" element={<PharmaciesListPage />} />
-              <Route path="/supplier/produits" element={<SupplierProductsPage />} />
               <Route path="/supplier/profile" element={<ProfilePage />} />
               <Route path="/supplier/settings" element={<SettingsPage />} />
             </Route>
@@ -163,7 +162,6 @@ function App() {
               <Route path="/patient/discover" element={<DiscoverDoctorsPage />} />
               <Route path="/patient/appointments" element={<PatientAppointmentsPage />} />
               <Route path="/patient/ordonnances" element={<PatientOrdonnancesPage />} />
-              <Route path="/patient/documents" element={<PatientDocumentsPage />} />
               <Route path="/patient/profile" element={<ProfilePage />} />
               <Route path="/patient/settings" element={<SettingsPage />} />
             </Route>

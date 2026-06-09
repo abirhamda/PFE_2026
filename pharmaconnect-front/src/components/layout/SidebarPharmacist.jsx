@@ -3,6 +3,7 @@ import {
   Building2,
   ClipboardList,
   FileText,
+  Globe,
   Home,
   LogOut,
   Package2,
@@ -81,6 +82,7 @@ const SidebarPharmacist = ({ isOpen, onClose }) => {
           <NavItem to="/pharmacy/fournisseurs" icon={<Building2 size={16} />} label="Fournisseurs" />
 
           <NavSection label="Compte" />
+          <NavItem to="/pharmacy/public-profile" icon={<Globe size={16} />} label="Profil public" />
           <NavItem to="/pharmacy/profile" icon={<UserRound size={16} />} label="Profil" />
         </nav>
 

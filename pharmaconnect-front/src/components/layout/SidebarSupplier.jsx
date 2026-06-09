@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Bell, Building2, LayoutDashboard, LogOut, Package2, Stethoscope, UserRound } from "lucide-react";
+import { Bell, Building2, LayoutDashboard, LogOut, Stethoscope, UserRound } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
 import api from "../../lib/api";
@@ -93,7 +93,6 @@ const SidebarSupplier = ({ isOpen, onClose }) => {
           <NavItem to="/supplier/dashboard" icon={<LayoutDashboard size={16} />} label="Tableau de bord" />
           <NavItem to="/supplier/demandes" icon={<Bell size={16} />} label="Demandes" badge={notificationCount} />
           <NavItem to="/supplier/pharmacies" icon={<Building2 size={16} />} label="Pharmacies" />
-          <NavItem to="/supplier/produits" icon={<Package2 size={16} />} label="Produits" />
 
           <NavSection label="Compte" />
           <NavItem to="/supplier/profile" icon={<UserRound size={16} />} label="Profil" />

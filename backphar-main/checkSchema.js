@@ -58,7 +58,6 @@ const REQUIRED_COLUMNS = {
     "doctor_notes",
     "created_by_role",
   ],
-  patient_documents: ["patient_user_id", "title", "created_at"],
   waiting_room_counters: ["doctor_id", "counter_date", "waiting_count", "updated_at"],
 };
 

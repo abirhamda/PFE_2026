@@ -2,22 +2,20 @@ import bcrypt from "bcryptjs";
 import db from "../db.js";
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-const normalizeRole = (role) => String(role || "").trim().toLowerCase();
+const normalizeRole  = (role)  => String(role  || "").trim().toLowerCase();
 const normalizeEmail = (email) => String(email || "").trim().toLowerCase();
 
+// Resolves the doctor linked to the requester using user_id FK (from JWT req.user.id)
 const resolveDoctorByUser = async (connection, user) => {
-  const role = normalizeRole(user?.role);
-  const email = normalizeEmail(user?.email);
+  const role   = normalizeRole(user?.role);
+  const userId = Number(user?.id);
 
-  if (!email) {
-    return null;
-  }
+  if (!userId) return null;
 
   if (role === "doctor") {
     const [rows] = await connection.execute(
-      "SELECT id, nom, prenom FROM doctors WHERE email = ? LIMIT 1",
-      [email],
+      "SELECT id, nom, prenom FROM doctors WHERE user_id = ? LIMIT 1",
+      [userId],
     );
     return rows[0] || null;
   }
@@ -27,9 +25,9 @@ const resolveDoctorByUser = async (connection, user) => {
       `SELECT d.id, d.nom, d.prenom
        FROM secretaries s
        INNER JOIN doctors d ON d.id = s.doctor_id
-       WHERE s.email = ?
+       WHERE s.user_id = ?
        LIMIT 1`,
-      [email],
+      [userId],
     );
     return rows[0] || null;
   }
@@ -38,34 +36,22 @@ const resolveDoctorByUser = async (connection, user) => {
 };
 
 const validateCreatePayload = (payload) => {
-  const nom = String(payload?.nom || "").trim();
-  const prenom = String(payload?.prenom || "").trim();
-  const email = normalizeEmail(payload?.email);
-  const password = String(payload?.password || "");
+  const nom       = String(payload?.nom    || "").trim();
+  const prenom    = String(payload?.prenom || "").trim();
+  const email     = normalizeEmail(payload?.email);
+  const password  = String(payload?.password || "");
   const telephone = payload?.telephone ? String(payload.telephone).trim() : null;
 
   if (!nom || !prenom || !email || !password) {
     return { valid: false, error: "nom, prenom, email et password sont obligatoires" };
   }
-
   if (!emailRegex.test(email)) {
     return { valid: false, error: "Format d'email invalide" };
   }
-
   if (password.length < 6) {
     return { valid: false, error: "Le mot de passe doit contenir au moins 6 caracteres" };
   }
-
-  return {
-    valid: true,
-    data: {
-      nom,
-      prenom,
-      email,
-      password,
-      telephone,
-    },
-  };
+  return { valid: true, data: { nom, prenom, email, password, telephone } };
 };
 
 const validateUpdatePayload = (payload) => {
@@ -74,32 +60,22 @@ const validateUpdatePayload = (payload) => {
 
   if (hasOwn("nom")) {
     const nom = String(payload?.nom || "").trim();
-    if (!nom) {
-      return { valid: false, error: "nom invalide" };
-    }
+    if (!nom) return { valid: false, error: "nom invalide" };
     data.nom = nom;
   }
-
   if (hasOwn("prenom")) {
     const prenom = String(payload?.prenom || "").trim();
-    if (!prenom) {
-      return { valid: false, error: "prenom invalide" };
-    }
+    if (!prenom) return { valid: false, error: "prenom invalide" };
     data.prenom = prenom;
   }
-
   if (hasOwn("email")) {
     const email = normalizeEmail(payload?.email);
-    if (!emailRegex.test(email)) {
-      return { valid: false, error: "Format d'email invalide" };
-    }
+    if (!emailRegex.test(email)) return { valid: false, error: "Format d'email invalide" };
     data.email = email;
   }
-
   if (hasOwn("telephone")) {
     data.telephone = payload?.telephone ? String(payload.telephone).trim() : null;
   }
-
   if (hasOwn("password")) {
     const password = String(payload?.password || "");
     if (password && password.length < 6) {
@@ -108,10 +84,7 @@ const validateUpdatePayload = (payload) => {
     data.password = password || null;
   }
 
-  if (Object.keys(data).length === 0) {
-    return { valid: false, error: "Aucune donnee a modifier" };
-  }
-
+  if (Object.keys(data).length === 0) return { valid: false, error: "Aucune donnee a modifier" };
   return { valid: true, data };
 };
 
@@ -120,18 +93,14 @@ export const createSecretary = async (req, res) => {
 
   try {
     const validation = validateCreatePayload(req.body);
-    if (!validation.valid) {
-      return res.status(400).json({ error: validation.error });
-    }
+    if (!validation.valid) return res.status(400).json({ error: validation.error });
 
     const requesterRole = normalizeRole(req.user?.role);
     let doctorId = Number(req.body?.doctor_id);
 
     if (requesterRole === "doctor") {
       const doctor = await resolveDoctorByUser(connection, req.user);
-      if (!doctor) {
-        return res.status(404).json({ error: "Docteur introuvable" });
-      }
+      if (!doctor) return res.status(404).json({ error: "Docteur introuvable" });
       doctorId = Number(doctor.id);
     } else if (requesterRole !== "admin") {
       return res.status(403).json({ error: "Acces refuse" });
@@ -153,7 +122,11 @@ export const createSecretary = async (req, res) => {
     }
 
     const { nom, prenom, email, password, telephone } = validation.data;
-    const [existingUsers] = await connection.execute("SELECT id FROM users WHERE email = ? LIMIT 1", [email]);
+
+    const [existingUsers] = await connection.execute(
+      "SELECT id FROM users WHERE email = ? LIMIT 1",
+      [email],
+    );
     if (existingUsers.length > 0) {
       await connection.rollback();
       return res.status(409).json({ error: "Un compte avec cet email existe deja" });
@@ -161,15 +134,18 @@ export const createSecretary = async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    await connection.execute(
+    // 1. Create the auth account in users
+    const [userInsert] = await connection.execute(
       "INSERT INTO users (email, password, role) VALUES (?, ?, 'secretaire')",
       [email, hashedPassword],
     );
+    const userId = userInsert.insertId;
 
+    // 2. Create the secretary profile linked via user_id (no password stored here)
     const [insertResult] = await connection.execute(
-      `INSERT INTO secretaries (doctor_id, nom, prenom, email, password, telephone, is_active, created_at)
+      `INSERT INTO secretaries (user_id, doctor_id, nom, prenom, email, telephone, is_active, created_at)
        VALUES (?, ?, ?, ?, ?, ?, 1, NOW())`,
-      [doctorId, nom, prenom, email, hashedPassword, telephone],
+      [userId, doctorId, nom, prenom, email, telephone],
     );
 
     const [newRows] = await connection.execute(
@@ -182,11 +158,7 @@ export const createSecretary = async (req, res) => {
     );
 
     await connection.commit();
-
-    return res.status(201).json({
-      message: "Secretaire creee avec succes",
-      secretary: newRows[0],
-    });
+    return res.status(201).json({ message: "Secretaire creee avec succes", secretary: newRows[0] });
   } catch (error) {
     await connection.rollback();
     console.error("Error creating secretary:", error);
@@ -198,8 +170,8 @@ export const createSecretary = async (req, res) => {
 
 export const getMyProfile = async (req, res) => {
   try {
-    const role = normalizeRole(req.user?.role);
-    const email = normalizeEmail(req.user?.email);
+    const role   = normalizeRole(req.user?.role);
+    const userId = Number(req.user?.id);
 
     if (role !== "secretaire") {
       return res.status(403).json({ error: "Acces reserve au role secretaire" });
@@ -210,19 +182,14 @@ export const getMyProfile = async (req, res) => {
               d.nom AS doctor_nom, d.prenom AS doctor_prenom, d.specialty AS doctor_specialty
        FROM secretaries s
        INNER JOIN doctors d ON d.id = s.doctor_id
-       WHERE s.email = ?
+       WHERE s.user_id = ?
        LIMIT 1`,
-      [email],
+      [userId],
     );
 
-    if (rows.length === 0) {
-      return res.status(404).json({ error: "Secretaire non trouvee" });
-    }
+    if (rows.length === 0) return res.status(404).json({ error: "Secretaire non trouvee" });
 
-    return res.json({
-      success: true,
-      secretary: rows[0],
-    });
+    return res.json({ success: true, secretary: rows[0] });
   } catch (error) {
     console.error("Error fetching secretary profile:", error);
     return res.status(500).json({ error: "Erreur lors de la recuperation du profil", details: error.message });
@@ -239,9 +206,7 @@ export const getDoctorSecretaries = async (req, res) => {
     const requesterRole = normalizeRole(req.user?.role);
     if (requesterRole === "doctor") {
       const doctor = await resolveDoctorByUser(db, req.user);
-      if (!doctor) {
-        return res.status(404).json({ error: "Docteur introuvable" });
-      }
+      if (!doctor) return res.status(404).json({ error: "Docteur introuvable" });
       if (Number(doctor.id) !== requestedDoctorId) {
         return res.status(403).json({ error: "Acces refuse a ce docteur" });
       }
@@ -257,11 +222,7 @@ export const getDoctorSecretaries = async (req, res) => {
       [requestedDoctorId],
     );
 
-    return res.json({
-      success: true,
-      count: rows.length,
-      secretaries: rows,
-    });
+    return res.json({ success: true, count: rows.length, secretaries: rows });
   } catch (error) {
     console.error("Error fetching doctor secretaries:", error);
     return res.status(500).json({ error: "Erreur lors de la recuperation des secretaires", details: error.message });
@@ -270,20 +231,15 @@ export const getDoctorSecretaries = async (req, res) => {
 
 const ensureSecretaryOwnership = async (connection, requester, secretaryId) => {
   const [rows] = await connection.execute(
-    "SELECT id, doctor_id, email, is_active FROM secretaries WHERE id = ? LIMIT 1",
+    "SELECT id, user_id, doctor_id, email, is_active FROM secretaries WHERE id = ? LIMIT 1",
     [secretaryId],
   );
-
-  if (rows.length === 0) {
-    return { ok: false, status: 404, error: "Secretaire non trouvee" };
-  }
+  if (rows.length === 0) return { ok: false, status: 404, error: "Secretaire non trouvee" };
 
   const secretary = rows[0];
   const role = normalizeRole(requester?.role);
 
-  if (role === "admin") {
-    return { ok: true, secretary };
-  }
+  if (role === "admin") return { ok: true, secretary };
 
   if (role === "doctor") {
     const doctor = await resolveDoctorByUser(connection, requester);
@@ -298,7 +254,6 @@ const ensureSecretaryOwnership = async (connection, requester, secretaryId) => {
 
 export const toggleSecretaryStatus = async (req, res) => {
   const connection = await db.getConnection();
-
   try {
     const secretaryId = Number(req.params.id);
     const active = req.body?.active;
@@ -311,9 +266,7 @@ export const toggleSecretaryStatus = async (req, res) => {
     }
 
     const ownership = await ensureSecretaryOwnership(connection, req.user, secretaryId);
-    if (!ownership.ok) {
-      return res.status(ownership.status).json({ error: ownership.error });
-    }
+    if (!ownership.ok) return res.status(ownership.status).json({ error: ownership.error });
 
     await connection.execute(
       "UPDATE secretaries SET is_active = ? WHERE id = ?",
@@ -322,9 +275,7 @@ export const toggleSecretaryStatus = async (req, res) => {
 
     const [rows] = await connection.execute(
       `SELECT id, doctor_id, nom, prenom, email, telephone, is_active, created_at
-       FROM secretaries
-       WHERE id = ?
-       LIMIT 1`,
+       FROM secretaries WHERE id = ? LIMIT 1`,
       [secretaryId],
     );
 
@@ -342,7 +293,6 @@ export const toggleSecretaryStatus = async (req, res) => {
 
 export const deleteSecretary = async (req, res) => {
   const connection = await db.getConnection();
-
   try {
     const secretaryId = Number(req.params.id);
     if (!Number.isInteger(secretaryId) || secretaryId <= 0) {
@@ -356,11 +306,10 @@ export const deleteSecretary = async (req, res) => {
       return res.status(ownership.status).json({ error: ownership.error });
     }
 
-    await connection.execute("DELETE FROM secretaries WHERE id = ?", [secretaryId]);
-    await connection.execute(
-      "DELETE FROM users WHERE email = ? AND role = 'secretaire'",
-      [ownership.secretary.email],
-    );
+    const userId = ownership.secretary.user_id;
+
+    // Deleting users row cascades to secretaries via FK
+    await connection.execute("DELETE FROM users WHERE id = ?", [userId]);
 
     await connection.commit();
     return res.json({ message: "Secretaire supprimee avec succes" });
@@ -375,7 +324,6 @@ export const deleteSecretary = async (req, res) => {
 
 export const updateSecretary = async (req, res) => {
   const connection = await db.getConnection();
-
   try {
     const secretaryId = Number(req.params.id);
     if (!Number.isInteger(secretaryId) || secretaryId <= 0) {
@@ -383,9 +331,7 @@ export const updateSecretary = async (req, res) => {
     }
 
     const validation = validateUpdatePayload(req.body);
-    if (!validation.valid) {
-      return res.status(400).json({ error: validation.error });
-    }
+    if (!validation.valid) return res.status(400).json({ error: validation.error });
 
     await connection.beginTransaction();
 
@@ -396,7 +342,7 @@ export const updateSecretary = async (req, res) => {
     }
 
     const [currentRows] = await connection.execute(
-      "SELECT id, doctor_id, nom, prenom, email, telephone, is_active FROM secretaries WHERE id = ? LIMIT 1",
+      "SELECT id, user_id, doctor_id, nom, prenom, email, telephone, is_active FROM secretaries WHERE id = ? LIMIT 1",
       [secretaryId],
     );
     if (currentRows.length === 0) {
@@ -405,21 +351,21 @@ export const updateSecretary = async (req, res) => {
     }
 
     const current = currentRows[0];
+    const userId  = current.user_id;
     const next = {
       nom: validation.data.nom ?? current.nom,
       prenom: validation.data.prenom ?? current.prenom,
       email: validation.data.email ?? current.email,
-      telephone:
-        Object.prototype.hasOwnProperty.call(validation.data, "telephone")
-          ? validation.data.telephone
-          : current.telephone,
+      telephone: Object.prototype.hasOwnProperty.call(validation.data, "telephone")
+        ? validation.data.telephone
+        : current.telephone,
       password: validation.data.password ?? null,
     };
 
     if (next.email !== current.email) {
       const [existingUsers] = await connection.execute(
-        "SELECT id FROM users WHERE email = ? AND email <> ? LIMIT 1",
-        [next.email, current.email],
+        "SELECT id FROM users WHERE email = ? AND id <> ? LIMIT 1",
+        [next.email, userId],
       );
       if (existingUsers.length > 0) {
         await connection.rollback();
@@ -428,31 +374,24 @@ export const updateSecretary = async (req, res) => {
     }
 
     let hashedPassword = null;
-    if (next.password) {
-      hashedPassword = await bcrypt.hash(next.password, 10);
-    }
+    if (next.password) hashedPassword = await bcrypt.hash(next.password, 10);
 
+    // Update secretary profile
+    await connection.execute(
+      `UPDATE secretaries SET nom = ?, prenom = ?, email = ?, telephone = ? WHERE id = ?`,
+      [next.nom, next.prenom, next.email, next.telephone, secretaryId],
+    );
+
+    // Keep auth account in sync via user_id FK — no more WHERE email = ? AND role = ?
     if (hashedPassword) {
       await connection.execute(
-        `UPDATE secretaries
-         SET nom = ?, prenom = ?, email = ?, telephone = ?, password = ?
-         WHERE id = ?`,
-        [next.nom, next.prenom, next.email, next.telephone, hashedPassword, secretaryId],
-      );
-      await connection.execute(
-        "UPDATE users SET email = ?, password = ? WHERE email = ? AND role = 'secretaire'",
-        [next.email, hashedPassword, current.email],
+        "UPDATE users SET email = ?, password = ? WHERE id = ?",
+        [next.email, hashedPassword, userId],
       );
     } else {
       await connection.execute(
-        `UPDATE secretaries
-         SET nom = ?, prenom = ?, email = ?, telephone = ?
-         WHERE id = ?`,
-        [next.nom, next.prenom, next.email, next.telephone, secretaryId],
-      );
-      await connection.execute(
-        "UPDATE users SET email = ? WHERE email = ? AND role = 'secretaire'",
-        [next.email, current.email],
+        "UPDATE users SET email = ? WHERE id = ?",
+        [next.email, userId],
       );
     }
 
@@ -461,16 +400,12 @@ export const updateSecretary = async (req, res) => {
               d.nom AS doctor_nom, d.prenom AS doctor_prenom
        FROM secretaries s
        INNER JOIN doctors d ON d.id = s.doctor_id
-       WHERE s.id = ?
-       LIMIT 1`,
+       WHERE s.id = ? LIMIT 1`,
       [secretaryId],
     );
 
     await connection.commit();
-    return res.json({
-      message: "Secretaire mise a jour avec succes",
-      secretary: rows[0],
-    });
+    return res.json({ message: "Secretaire mise a jour avec succes", secretary: rows[0] });
   } catch (error) {
     await connection.rollback();
     console.error("Error updating secretary:", error);

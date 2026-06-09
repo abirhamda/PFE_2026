@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<title>Sprint Global — MediCare</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: #f0f4f8; color: #0f1e2e; }
+
+  header {
+    background: #0f2d4a; color: #fff;
+    padding: 18px 32px;
+    display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; z-index: 10;
+    box-shadow: 0 2px 8px rgba(15,29,74,.18);
+  }
+  header .logo { display: flex; align-items: center; gap: 12px; }
+  header .logo-text h1 { font-size: 18px; font-weight: 600; }
+  header .logo-text p  { font-size: 11px; opacity: .55; letter-spacing: .18em; text-transform: uppercase; }
+  header .badge {
+    background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.2);
+    border-radius: 20px; padding: 6px 14px; font-size: 12px; font-weight: 500;
+  }
+
+  .page { padding: 32px; }
+
+  .page-title {
+    font-size: 20px; font-weight: 700; color: #0f2d4a;
+    margin-bottom: 28px;
+    padding-bottom: 14px; border-bottom: 2px solid #dde3ec;
+    display: flex; align-items: center; gap: 10px;
+  }
+
+  /* ── Sprint cards ─────────────────────────────── */
+  .sprint-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    margin-bottom: 32px;
+  }
+
+  .sprint-card {
+    background: #fff;
+    border-radius: 12px;
+    border: 1px solid #dde3ec;
+    box-shadow: 0 2px 8px rgba(15,29,74,.07);
+    overflow: hidden;
+  }
+  .sprint-card-header {
+    padding: 14px 18px;
+    color: #fff;
+    font-size: 14px; font-weight: 700;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .sprint-num {
+    width: 30px; height: 30px; border-radius: 50%;
+    background: rgba(255,255,255,.22);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 800; flex-shrink: 0;
+  }
+  .s1-bg { background: #0f2d4a; }
+  .s2-bg { background: #1e6fd9; }
+  .s3-bg { background: #0d6e4f; }
+
+  .sprint-card-body { padding: 16px 18px; }
+
+  .us-list { list-style: none; }
+  .us-list li {
+    display: flex; align-items: baseline; gap: 9px;
+    padding: 5px 0; font-size: 12.5px; color: #374151;
+    border-bottom: 1px dashed #e5e7eb;
+  }
+  .us-list li:last-child { border-bottom: none; }
+
+  .us-badge {
+    flex-shrink: 0; font-size: 10px; font-weight: 700;
+    padding: 2px 8px; border-radius: 10px; letter-spacing: .03em;
+  }
+  .s1-badge { background: #dce8f5; color: #0f2d4a; }
+  .s2-badge { background: #dbeafe; color: #1d4ed8; }
+  .s3-badge { background: #d1fae5; color: #065f46; }
+
+  .entities-bar {
+    margin-top: 12px; padding-top: 12px;
+    border-top: 1px solid #f0f4f8;
+  }
+  .entities-bar .label {
+    font-size: 10px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .1em;
+    color: #9ca3af; margin-bottom: 8px;
+  }
+  .tags { display: flex; flex-wrap: wrap; gap: 5px; }
+  .tag {
+    font-size: 10px; font-weight: 600;
+    padding: 2px 9px; border-radius: 8px; border: 1px solid;
+  }
+  .s1-tag { background: #f0f6ff; border-color: #c3d8f0; color: #0f2d4a; }
+  .s2-tag { background: #eff6ff; border-color: #bfdbfe; color: #1e40af; }
+  .s3-tag { background: #f0fdf4; border-color: #a7f3d0; color: #065f46; }
+
+  /* ── Summary table ────────────────────────────── */
+  .summary-card {
+    background: #fff; border-radius: 12px;
+    border: 1px solid #dde3ec;
+    box-shadow: 0 2px 8px rgba(15,29,74,.07);
+    overflow: hidden;
+  }
+  .summary-card h3 {
+    font-size: 13px; font-weight: 700;
+    color: #0f2d4a; padding: 14px 20px;
+    border-bottom: 1px solid #dde3ec;
+    background: #f8fafc;
+  }
+  .sum-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  .sum-table th {
+    text-align: left; padding: 10px 16px;
+    background: #f8fafc; font-size: 11px;
+    font-weight: 700; text-transform: uppercase;
+    letter-spacing: .07em; color: #6b7280;
+    border-bottom: 1px solid #e5e7eb;
+  }
+  .sum-table td { padding: 10px 16px; border-bottom: 1px solid #f3f4f6; vertical-align: top; }
+  .sum-table tr:last-child td { border-bottom: none; }
+  .pill {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 26px; height: 26px; border-radius: 50%;
+    color: #fff; font-size: 12px; font-weight: 800;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+      <rect width="36" height="36" rx="8" fill="rgba(255,255,255,.12)"/>
+      <path d="M18 8C12.477 8 8 12.477 8 18s4.477 10 10 10 10-4.477 10-10S23.523 8 18 8z" stroke="white" stroke-width="1.5" fill="none"/>
+      <path d="M18 13v10M13 18h10" stroke="white" stroke-width="2" stroke-linecap="round"/>
+    </svg>
+    <div class="logo-text">
+      <h1>MediCare</h1>
+      <p>Planification des sprints</p>
+    </div>
+  </div>
+  <div class="badge">Vue globale — 3 Sprints · 24 User Stories</div>
+</header>
+
+<div class="page">
+  <p class="page-title">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0f2d4a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+    Planification globale des sprints
+  </p>
+
+  <!-- ── 3 Sprint cards ── -->
+  <div class="sprint-grid">
+
+    <div class="sprint-card">
+      <div class="sprint-card-header s1-bg">
+        <div class="sprint-num">1</div>
+        Sprint 1 — Espace médecin &amp; secrétaire
+      </div>
+      <div class="sprint-card-body">
+        <ul class="us-list">
+          <li><span class="us-badge s1-badge">US1</span>  S'authentifier</li>
+          <li><span class="us-badge s1-badge">US4</span>  Gérer secrétaires</li>
+          <li><span class="us-badge s1-badge">US5</span>  Gérer patients</li>
+          <li><span class="us-badge s1-badge">US6</span>  Gérer rendez-vous</li>
+          <li><span class="us-badge s1-badge">US7</span>  Gérer informations publiques (médecin / secrétaire)</li>
+          <li><span class="us-badge s1-badge">US8</span>  Gérer fiches patients</li>
+          <li><span class="us-badge s1-badge">US9</span>  Consulter fiches patients</li>
+          <li><span class="us-badge s1-badge">US10</span> Gérer ordonnances</li>
+          <li><span class="us-badge s1-badge">US11</span> Consulter ordonnances</li>
+        </ul>
+        <div class="entities-bar">
+          <p class="label">Entités impliquées</p>
+          <div class="tags">
+            <span class="tag s1-tag">users</span>
+            <span class="tag s1-tag">password_reset_codes</span>
+            <span class="tag s1-tag">doctors</span>
+            <span class="tag s1-tag">doctor_public_profiles</span>
+            <span class="tag s1-tag">secretaries</span>
+            <span class="tag s1-tag">patients</span>
+            <span class="tag s1-tag">doctor_patients</span>
+            <span class="tag s1-tag">patient_fiche_notes</span>
+            <span class="tag s1-tag">appointments</span>
+            <span class="tag s1-tag">waiting_room_counters</span>
+            <span class="tag s1-tag">ordonnances</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sprint-card">
+      <div class="sprint-card-header s2-bg">
+        <div class="sprint-num">2</div>
+        Sprint 2 — Espace admin &amp; patient
+      </div>
+      <div class="sprint-card-body">
+        <ul class="us-list">
+          <li><span class="us-badge s2-badge">US2</span>  Gérer comptes</li>
+          <li><span class="us-badge s2-badge">US2</span>  Réinitialiser mot de passe</li>
+          <li><span class="us-badge s2-badge">US3</span>  Gérer accès module IA</li>
+          <li><span class="us-badge s2-badge">US12</span> Utiliser module IA</li>
+          <li><span class="us-badge s2-badge">US13</span> S'inscrire</li>
+          <li><span class="us-badge s2-badge">US14</span> Consulter médecins</li>
+          <li><span class="us-badge s2-badge">US15</span> Consulter pharmacies</li>
+          <li><span class="us-badge s2-badge">US16</span> Prendre rendez-vous</li>
+          <li><span class="us-badge s2-badge">US17</span> Consulter ses informations</li>
+        </ul>
+        <div class="entities-bar">
+          <p class="label">Entités impliquées</p>
+          <div class="tags">
+            <span class="tag s2-tag">users</span>
+            <span class="tag s2-tag">password_reset_codes</span>
+            <span class="tag s2-tag">admin</span>
+            <span class="tag s2-tag">patient_portal_profiles</span>
+            <span class="tag s2-tag">patients</span>
+            <span class="tag s2-tag">doctor_public_profiles</span>
+            <span class="tag s2-tag">pharmacie</span>
+            <span class="tag s2-tag">appointments</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sprint-card">
+      <div class="sprint-card-header s3-bg">
+        <div class="sprint-num">3</div>
+        Sprint 3 — Pharmacien &amp; fournisseur
+      </div>
+      <div class="sprint-card-body">
+        <ul class="us-list">
+          <li><span class="us-badge s3-badge">US18</span> Consulter ordonnances</li>
+          <li><span class="us-badge s3-badge">US20</span> Envoyer demandes</li>
+          <li><span class="us-badge s3-badge">US21</span> Gérer fournisseurs</li>
+          <li><span class="us-badge s3-badge">US22</span> Gérer demandes</li>
+          <li><span class="us-badge s3-badge">US24</span> Consulter pharmacies</li>
+        </ul>
+        <div class="entities-bar">
+          <p class="label">Entités impliquées</p>
+          <div class="tags">
+            <span class="tag s3-tag">pharmacie</span>
+            <span class="tag s3-tag">medicaments_stock</span>
+            <span class="tag s3-tag">ordonnances</span>
+            <span class="tag s3-tag">suppliers</span>
+            <span class="tag s3-tag">supplier_pharmacie</span>
+            <span class="tag s3-tag">supplier_partnership_requests</span>
+            <span class="tag s3-tag">demandes</span>
+            <span class="tag s3-tag">notifications</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /sprint-grid -->
+
+  <!-- ── Summary table ── -->
+  <div class="summary-card">
+    <h3>Récapitulatif par sprint</h3>
+    <table class="sum-table">
+      <thead>
+        <tr>
+          <th>Sprint</th>
+          <th>Thème principal</th>
+          <th>User Stories</th>
+          <th>Nb entités</th>
+          <th>Acteurs concernés</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="pill s1-bg">1</span></td>
+          <td><strong>Espace médecin &amp; secrétaire</strong></td>
+          <td>US1, US4, US5, US6, US7, US8, US9, US10, US11</td>
+          <td><strong>12</strong></td>
+          <td>Médecin, Secrétaire</td>
+        </tr>
+        <tr>
+          <td><span class="pill s2-bg">2</span></td>
+          <td><strong>Espace admin &amp; patient portal</strong></td>
+          <td>US2, US3, US12, US13, US14, US15, US16, US17</td>
+          <td><strong>8</strong></td>
+          <td>Admin, Patient</td>
+        </tr>
+        <tr>
+          <td><span class="pill s3-bg">3</span></td>
+          <td><strong>Espace pharmacien &amp; fournisseur</strong></td>
+          <td>US18, US19, US20, US21, US22, US24</td>
+          <td><strong>10</strong></td>
+          <td>Pharmacien, Fournisseur</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>
+</body>
+</html>

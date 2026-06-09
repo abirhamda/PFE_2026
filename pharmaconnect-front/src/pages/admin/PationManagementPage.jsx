@@ -46,10 +46,11 @@ const PationManagementPage = () => {
     try {
       await api.post('/pations', form);
       setForm(initialForm);
-      setMessage('Pation créé avec succès');
+      setMessage('Patient créé avec succès');
       await loadPations();
     } catch (requestError) {
-      setError(requestError.response?.data?.error || 'Création impossible');
+      const msg = requestError.response?.data?.error;
+      setError(msg || 'Création impossible. Vérifiez les informations saisies.');
     } finally {
       setLoading(false);
     }

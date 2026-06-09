@@ -182,6 +182,39 @@ const ensureOrdonnancesCinNullable = async (connection) => {
   console.log("[ok] Ensured ordonnances.cin is nullable");
 };
 
+const ensureOrdonnancesDoctorSetNullOnDelete = async (connection) => {
+  await dropForeignKeyIfExists(connection, "ordonnances", "fk_ordonnances_doctor");
+  await connection.query("ALTER TABLE ordonnances MODIFY COLUMN doctor_id INT NULL");
+  console.log("[ok] Ensured ordonnances.doctor_id is nullable");
+
+  await connection.query(
+    `UPDATE ordonnances o
+     INNER JOIN doctors d ON d.id = o.id_doctor
+     SET o.doctor_id = o.id_doctor
+     WHERE o.doctor_id IS NULL
+       AND o.id_doctor IS NOT NULL`,
+  );
+  console.log("[ok] Backfilled ordonnances.doctor_id from existing doctors when possible.");
+
+  await connection.query(
+    `UPDATE ordonnances o
+     LEFT JOIN doctors d ON d.id = o.doctor_id
+     SET o.doctor_id = NULL
+     WHERE o.doctor_id IS NOT NULL
+       AND d.id IS NULL`,
+  );
+  console.log("[ok] Cleared orphan ordonnances.doctor_id values.");
+
+  await ensureIndex(connection, "ordonnances", "idx_ordonnances_doctor", "INDEX `idx_ordonnances_doctor` (`doctor_id`)");
+
+  await connection.query(
+    `ALTER TABLE ordonnances
+     ADD CONSTRAINT fk_ordonnances_doctor
+     FOREIGN KEY (doctor_id) REFERENCES doctors(id) ON DELETE SET NULL`,
+  );
+  console.log("[ok] Ensured ordonnances.doctor_id uses ON DELETE SET NULL");
+};
+
 const normalizeNullableCinColumn = async (connection, tableName, columnName) => {
   const [rows] = await connection.query(
     `SELECT COUNT(*) AS count
@@ -333,26 +366,38 @@ const ensureCinUniquenessGuards = async (connection) => {
   );
 };
 
-const ensureSupplierExtensions = async (connection) => {
-  await connection.query(
-    `CREATE TABLE IF NOT EXISTS supplier_products (
-       id INT AUTO_INCREMENT PRIMARY KEY,
-       supplier_id INT NOT NULL,
-       nom VARCHAR(140) NOT NULL,
-       description TEXT NULL,
-       prix DECIMAL(10,2) NULL,
-       quantite_disponible INT NOT NULL DEFAULT 0,
-       unite VARCHAR(40) NULL,
-       is_active TINYINT(1) NOT NULL DEFAULT 1,
-       created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-       updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-       CONSTRAINT fk_supplier_products_supplier FOREIGN KEY (supplier_id) REFERENCES suppliers(id) ON DELETE CASCADE,
-       UNIQUE KEY uq_supplier_product_nom (supplier_id, nom),
-       INDEX idx_supplier_products_supplier (supplier_id, is_active)
-     ) ENGINE=InnoDB`,
-  );
-  console.log("[ok] Ensured table supplier_products exists");
+const ensureProfileUserIdColumns = async (connection) => {
+  const profileTables = [
+    { table: "suppliers",              role: "supplier",   indexName: "uq_suppliers_user_id" },
+    { table: "doctors",                role: "doctor",     indexName: "uq_doctors_user_id" },
+    { table: "secretaries",            role: "secretaire", indexName: "uq_secretaries_user_id" },
+    { table: "pharmacie",              role: "pharmacist", indexName: "uq_pharmacie_user_id" },
+    { table: "admin",                  role: "admin",      indexName: "uq_admin_user_id" },
+    { table: "patient_portal_profiles",role: "pation",     indexName: "uq_patient_portal_profiles_user_id" },
+  ];
 
+  for (const { table, role, indexName } of profileTables) {
+    await ensureColumn(connection, table, "user_id", "INT NULL");
+
+    await connection.query(
+      `UPDATE \`${table}\` t
+       INNER JOIN users u ON u.email = t.email AND u.role = ?
+       SET t.user_id = u.id
+       WHERE t.user_id IS NULL`,
+      [role],
+    );
+    console.log(`[ok] Backfilled ${table}.user_id from users`);
+
+    await ensureIndex(
+      connection,
+      table,
+      indexName,
+      `UNIQUE KEY \`${indexName}\` (\`user_id\`)`,
+    );
+  }
+};
+
+const ensureSupplierExtensions = async (connection) => {
   await connection.query(
     `CREATE TABLE IF NOT EXISTS supplier_partnership_requests (
        id INT AUTO_INCREMENT PRIMARY KEY,
@@ -372,22 +417,6 @@ const ensureSupplierExtensions = async (connection) => {
      ) ENGINE=InnoDB`,
   );
   console.log("[ok] Ensured table supplier_partnership_requests exists");
-
-  await connection.query(
-    `CREATE TABLE IF NOT EXISTS pharmacy_ordonnance_views (
-       id INT AUTO_INCREMENT PRIMARY KEY,
-       pharmacie_id INT NOT NULL,
-       ordonnance_id INT NOT NULL,
-       view_count INT NOT NULL DEFAULT 1,
-       first_viewed_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-       last_viewed_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-       CONSTRAINT fk_pharmacy_ordonnance_views_pharmacy FOREIGN KEY (pharmacie_id) REFERENCES pharmacie(id_pharmacie) ON DELETE CASCADE,
-       CONSTRAINT fk_pharmacy_ordonnance_views_ordonnance FOREIGN KEY (ordonnance_id) REFERENCES ordonnances(id) ON DELETE CASCADE,
-       UNIQUE KEY uq_pharmacy_ordonnance_view (pharmacie_id, ordonnance_id),
-       INDEX idx_pharmacy_ordonnance_views_pharmacy (pharmacie_id, last_viewed_at)
-     ) ENGINE=InnoDB`,
-  );
-  console.log("[ok] Ensured table pharmacy_ordonnance_views exists");
 };
 
 const ensureGlobalPatientsManyToMany = async (connection) => {
@@ -518,8 +547,12 @@ const runMigration = async () => {
     }
     console.log(`[ok] Schema sync executed (${expectedTables.length} tables declared).`);
     await ensureUsersRoleEnumIncludesRequiredRoles(connection);
+    await ensureProfileUserIdColumns(connection);
     await ensureOrdonnancesCinNullable(connection);
     await ensureSupplierExtensions(connection);
+    await dropTableIfExists(connection, "supplier_products");
+    await dropTableIfExists(connection, "pharmacy_ordonnance_views");
+    await dropTableIfExists(connection, "patient_documents");
 
     await ensureColumn(connection, "notifications", "demande_id", "INT NULL");
     await ensureColumn(
@@ -562,6 +595,10 @@ const runMigration = async () => {
     await ensureColumn(connection, "appointments", "patient_id", "INT NULL");
     await ensureColumn(connection, "appointments", "booked_by_patient_user_id", "INT NULL");
     await ensureColumn(connection, "appointments", "patient_matricule", "VARCHAR(30) NULL");
+    await ensureColumn(connection, "appointments", "patient_nom", "VARCHAR(120) NULL");
+    await ensureColumn(connection, "appointments", "patient_prenom", "VARCHAR(120) NULL");
+    await ensureColumn(connection, "appointments", "patient_cin", "VARCHAR(30) NULL");
+    await ensureColumn(connection, "appointments", "patient_phone", "VARCHAR(30) NULL");
     await ensureColumn(connection, "appointments", "patient_date_naissance", "DATE NULL");
     await ensureColumn(connection, "appointments", "payment_amount", "DECIMAL(10,2) NULL");
     await ensureColumn(connection, "appointments", "payment_doctor_comment", "TEXT NULL");
@@ -570,7 +607,11 @@ const runMigration = async () => {
       connection,
       "appointments",
       "created_by_role",
-      "ENUM('doctor','secretaire') NOT NULL DEFAULT 'doctor'",
+      "ENUM('doctor','secretaire','pation') NOT NULL DEFAULT 'doctor'",
+    );
+    await connection.query(
+      `ALTER TABLE appointments
+       MODIFY COLUMN created_by_role ENUM('doctor','secretaire','pation') NOT NULL`,
     );
     await ensureColumn(connection, "patient_fiche_notes", "entry_at", "DATETIME NOT NULL");
     await ensureGlobalPatientsManyToMany(connection);
@@ -583,14 +624,7 @@ const runMigration = async () => {
     await dropIndexIfExists(connection, "appointments", "idx_appointments_status");
     await dropForeignKeyIfExists(connection, "ordonnances", "fk_ordonnances_pation");
     await dropTableIfExists(connection, "pations");
-
-    await connection.query(
-      `UPDATE ordonnances
-       SET doctor_id = id_doctor
-       WHERE doctor_id IS NULL
-         AND id_doctor IS NOT NULL`,
-    );
-    console.log("[ok] Backfilled ordonnances.doctor_id from id_doctor when possible.");
+    await ensureOrdonnancesDoctorSetNullOnDelete(connection);
 
     const [existingRows] = await connection.query("SHOW TABLES");
     const key = `Tables_in_${DB_NAME}`;
